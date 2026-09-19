@@ -10,7 +10,7 @@ the tickets are a chain, and parallel edits to a crate split collide.
 1. **Frontier.** In `.scratch/<effort>/issues/`, take the lowest-numbered ticket
    that is `Status: ready-for-agent` and whose `Blocked by:` tickets are all
    `resolved`. Skip `needs-info` and `ready-for-human`.
-2. **Claim.** Set `Status: claimed`, commit, push.
+2. **Claim.** Create the ticket's branch and set `Status: claimed` on it.
 3. **Delegate.** Give the subagent the ticket path, the spec, the ADR and this
    file. It implements, runs `scripts/gate.sh`, and reports what it changed, what
    it did not do, and anything that surprised it. It does not commit.
@@ -19,8 +19,13 @@ the tickets are a chain, and parallel edits to a crate split collide.
    tcdocs patch, baseline entry, `#[ignore]`, `#[allow]` without a reason, or
    deleted test to get green. If the work is wrong, send it back with specifics
    (at most three rounds, then see Stop).
-5. **Land.** Commit, push to `main`, wait for CI (`gh run watch`). Red CI is
-   fixed or reverted before anything else happens.
+5. **Land.** `main` is protected: a pull request and a green `test` check are
+   required, for everyone. Work on a branch named `NN-<slug>` after the ticket,
+   commit, push, `gh pr create`, wait with `gh pr checks --watch`, then
+   `gh pr merge --squash --delete-branch` (auto-merge is off for this repository). A red check is fixed on the branch; never close
+   the PR and retry around it. After the merge, `git checkout main && git pull`
+   and delete the branch. The claim (step 2) and the resolution (step 6) ride in
+   the same PR as the work, so a ticket is one PR.
 6. **Resolve.** Append `## Answer` (what landed, commit hash, follow-ups), set
    `Status: resolved`. A follow-up is a new ticket, not scope added to this one.
    Update CLAUDE.md and `docs/plans/hardening.md` when a status line in them
