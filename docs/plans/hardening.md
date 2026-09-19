@@ -459,9 +459,17 @@ over the Phase 0 leftovers and the cross-cutting fuzzing, Miri and benchmark ite
 
 ### Cross-cutting: testing and safety
 
-- [ ] **Fuzzing.** `cargo fuzz` target that parses arbitrary bytes and asserts no
-      panic and that `strict()` classification is consistent (an input with no
-      diagnostics round-trips to identical USX). Run in CI for a fixed time budget.
+- [x] **Fuzzing.** `cargo fuzz` targets that parse arbitrary bytes and assert no
+      panic, the span invariants and that the USX output is well-formed XML.
+      Done 2026-09-19 by `.scratch/oxc-layout/issues/06-fuzz-target.md`:
+      `tasks/fuzz` holds `parse_lossy` and `parse_utf8`, seeded from tcdocs and
+      sharing `usfm_parser::span_check` with `tests/spans.rs`; see
+      `tasks/fuzz/README.md` for the runs and the five findings they produced
+      (two span-invariant wordings, control characters, duplicate attributes
+      and attribute names that are not XML names). Run on demand, not in CI:
+      a useful run is minutes long and needs nightly plus a sanitizer.
+      Still open: the `strict()` round-trip property (no diagnostics implies
+      USFM -> USX -> USFM is identical) waits for `usfm_codegen` in M5.
 - [ ] **Malformed corpus.** Directory of real-world broken files (with permission)
       plus the synthetic ones from the assessment. Snapshot the diagnostics and
       recovered tree.

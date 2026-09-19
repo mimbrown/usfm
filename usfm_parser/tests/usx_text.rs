@@ -41,3 +41,37 @@ fn text_content_gets_no_added_whitespace() {
         "{output}"
     );
 }
+
+/// USX is XML, so `to_usx_string` has to write something an XML reader
+/// accepts even when the source does not. XML 1.0 has no way to write a C0
+/// control character — not even as `&#0;` — so the writer replaces it with
+/// U+FFFD, in text and in attribute values alike. The fuzzer found this on a
+/// source of one byte, a NUL.
+#[test]
+fn characters_xml_forbids_are_replaced() {
+    let output = usx("\\id GEN\n\\c 1\n\\p \\v 1 a\u{0}b \\w c|lemma=\"d\u{c}e\"\\w*");
+    assert!(output.contains("a\u{fffd}b "), "{output}");
+    assert!(output.contains("lemma=\"d\u{fffd}e\""), "{output}");
+    assert!(!output.contains('\u{0}') && !output.contains('\u{c}'), "{output}");
+    XmlDocument::from(output.as_bytes()).expect("well-formed XML");
+}
+
+/// XML has no repeated attribute, so the writer keeps the first value of a
+/// name and drops later ones (`duplicate-attribute`).
+#[test]
+fn repeated_attributes_are_written_once() {
+    let output = usx("\\id GEN\n\\c 1\n\\p \\v 1 \\w a|lemma=\"first\" lemma=\"second\"\\w*");
+    assert!(output.contains(r#"<char style="w" lemma="first">a</char>"#), "{output}");
+    XmlDocument::from(output.as_bytes()).expect("well-formed XML");
+}
+
+/// An attribute whose name is not an XML name cannot be written at all, so
+/// the parser reports `malformed-attribute-name` (tested in `recovery.rs`)
+/// and the serializer drops the attribute rather than emit broken XML.
+#[test]
+fn attributes_that_are_not_xml_names_are_dropped() {
+    let output = usx("\\id GEN\n\\c 1\n\\p \\v 1 \\w a|b<c=\"1\" strong=\"H1\"\\w*");
+    assert!(output.contains(r#"<char style="w" strong="H1">a</char>"#), "{output}");
+    XmlDocument::from(output.as_bytes()).expect("well-formed XML");
+}
+

@@ -4,6 +4,13 @@ use xml::namespace::Namespace;
 
 use crate::{ast::*, context::Context, xml, xml_document::*};
 
+/// Whether `name` can be added to `attrs`: a valid XML name that is not
+/// already there. XML has no repeated attribute, so a name given twice
+/// (`duplicate-attribute`) keeps its first value.
+fn is_writable(attrs: &[xml::attribute::OwnedAttribute], name: &str) -> bool {
+    is_valid_attribute_name(name) && !attrs.iter().any(|attr| attr.name.local_name == name)
+}
+
 pub trait ToUsx {
     fn to_usx(&self, context: &mut Context) -> XmlNode;
 }
@@ -99,8 +106,11 @@ impl<'a> ToUsx for Char<'a> {
                 } else {
                     attr.name.to_string()
                 };
-                // Only add if we have a valid attribute name
-                if !name.is_empty() {
+                // Only add a name USX can carry: an empty one (a default
+                // attribute the marker does not have), a malformed one
+                // (`malformed-attribute-name`) and a repeat
+                // (`duplicate-attribute`) are not writable as XML.
+                if is_writable(&attrs, &name) {
                     attrs.push(xml::attribute::OwnedAttribute::new(
                         xml::name::OwnedName::local(name),
                         attr.value.to_string(),
@@ -160,7 +170,7 @@ impl<'a> ToUsx for Periph<'a> {
                 } else {
                     Some(attr.name.as_ref())
                 };
-                if let Some(name) = name {
+                if let Some(name) = name.filter(|name| is_writable(&attrs, name)) {
                     attrs.push(attribute(name, attr.value.to_string()));
                 }
             }
@@ -218,7 +228,7 @@ impl<'a> ToUsx for Milestone<'a> {
             } else {
                 Some(attr.name.as_ref())
             };
-            if let Some(name) = name {
+            if let Some(name) = name.filter(|name| is_writable(&attrs, name)) {
                 attrs.push(xml::attribute::OwnedAttribute::new(
                     xml::name::OwnedName::local(name),
                     attr.value.to_string(),

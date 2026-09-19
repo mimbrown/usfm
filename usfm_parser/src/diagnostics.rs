@@ -310,6 +310,21 @@ pub enum Code {
     /// **Recovery:** the attribute is kept with an empty value.
     /// **Severity:** Error.
     MissingAttributeValue,
+    /// **Trigger:** a named attribute whose name is not an identifier
+    /// (`\w a|b<c="1"\w*`). USFM attribute names are ASCII letters, digits,
+    /// `-`, `_` and `.`, starting with a letter or `_`.
+    /// **Recovery:** kept in the tree with its name as written; USX
+    /// serializers drop it, since the name is not a valid XML name.
+    /// **Severity:** Error.
+    MalformedAttributeName,
+    /// **Trigger:** the same attribute name twice in one list, including two
+    /// bare values, which are both the marker's default attribute
+    /// (`\rb b|"h=c"`).
+    /// **Recovery:** every occurrence is kept in the tree; USX serializers
+    /// write the first and drop the rest, since XML has no repeated
+    /// attribute.
+    /// **Severity:** Error.
+    DuplicateAttribute,
     /// **Trigger:** the parser reached a state its own invariants say is
     /// impossible. Parsing stops at this point.
     /// **Recovery:** none; the document is whatever was parsed so far.
@@ -369,6 +384,8 @@ impl Code {
         Code::DefaultAttributeWithOthers,
         Code::AttributeValueNotQuoted,
         Code::MissingAttributeValue,
+        Code::MalformedAttributeName,
+        Code::DuplicateAttribute,
         Code::NumberHasLeadingZero,
         Code::Internal,
     ];
@@ -425,6 +442,8 @@ impl Code {
             Code::DefaultAttributeWithOthers => "default-attribute-with-others",
             Code::AttributeValueNotQuoted => "attribute-value-not-quoted",
             Code::MissingAttributeValue => "missing-attribute-value",
+            Code::MalformedAttributeName => "malformed-attribute-name",
+            Code::DuplicateAttribute => "duplicate-attribute",
             Code::NumberHasLeadingZero => "number-has-leading-zero",
             Code::Internal => "internal",
         }

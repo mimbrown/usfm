@@ -5,3 +5,9 @@ node_modules
 
 # Local copy of the USFM docs; fetch with .claude/import_docs.py
 /.claude/docs/
+
+# cargo-fuzz: its own build directory, and the inputs that crashed a target.
+# A finding becomes a test (and, if it is not fixed yet, a file in
+# `tasks/fuzz/findings/`), never a committed artifact.
+/tasks/fuzz/target/
+/tasks/fuzz/artifacts/

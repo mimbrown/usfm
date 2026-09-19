@@ -66,6 +66,12 @@ tcdocs status (260 tests, 2026-09-12):
   with `miri` and `rust-src`, which CI installs in its own step and
   `scripts/session-start.sh` installs on a fresh VM; `rust-toolchain.toml`
   stays pinned at 1.98.0 for everything else.
+- Fuzzing is on demand, not in the gate or CI (ticket 06): `cargo +nightly fuzz
+  run --fuzz-dir tasks/fuzz parse_lossy -- -max_total_time=600 -max_len=65536`,
+  and the same for `parse_utf8`. The targets assert no panic, the span
+  invariants (`usfm_parser::span_check`, shared with `tests/spans.rs` behind the
+  `testing` feature) and that the USX output is well-formed XML. `tasks/fuzz` is
+  outside the workspace, so run its clippy separately; see `tasks/fuzz/README.md`.
 
 **Traversal API (Phase 3, complete 2026-09-12)** lives in `usfm_ast`:
 `visit::Visit` / `visit_mut::VisitMut` (generated from one macro, same method
@@ -77,6 +83,12 @@ milestone paths, `verse(c, v)`, `VerseRef::nodes()` / `text()`), and
 read-only.
 
 Recent progress:
+- USX output is well-formed XML for any input (found by the fuzz targets,
+  ticket 06): the `XmlNode` writer replaces characters XML 1.0 cannot carry
+  (the C0 controls, U+FFFE/U+FFFF) with U+FFFD in text and attribute values,
+  and the serializers drop an attribute they cannot write — a name that is not
+  an XML name (`malformed-attribute-name`) or a repeat of one already written
+  (`duplicate-attribute`), both new `Code`s
 - The CLI writes USX through `usx.rs` (`usx::to_usx_string`; `serialize_usx.rs` is
   gone), so it keeps word-level attributes. The `XmlNode` writer escapes text and
   adds no whitespace inside mixed content; `usfm_parser/tests/usx_text.rs`

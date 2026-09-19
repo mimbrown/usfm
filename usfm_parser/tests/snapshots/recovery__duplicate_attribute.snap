@@ -1,0 +1,14 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 \\w word|lemma=\"a\" lemma=\"b\"\\w*"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..51
+  VerseStart 1@16..20
+  Char w@21..51 lemma="a" lemma="b"
+    Text "word"@24..28
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[duplicate-attribute] @39..44: `lemma` is given more than once

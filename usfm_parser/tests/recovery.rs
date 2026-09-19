@@ -462,6 +462,33 @@ fn missing_attribute_value() {
     );
 }
 
+/// An attribute name that is not an identifier. The fuzzer found this: the
+/// name went straight into the USX output, which made it invalid XML. The
+/// tree keeps the attribute as written; `usx.rs` drops it.
+#[test]
+fn malformed_attribute_name() {
+    check(
+        Code::MalformedAttributeName,
+        "\\id GEN\n\\c 1\n\\p \\v 1 \\w word|b<c=\"1\"\\w*",
+    );
+}
+
+/// The same attribute name twice. The fuzzer found the two-defaults form
+/// (`\rb b|"h=c"`, where the quotes make two bare values): both became
+/// `gloss` and the USX had the attribute twice, which is not XML.
+#[test]
+fn duplicate_attribute() {
+    check(
+        Code::DuplicateAttribute,
+        "\\id GEN\n\\c 1\n\\p \\v 1 \\w word|lemma=\"a\" lemma=\"b\"\\w*",
+    );
+    check_variant(
+        Code::DuplicateAttribute,
+        "default_twice",
+        "\\id GEN\n\\c 1\n\\p \\v 1 \\rb b|\"h=c\"\\rb*",
+    );
+}
+
 #[test]
 fn number_has_leading_zero() {
     check(

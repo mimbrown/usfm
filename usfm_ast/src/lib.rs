@@ -226,6 +226,20 @@ pub fn default_attribute_name(marker: &str) -> Option<&'static str> {
     }
 }
 
+/// Whether `name` can be written as an XML attribute name, which is what a
+/// USFM attribute becomes in USX. USFM attribute names are identifiers: an
+/// ASCII letter or `_`, then ASCII letters, digits, `-`, `_` or `.`. Anything
+/// else (`\w a|b<c="1"\w*`) is reported as `malformed-attribute-name` and
+/// dropped by the USX serializers, which have no way to write it.
+pub fn is_valid_attribute_name(name: &str) -> bool {
+    let mut chars = name.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+    (first.is_ascii_alphabetic() || first == '_')
+        && chars.all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
+}
+
 /// A run of text, with the source range it came from.
 ///
 /// `content` is not the source verbatim and `&source[span]` is not expected to

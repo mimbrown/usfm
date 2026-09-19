@@ -17,6 +17,11 @@ pub mod serialize;
 pub mod serialize_html;
 pub use serialize_html::{SerializeHtml, ToHtml, serialize_html, to_html_string};
 
+// The span invariants, shared by `tests/spans.rs` and `tasks/fuzz` so the two
+// cannot drift apart. Behind a feature, so the default build is unchanged.
+#[cfg(feature = "testing")]
+pub mod span_check;
+
 pub mod style;
 pub mod text_replacements;
 pub mod usx;
