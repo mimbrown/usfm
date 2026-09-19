@@ -22,8 +22,9 @@ expected failures, 0 unexpected passes** (100%). Unit tests:
 **Phase 1 is complete** as of 2026-09-12: D1, D2, D3, D5 and D6 are all in, and the
 AST shape is frozen; Phase 2 (conformance) and Phase 3 (traversal) are done. The
 32 remaining failures are all Phase 2 work; none is an AST-shape question.
-`cargo clippy --workspace --exclude usfm_language_server --all-targets`: 118 warnings.
-Workspace does not build (`usfm_language_server`: 8 errors).
+`cargo clippy --workspace --all-targets`: 118 warnings.
+The workspace builds since 2026-09-19: `usfm_language_server` and `data_layer`
+moved to `wip/`, outside the workspace (`.scratch/oxc-layout/issues/01-move-wip-crates-out-of-workspace.md`).
 
 Only **2** failures are now an error reported on valid input, down from 9:
 `advanced/nesting1` and `advanced/periph`, neither milestone-related.
@@ -254,12 +255,13 @@ paragraph-level attributes (`unexpected-pipe`).
       2026-09-19 (26/26 lib tests); `cargo test -p usfm_parser` runs every suite.
 - [x] CLI prints diagnostics as `file:line:col` and exits non-zero under `--strict`
       when any error was reported. Without `--strict` it still produces output.
-- [ ] Either fix `usfm_language_server` so the workspace builds, or move it to a
-      `wip/` directory outside the workspace members. Recommended: move it out along
-      with `data_layer`, since Phase 5 rebuilds it on the parser anyway and the
-      current code shares nothing with the parser. *Verified still broken 2026-09-12:*
-      8 errors (`init_config` missing on `Backend`, `WorkspaceWorker.db` field gone,
-      unresolved type annotation in `worker.rs`), so `cargo build --workspace` fails.
+- [x] Either fix `usfm_language_server` so the workspace builds, or move it to a
+      `wip/` directory outside the workspace members. Moved 2026-09-19 (ticket 01,
+      `.scratch/oxc-layout/issues/01-move-wip-crates-out-of-workspace.md`): both
+      `usfm_language_server` and `data_layer` are now `wip/` crates with
+      `exclude = ["wip"]` in the root `Cargo.toml`, so `cargo build --workspace`
+      passes with no `--exclude`. They still do not compile (8 errors); Phase 5 / M6
+      rebuilds the server on the parser.
 - [x] Delete root `build.rs` (references files that do not exist). Deleted
       2026-09-12; the root `Cargo.toml` is `[workspace]`-only, so Cargo never ran it.
 - [x] Stop the `usfm_parser` build script writing into `src/`. Done 2026-09-12:

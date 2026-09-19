@@ -11,10 +11,12 @@ This project has three parallel work streams, all in progress:
    - Handle edge cases and malformed input gracefully
    - Expand grammar coverage
 
-2. **Language Server** (`usfm_language_server/`)
+2. **Language Server** (`wip/usfm_language_server/`) — parked
    - Power VS Code extension for editing USFM
    - Validation, diagnostics, formatting
    - Eventually: completion, hover, go-to-definition
+   - Parked outside the workspace in `wip/` (ticket 01) and does not build;
+     M6 rebuilds it in `apps/` on `ParseResult`. Do not work this stream until then.
 
 3. **Output Generation** (`usfm_style/`, future crates)
    - Transform AST to HTML, Dart, XML, etc.
@@ -48,8 +50,6 @@ tcdocs status (260 tests, 2026-09-12):
 - AST snapshot corpus: `cargo test -p usfm_parser --test snapshot` (review with `cargo insta review`)
 - Run `git submodule update --init tcdocs` first. Without it the `usfm_tests` build
   fails on purpose, so a zero-test run can never report a pass rate.
-- `cargo build --workspace` still fails on `usfm_language_server`; use
-  `--exclude usfm_language_server`.
 - CI (`.github/workflows/ci.yml`) runs the unit and integration suites
   (`recovery`, `snapshot`, `spans`, `whitespace`, `attributes`, `verse_ends`, `usx_text`,
   parser lib) and
@@ -165,11 +165,12 @@ Minimal restrictions - work freely as long as changes are revertable:
 usfm-tools/
 ├── usfm_ast/              # AST node definitions
 ├── usfm_parser/           # Parser implementation
-├── usfm_language_server/  # LSP server
 ├── usfm_style/            # Styling/output
-├── data_layer/            # Data persistence
 ├── tests/                 # Integration tests (usfm_tests crate)
 ├── tcdocs/                # Git submodule: official USFM test suite
+├── wip/                   # Outside the workspace, parked until M6, does not build
+│   ├── usfm_language_server/  # LSP server (parked)
+│   └── data_layer/            # Data persistence (parked)
 └── build.rs               # Build configuration
 ```
 
