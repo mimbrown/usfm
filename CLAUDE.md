@@ -6,7 +6,7 @@ Rust-based USFM parser with AST, language server, and multiple output formats.
 
 This project has three parallel work streams, all in progress:
 
-1. **Parser Development** (`usfm_parser/`, `usfm_ast/`)
+1. **Parser Development** (`crates/usfm_parser/`, `crates/usfm_ast/`)
    - Parse USFM into AST structure
    - Handle edge cases and malformed input gracefully
    - Expand grammar coverage
@@ -18,7 +18,7 @@ This project has three parallel work streams, all in progress:
    - Parked outside the workspace in `wip/` (ticket 01) and does not build;
      M6 rebuilds it in `apps/` on `ParseResult`. Do not work this stream until then.
 
-3. **Output Generation** (`usfm_style/`, future crates)
+3. **Output Generation** (`crates/usfm_style/`, future crates)
    - Transform AST to HTML, Dart, XML, etc.
    - Support web pages, PDFs, mobile apps
 
@@ -36,18 +36,19 @@ design decisions. The parser never fails: it recovers and reports
 `Diagnostic`s in a `ParseResult`; `ParseResult::strict()` is the policy for
 pipelines. Those four types (`Diagnostic`, `Code`, `Severity`, `ParseResult`,
 plus `Diagnostic::render` / `to_json_line`) live in the `usfm_diagnostics`
-crate, re-exported as `usfm_parser::diagnostics` (ticket 12). Every recovery
-rule is a `Code` variant with a test in `usfm_parser/tests/recovery.rs`.
+crate, re-exported as `usfm_parser::diagnostics` (ticket 12) and as
+`usfm::diagnostics` on the facade (ticket 17). Every recovery
+rule is a `Code` variant with a test in `crates/usfm_parser/tests/recovery.rs`.
 
 Conformance status (276 tests across two roots, 2026-09-19):
 - tcdocs (260 tests): 215 passed, 0 failed, 0 panicked, 1 skipped,
   44 expected failures, 0 unexpected passes
 - `usfm-grammar/bugfixes` (16 tests, vendored under
-  `tests/fixtures/usfm-grammar/`, MIT): 16 passed, 0 failed
-- `tests/fixtures/machine-py/` (sillsdev/machine.py, MIT) is *not* a harness
+  `tasks/conformance/fixtures/usfm-grammar/`, MIT): 16 passed, 0 failed
+- `tasks/conformance/fixtures/machine-py/` (sillsdev/machine.py, MIT) is *not* a harness
   root: those Paratext-shaped projects ship no reference USX, so their
   expectation is the parser's own tree and diagnostics, snapshotted by the
-  `machine_py_*` tests in `usfm_parser/tests/recovery.rs`. All seven books are
+  `machine_py_*` tests in `crates/usfm_parser/tests/recovery.rs`. All seven books are
   fuzz seeds.
 - `BookCode::Other([u8; 3])` holds a code USX accepts that the enum does not
   name: `book@code` in `usx.rnc` is the book list *or* the pattern
@@ -66,14 +67,14 @@ Conformance status (276 tests across two roots, 2026-09-19):
   line, because that generator copies source whitespace verbatim and truncates
   the version to `major.minor`; tcdocs is compared exactly as before.
 - Fourteen reference files (nine tcdocs, five usfm-grammar) are read through a
-  patch in `tests/tcdocs-patches/`
+  patch in `tasks/conformance/tcdocs-patches/`
   (rules in its README; the directory covers both roots): a unified diff with
   the rationale above it, for a reference quirk or an accepted deviation, never
   for a parser gap. The harness fails a patch that stops applying or that the
   parser no longer needs. `cargo run -p usfm_tests -- --show <name>` prints one
   test's diagnostics, output and patched expected USX.
-- `usfm_parser/usfm-extra.sty` is appended to Paratext's `usfm.sty` by
-  `usfm_parser/build.rs`: the markers that sheet predates (`\ipc`, `\ta`,
+- `crates/usfm_parser/usfm-extra.sty` is appended to Paratext's `usfm.sty` by
+  `crates/usfm_parser/build.rs`: the markers that sheet predates (`\ipc`, `\ta`,
   `\wl`) and the one entry it gets wrong (`\xta` occurs under `\ex` too),
   each citing `tcdocs/grammar/usx.rnc`.
 - AST snapshot corpus: `cargo test -p usfm_parser --test snapshot` (review with `cargo insta review`)
@@ -86,7 +87,7 @@ Conformance status (276 tests across two roots, 2026-09-19):
   `cargo clippy --workspace --all-targets -- -D warnings` (in `scripts/gate.sh`
   since 2026-09-19, ticket 02: the workspace is clippy-clean, so a new warning
   fails the build) and
-  gates tcdocs on `tests/tcdocs-baseline.txt`, the list of known failures
+  gates tcdocs on `tasks/conformance/tcdocs-baseline.txt`, the list of known failures
   (currently empty). It fails on a regression *and* on a stale entry, so when
   you fix a tcdocs case, remove it from the baseline (or regenerate with
   `--write-baseline`) in the same commit. Last in the gate is `scripts/miri.sh`
@@ -101,7 +102,7 @@ Conformance status (276 tests across two roots, 2026-09-19):
 - Fuzzing is on demand, not in the gate or CI (ticket 06): `cargo +nightly fuzz
   run --fuzz-dir tasks/fuzz parse_lossy -- -max_total_time=600 -max_len=65536`,
   and the same for `parse_utf8` and `parse_html`. The first two assert no panic,
-  the span invariants (`usfm_parser::span_check`, shared with `tests/spans.rs`
+  the span invariants (`usfm_parser::span_check`, shared with `crates/usfm_parser/tests/spans.rs`
   behind the `testing` feature) and that the USX output is well-formed XML;
   `parse_html` (ticket 14) asserts no panic and that the HTML output is balanced
   and properly escaped, checked by a scanner in `tasks/fuzz/src/lib.rs` rather
@@ -118,6 +119,20 @@ milestone paths, `verse(c, v)`, `VerseRef::nodes()` / `text()`), and
 read-only.
 
 Recent progress:
+- **The `usfm` facade and the ADR's layout (ticket 17, M3 closed).** One crate
+  to depend on: `usfm` re-exports `span`, `style`, `ast`, `diagnostics` and
+  `parser` unconditionally and `usx`, `html`, `json`, `pipeline` behind the
+  features of those names (all four on by default), lifts `Document`,
+  `ParseResult`, `Diagnostic`, `Code`, `Severity`, `Span`, `StyleSheet` and
+  `DEFAULT_STYLESHEET` to its root, and adds `usfm::parse(&str)` and
+  `usfm::parse_with(&str, &Arc<StyleSheet>)`. `apps/usfm_cli`,
+  `tasks/conformance`, `tasks/benchmark` and `tasks/fuzz` depend on it instead
+  of on the pieces (the features `benchmarking` and `testing` forward to
+  `usfm_parser`'s); the crates under `crates/` keep depending on each other
+  directly. Everything moved with it: `crates/usfm_*`, `tasks/conformance/`
+  (the `usfm_tests` package, with its `fixtures/`, `tcdocs-patches/` and
+  `tcdocs-baseline.txt`). `apps/usfm_cli`'s binary carries `doc = false`: it is
+  also called `usfm`, and rustdoc would write it over the facade's page
 - `usfm_json` (ticket 16): the AST as JSON, `to_json_value` /
   `to_json_string` / `to_json_string_pretty`. One object per node with
   `"type"` (the AST variant in snake_case, the whole vocabulary in
@@ -161,13 +176,13 @@ Recent progress:
   implementation over private state (book code, chapter, open verse,
   `include_vid`, the document's stylesheet) — no shared `Context`, and no
   dependency on `usfm_parser` (ticket 13). The `XmlNode` writer escapes text and
-  adds no whitespace inside mixed content; `usfm_parser/tests/usx_text.rs`
+  adds no whitespace inside mixed content; `crates/usfm_parser/tests/usx_text.rs`
 - Phase 3 traversal API (above); the old `usfm_parser::visit_mut::Context`
   is gone, `TextReplacement::apply_to(&mut document)` replaces
   `visit_mut_document`
 - Verse and chapter ends are emitted by the parser as it goes (`OpenVerse` in
   `parser.rs`, plan D4) instead of by a path-arithmetic pass after parsing;
-  the placement rules are one test each in `usfm_parser/tests/verse_ends.rs`
+  the placement rules are one test each in `crates/usfm_parser/tests/verse_ends.rs`
 - `Inline::OptBreak` for `//` (USX `<optbreak/>`, HTML `<wbr>`); the default
   attribute value is verbatim, quotes included, as Paratext reads it; a verse
   that starts in a non-verse-text paragraph (`\lit`) ends inside it when the
@@ -196,7 +211,7 @@ Recent progress:
   default attribute (`\qt-s |Speaker\*` is `who`). Verse ends stop at a chapter
   boundary and skip sidebars (plan D7)
 - Whitespace rules pinned (rules 1–6 on `Text` in `usfm_ast`, tested in
-  `usfm_parser/tests/whitespace.rs`): only ASCII whitespace is normalised,
+  `crates/usfm_parser/tests/whitespace.rs`): only ASCII whitespace is normalised,
   `~` is a no-break space, trailing whitespace is dropped only at
   paragraph-level boundaries. The tcdocs harness ignores whitespace at note
   and cell ends on both sides because the reference files disagree there.
@@ -206,7 +221,7 @@ Recent progress:
   D6 (attributes as a field, `Chunk` removed)
 - Derived (`\k-s`) and unknown (`\zaln-s`, `\ts`) milestones are registered and kept
   rather than dropped; `Block::Milestone` for milestones between blocks
-- `tests/spans.rs` checks span invariants mechanically; snapshots render spans
+- `crates/usfm_parser/tests/spans.rs` checks span invariants mechanically; snapshots render spans
 - Implemented word-level attributes (`\w word|lemma="value"\w*`)
 - Added `Attributes` AST node type as last child of `Char`
 - Attributes correctly serialized to USX as XML attributes
@@ -237,10 +252,13 @@ it leaves for callers:
 Priority areas, next: the route is `.scratch/oxc-layout/spec.md` (decision in
 `docs/adr/0001-oxc-style-crate-layout.md`): oxc's crate organisation, not its arena.
 Milestones in order: M1 workspace builds clean, M2 benchmarks + Miri + fuzz, M3
-crate split, M4 `usfm_semantic`, M5 `usfm_codegen`, M6 language server. M1 and
-M2 closed 2026-09-19 (exit criteria recorded in the spec); M3 is ticketed
-(11–17) and in progress. Tickets are in `.scratch/oxc-layout/issues/`, written
-one milestone ahead. Unattended
+crate split, M4 `usfm_semantic`, M5 `usfm_codegen`, M6 language server. M1, M2
+and M3 all closed 2026-09-19 (exit criteria recorded in the spec); **M4
+(`usfm_semantic`) is next**: move the non-syntactic checks (`OccursUnder`
+placement, table columns, leading zeros, the attribute validation that needs
+the stylesheet) and `ReferenceIndex` out of the parser, with `usfm::parse()`
+still returning the union so tcdocs is unchanged. Tickets are in
+`.scratch/oxc-layout/issues/`, written one milestone ahead. Unattended
 sessions follow `docs/agents/loop.md`; `scripts/gate.sh` is the gate before every push.
 
 ## Boundaries
@@ -255,27 +273,42 @@ Minimal restrictions - work freely as long as changes are revertable:
 
 ## Project Structure
 
+The layout is the one in `docs/adr/0001-oxc-style-crate-layout.md`, reached by
+ticket 17 (M3, 2026-09-19). Dependencies point one way: span <- style, ast <-
+diagnostics <- parser <- outputs <- pipeline <- facade <- apps. No output crate
+depends on another output crate.
+
 ```
 usfm-tools/
-├── usfm_ast/              # AST node definitions
-├── usfm_diagnostics/      # Diagnostic, Code, Severity, ParseResult, rendering
-├── usfm_parser/           # Parser implementation
-├── usfm_span/             # Span and LineIndex (leaf crate, no dependencies)
-├── usfm_style/            # Styling/output
-├── usfm_usx/              # AST -> USX: the XML tree, its writer and reader
-├── usfm_html/             # AST -> HTML: ToHtml, SerializeHtml, Context
-├── usfm_json/             # AST -> JSON: the tree as it is, one object per node
-├── usfm_pipeline/         # Document -> Document/text: replacements, sections,
-│                          #   diglot, prompt, SILE, the format dispatch
+├── crates/
+│   ├── usfm_span/         # Span, SPAN and LineIndex (leaf crate, no dependencies)
+│   ├── usfm_style/        # The stylesheet: StyleSheet, StyleRule, StyleId
+│   ├── usfm_ast/          # AST nodes, Visit / VisitMut / Fold, Cursor, PlainText
+│   ├── usfm_diagnostics/  # Diagnostic, Code, Severity, ParseResult, rendering
+│   ├── usfm_parser/       # Lexer + parser. A library, no binary
+│   ├── usfm_usx/          # AST -> USX: the XML tree, its writer and reader
+│   ├── usfm_html/         # AST -> HTML: ToHtml, SerializeHtml, Context
+│   ├── usfm_json/         # AST -> JSON: the tree as it is, one object per node
+│   ├── usfm_pipeline/     # Document -> Document/text: replacements, sections,
+│   │                      #   diglot, prompt, SILE, the format dispatch
+│   └── usfm/              # Facade: re-exports the above behind features, and
+│                          #   `usfm::parse` / `usfm::parse_with`. `apps/` and
+│                          #   `tasks/` depend on this, not on the pieces
 ├── apps/
 │   └── usfm_cli/          # The `usfm` binary: clap, watch mode, diagnostics
-├── tests/                 # Integration tests (usfm_tests crate)
+├── tasks/
+│   ├── conformance/       # tcdocs + usfm-grammar runner (the `usfm_tests` crate),
+│   │                      #   its fixtures, patches and baseline
+│   ├── benchmark/         # criterion benches over a committed corpus
+│   └── fuzz/              # cargo-fuzz targets (own workspace, nightly)
 ├── tcdocs/                # Git submodule: official USFM test suite
-├── wip/                   # Outside the workspace, parked until M6, does not build
-│   ├── usfm_language_server/  # LSP server (parked)
-│   └── data_layer/            # Data persistence (parked)
-└── build.rs               # Build configuration
+└── wip/                   # Outside the workspace, parked until M6, does not build
+    ├── usfm_language_server/  # LSP server (parked)
+    └── data_layer/            # Data persistence (parked)
 ```
+
+`crates/usfm_semantic` (M4) and `crates/usfm_codegen` (M5) are the two the
+ADR's tree still lacks; M6 rebuilds the language server under `apps/`.
 
 ## Running Tests
 
@@ -291,10 +324,10 @@ cargo run --package usfm_tests mandatory
 cargo run --package usfm_tests -- --categories
 
 # Gate against the known-failure list (what CI runs)
-cargo run --package usfm_tests -- --baseline tests/tcdocs-baseline.txt
+cargo run --package usfm_tests -- --baseline tasks/conformance/tcdocs-baseline.txt
 
 # Regenerate the list after fixing or regressing cases
-cargo run --package usfm_tests -- --write-baseline tests/tcdocs-baseline.txt
+cargo run --package usfm_tests -- --write-baseline tasks/conformance/tcdocs-baseline.txt
 
 # Run as cargo test (with output)
 cargo test --package usfm_tests -- --nocapture

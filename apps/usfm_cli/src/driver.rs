@@ -1,7 +1,7 @@
 //! Reading the files a run needs, parsing them, and writing the output.
 //!
-//! The `ParseAndTransform` of `usfm_parser/src/main.rs`, with the transforms
-//! themselves now in `usfm_pipeline`. What is left here is the part that
+//! The `ParseAndTransform` of the old `usfm_parser/src/main.rs`, with the
+//! transforms themselves now in `usfm_pipeline`. What is left here is the part that
 //! touches the filesystem: which files were read, so watch mode can read them
 //! again, and where the result goes.
 
@@ -9,12 +9,12 @@ use std::io::Write;
 use std::path::{Path, PathBuf, absolute};
 use std::sync::Arc;
 
-use usfm_ast::Document;
-use usfm_diagnostics::{ParseResult, Severity};
-use usfm_parser::{DEFAULT_STYLESHEET, parser::Parser};
-use usfm_pipeline::{OutputFormat, TextReplacement};
-use usfm_span::LineIndex;
-use usfm_style::StyleSheet;
+use usfm::ast::Document;
+use usfm::diagnostics::{ParseResult, Severity};
+use usfm::parser::{DEFAULT_STYLESHEET, parser::Parser};
+use usfm::pipeline::{OutputFormat, TextReplacement};
+use usfm::span::LineIndex;
+use usfm::style::StyleSheet;
 
 use crate::args::{DiagnosticFormat, ParseArgs};
 use crate::error::Error;
@@ -250,13 +250,13 @@ impl Driver {
         }
 
         if self.diglots.is_empty() {
-            return Ok(usfm_pipeline::render(&document, &style_sheet, self.format)?);
+            return Ok(usfm::pipeline::render(&document, &style_sheet, self.format)?);
         }
 
         // Checked before the second file is parsed, so `--format usx --diglot`
         // does not print a page of diagnostics for a document it will not use.
         if !self.format.supports_diglot() {
-            return Err(usfm_pipeline::RenderError::NoDiglotForm(self.format).into());
+            return Err(usfm::pipeline::RenderError::NoDiglotForm(self.format).into());
         }
         let diglot = join(&self.diglots);
         let result = Parser::new(&diglot).parse(&sheet_or_default(&self.diglot_style_sheet));
@@ -265,7 +265,7 @@ impl Driver {
         for replacement in self.diglot_replacements.iter_mut() {
             replacement.value.apply_to(&mut diglot_document);
         }
-        Ok(usfm_pipeline::render_diglot(
+        Ok(usfm::pipeline::render_diglot(
             &document,
             &style_sheet,
             &diglot_document,

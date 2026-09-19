@@ -25,8 +25,8 @@ cd "$(dirname "$0")"
 # Matches the `-max_len` in README.md's run commands.
 MAX_LEN=${MAX_LEN:-65536}
 TCDOCS=../../tcdocs
-FIXTURES=../../tests/fixtures/usfm-grammar
-MACHINE_PY=../../tests/fixtures/machine-py
+FIXTURES=../conformance/fixtures/usfm-grammar
+MACHINE_PY=../conformance/fixtures/machine-py
 
 if [[ ! -d $TCDOCS/tests ]]; then
   echo "tcdocs is not checked out: run 'git submodule update --init tcdocs'" >&2

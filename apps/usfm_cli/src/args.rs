@@ -1,6 +1,6 @@
 //! The command line, as a struct.
 //!
-//! Every flag the hand-rolled argument loop in `usfm_parser/src/main.rs`
+//! Every flag the hand-rolled argument loop in the old `usfm_parser/src/main.rs`
 //! understood is here, plus `--deny-warnings` and `--diagnostics` (ticket 15).
 //! The long names of four flags changed with the move: `--style` is
 //! `--stylesheet`, `--replacements` is `--replace`, `--diglot-style` is
@@ -12,8 +12,8 @@
 use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use usfm_diagnostics::Severity;
-use usfm_pipeline::OutputFormat;
+use usfm::diagnostics::Severity;
+use usfm::pipeline::OutputFormat;
 
 /// Parse USFM and write it out as USX, HTML, JSON, SILE or a translation
 /// prompt.
