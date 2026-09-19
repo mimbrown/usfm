@@ -1,5 +1,5 @@
 ---
-source: usfm_parser/tests/recovery.rs
+source: crates/usfm_parser/tests/recovery.rs
 description: "\\id MAT - Test\r\n\\h Matthew\r\n\\mt Matthew\r\n\\ip An introduction to Matthew\\fe + \\ft This is an endnote.\\fe*\r\n\\p \\rq MAT 1\\rq* Here is another paragraph.\r\n\\p and with a \\w keyword|a special concept\\w* in it.\r\n\\p and a \\weirdtaglookingthing that is not an actual tag.\r\n\\c 1\r\n\\s Chapter One\r\n\\v 1 Chapter \\pn one\\+pro WON\\+pro*\\pn*, verse one.\\f + \\fr 1:1: \\ft This is a footnote for v1.\\f*\r\n\\li1\r\n\\v 2 \\bd C\\bd*hapter one,\r\n\\li2 verse\\f + \\fr 1:2: \\ft This is a footnote for v2.\\f* two.\r\n\\v 3 Chapter one \\w*,\r\n\\li2 verse three.\r\n\\v 4 Chapter one with odd whitespace, \r\n\\li2 verse four,\r\n\\v 5 Chapter one,\r\n\\li2 verse \\fig Figure 1|src=\"image1.png\" size=\"col\" ref=\"1:5\"\\fig* five.\r\n\\v 6 Verse 6 content.\r\n\\v 7\r\n\\v 8\r\n\\c 2\r\n\\tr \\tc1 Row one, column one. \\tc2 Row one, column two.\r\n\\tr \\tc1 Row two, column one. \\tc2 Row two, column two.\r\n\\s1 Chapter \\it Two \\it*\r\n\\p\r\n\\p\r\n\\v 1 Chapter \\add two\\add*, verse \\f + \\fr 2:1: \\ft This is a footnote.\\f*one.\r\n\\v 2-3 Chapter two, // verse \\fm ∆\\fm*two.\r\n\\esb\r\n\\ms This is a sidebar\r\n\\p Here is some sidebar // content.\r\n\\esbe\r\n\\v 3-4a Chapter two, verse \\w three|lemma\\w*.\r\n\\v 4b Chapter two, verse four.\r\n\\p\r\n\\v 6 Chapter two, verse \\w six|strong=\"12345\" \\w*.\r\n\\p\r\n\\v 6 Bad verse. \\x - \\xo abc\\xt 123\\x* and more content.\r\n\\p\r\n\\v 5 Chapter two, verse five \\rq (MAT 3:1)\\rq*.\r\n\\v 7a Chapter two, verse seven A,\r\n\\s Section header \\ts-s\\*\r\n\\p\r\n\\v 7b verse seven B.\r\n\\p\r\n\\v 8 This is a list: \\ts-e\\*\r\n\\b\r\n\\tr \\tc1\r\n\\v 9 Chapter\\tcr2 2\\tc3 verse\\tcr4 9\r\n\\tr \\tc1-2\r\n\\v 10 \\tc3-4 \\qt-s |Jesus\\*Chapter 2 verse 10\\qt-e\\*\r\n\\v 11-12\r\n\\restore restore information\r\n\\c 3\r\n\\cl PSALM 3\r\n\\s1 Section 1\r\n\\mt1 Major Title 1\r\n\\d \\va (1)\\va* Description\r\n\\q1\r\n\\v 1 \\va 2\\va*\\vp 1 (2)\\vp* Chapter 3 verse 1.\r\n\\q1 3.1 part 2\r\n\\b\r\n\\q1 3.1 part 3\r\n\\q1 3.1 part 4\r\n\\c 4\r\n\\v 1\r\n"
 ---
 Book MAT "- Test" @0..14
@@ -236,11 +236,7 @@ Para p@1790..1796
   VerseEnd 1
 ChapterEnd 4
 --- diagnostics
-error[verse-text-before-chapter] @106..108: `\p` (verse text) before the first `\c`
-error[verse-text-before-chapter] @151..153: `\p` (verse text) before the first `\c`
-error[verse-text-before-chapter] @205..207: `\p` (verse text) before the first `\c`
 error[unknown-marker] @214..235: unknown marker `\weirdtaglookingthing`
-error[verse-in-heading] @286..288: `\v` inside a title or section heading
 error[unmatched-closing-marker] @500..503: closing marker `\w*` has no matching `\w`
 error[content-outside-paragraph] @1060..1146: content after `\esbe` is outside a paragraph; an implicit `\p` was opened
 error[content-outside-paragraph] @1790..1792: content outside a paragraph; an implicit `\p` was opened

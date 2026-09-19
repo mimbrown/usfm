@@ -570,6 +570,20 @@ same work back (52.05 against 49.01 in the run above, on a VM that also drifted
 up). This is the price of the split, not a check doing something silly per
 node, and it is paid only by documents that are mostly attributes.
 
+**After ticket 21** (the structure, verse-placement, table-column and
+`empty-word` checks moved across — nine more codes), same method, three rounds
+turn about on whole-corpus: `parse_semantic` **45.89** MiB/s (45.49, 46.56,
+45.89) against `parse` at **51.51** (51.51, 51.09, 51.58). The gap is **10.9%**,
+against 12.4% after ticket 20 — that is, the nine checks added here cost
+nothing that shows above this VM's noise, which is what a check reading fields
+of nodes the walk already visits should cost. One further round with the classes
+split says where the remaining gap is, and it is where ticket 20 left it:
+`plain` 65.08 against 66.28 (1.8%), `note-heavy` 45.67 against 49.15 (7.1%),
+`alignment-heavy` 57.08 against 66.65 (14.4%) and `attributes-heavy` 30.13
+against 36.70 (17.9%). The two heavy classes are the two full of attribute
+lists — an alignment file is `\zaln-s |x-strong="…"` most of the way down — so
+the cost is still the second pass over those lists, not the checks moved here.
+
 ## Reading a regression
 
 The VM is a shared 4-vCPU cloud instance, so the numbers move on their own.

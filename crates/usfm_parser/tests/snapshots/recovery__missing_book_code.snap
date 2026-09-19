@@ -1,5 +1,5 @@
 ---
-source: usfm_parser/tests/recovery.rs
+source: crates/usfm_parser/tests/recovery.rs
 description: "\\id\n\\c 1\n\\p \\v 1 a"
 ---
 ChapterStart 1@4..8
@@ -10,4 +10,3 @@ Para p@9..18
 ChapterEnd 1
 --- diagnostics
 error[missing-book-code] @0..3: `\id` must be followed by a book code
-error[missing-id] @0..0: document must start with `\id`

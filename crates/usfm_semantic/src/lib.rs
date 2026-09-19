@@ -11,13 +11,18 @@
 //! * this crate **reports**. A check here reads the finished tree and the
 //!   stylesheet it resolves against, and says something about a document that
 //!   parsed exactly as written: a marker in a place its `OccursUnder` does not
-//!   list, a table column out of order, a verse number with a leading zero, a
-//!   book code USX accepts but USFM does not list. Nothing here changes the
-//!   tree, and none of these codes has a "recovery" to describe.
+//!   list, a table column out of order, a verse in a heading, a book code USX
+//!   accepts but USFM does not list. Nothing here changes the tree, and none
+//!   of these codes has a "recovery" to describe.
 //!
-//! The practical test for where a check belongs: if deleting it would change
-//! the tree, it is the parser's; if deleting it would only make the diagnostics
-//! shorter, it is this crate's.
+//! The practical test for where a check belongs, and the audit of every code
+//! against it, are in `usfm_diagnostics`'s module documentation (ticket 21). In
+//! short: a check is the parser's if deleting it would change the tree, or if
+//! what the author wrote is no longer visible in the tree — `verse-in-note`
+//! drops the verse, `number-has-leading-zero` parses `01` to the number 1, and
+//! neither is there to be found afterwards. Everything else is this crate's,
+//! and [`EMITS`] is the list, kept in step with [`Code::is_semantic`] by a
+//! test.
 //!
 //! [`analyze`] is the whole API. Callers usually reach it through
 //! `usfm::parse`, which merges these diagnostics with the parser's; a caller
@@ -46,14 +51,46 @@
 //! name: an attribute diagnostic points at the attribute, exactly as it did
 //! when the parser reported it mid-parse.
 
-use usfm_ast::visit::{Visit, walk_document, walk_note, walk_para, walk_table_cell};
+use usfm_ast::visit::{Visit, walk_note, walk_para, walk_table_cell};
 use usfm_ast::{
-    Attributes, Book, Char, Document, Milestone, Note, Para, Periph, StyleId, TableCell,
-    default_attribute_name, is_valid_attribute_name,
+    Attributes, Block, Book, BookCode, ChapterStart, Char, Document, Milestone, Note, Para, Periph,
+    Sidebar, StyleId, Table, TableCell, VerseStart, default_attribute_name,
+    is_valid_attribute_name,
 };
 use usfm_diagnostics::{Code, Diagnostic};
 use usfm_span::Span;
-use usfm_style::StyleSheet;
+use usfm_style::{StyleSheet, TextType};
+
+/// Every [`Code`] this crate can report.
+///
+/// The list is the crate's half of the split recorded in
+/// [`Code::is_semantic`]: `analyze` emits these and nothing else, and
+/// `semantic_emits_exactly_the_semantic_codes` asserts the two agree in both
+/// directions, so a check moved here without its line in `is_semantic` — or a
+/// code marked semantic that nothing here reports — fails the build.
+pub const EMITS: &[Code] = &[
+    // ticket 19
+    Code::UnlistedBookCode,
+    // ticket 20
+    Code::MarkerNotAllowedHere,
+    Code::MarkerNotListedHere,
+    Code::EmptyAttributeList,
+    Code::EmptyMilestoneAttributeList,
+    Code::NoDefaultAttribute,
+    Code::DefaultAttributeWithOthers,
+    Code::MalformedAttributeName,
+    Code::DuplicateAttribute,
+    // ticket 21
+    Code::MissingId,
+    Code::IdNotFirst,
+    Code::EmptyBook,
+    Code::VerseTextBeforeChapter,
+    Code::VerseOutsideChapter,
+    Code::VerseInHeading,
+    Code::VerseInCharacterStyle,
+    Code::UnexpectedTableColumn,
+    Code::EmptyWord,
+];
 
 /// Run every semantic check over `document`.
 ///
@@ -86,6 +123,16 @@ struct Analyzer<'a> {
     style_sheet: &'a StyleSheet,
     /// What the walk is inside, innermost last; see [`Scope`].
     scopes: Vec<Scope>,
+    /// Whether the block being visited is the first of the block list it is
+    /// in. `id-not-first` is exactly "a `Book` for which this is false", which
+    /// is the rule the parser applied to the list it was appending to.
+    first_in_container: bool,
+    /// The book in force, from the last `\id` the walk passed. `None` until
+    /// the first one: a document with no `\id` has no book to be wrong about,
+    /// which is how the parser read it too.
+    book: Option<BookCode>,
+    /// Whether a `\c` has been passed, anywhere, at any depth.
+    chapter_seen: bool,
     diagnostics: Vec<Diagnostic>,
 }
 
@@ -115,6 +162,9 @@ impl<'a> Analyzer<'a> {
         Self {
             style_sheet,
             scopes: Vec::new(),
+            first_in_container: true,
+            book: None,
+            chapter_seen: false,
             diagnostics: Vec::new(),
         }
     }
@@ -153,6 +203,176 @@ impl<'a> Analyzer<'a> {
                 book.code
             ),
         ));
+    }
+
+    /// `missing-id` / `empty-book`: what the document's own block list says
+    /// about it, which is all these two rules ever read.
+    ///
+    /// A document that starts with anything but `\id` is missing one, reported
+    /// at offset 0 — where the `\id` should have been, not where the block that
+    /// stands there begins. A document whose only block is the book is empty:
+    /// that one is reported at the end of the source, which is why
+    /// [`Document`] carries a span of its own (ticket 21). An empty document
+    /// reports neither: there is no first block to be wrong about.
+    ///
+    /// The list is the top-level one. A `\id` nested in a sidebar is not a
+    /// document's first block whatever it is doing there, and `id-not-first`
+    /// below has it covered.
+    fn check_document(&mut self, document: &Document<'_>) {
+        match document.blocks.first() {
+            Some(Block::Book(_)) => {
+                if document.blocks.len() == 1 {
+                    self.emit(
+                        Code::EmptyBook,
+                        Span::empty(document.span.end),
+                        "book contains only an `\\id` line",
+                    );
+                }
+            }
+            Some(_) => self.emit(
+                Code::MissingId,
+                Span::empty(0),
+                "document must start with `\\id`",
+            ),
+            None => {}
+        }
+    }
+
+    /// `id-not-first`: a `\id` after other content.
+    ///
+    /// Nothing is repaired — the book is in the tree like any other — so the
+    /// rule is just "this `Book` is not the first block of its list", which is
+    /// what the parser asked of the list it was appending to.
+    ///
+    /// The span is the `Book` node: the whole `\id` line, where the parser
+    /// reported the marker alone. Same start, wider end (see the note on spans
+    /// above).
+    fn check_id_not_first(&mut self, book: &Book<'_>) {
+        if self.first_in_container {
+            return;
+        }
+        self.emit(
+            Code::IdNotFirst,
+            book.span,
+            "`\\id` must be the first marker in the file",
+        );
+    }
+
+    /// `verse-text-before-chapter`: a paragraph of verse text standing before
+    /// the first `\c` of a scripture book.
+    ///
+    /// Introductory matter (`\ip`, `\imt`) is not verse text and is where it
+    /// belongs; a peripheral book (`\id FRT`) has no chapters at all, so the
+    /// rule does not apply to one. Nothing is repaired: the paragraph is in
+    /// the tree with the style it was written with, which with the book and
+    /// the chapters is everything the rule reads.
+    ///
+    /// The span is the paragraph node; the parser reported its marker.
+    fn check_verse_text_before_chapter(&mut self, para: &Para<'_>) {
+        if self.chapter_seen || !self.book.is_some_and(|book| !book.is_non_scripture()) {
+            return;
+        }
+        let rule = self.style_sheet.get_rule(para.style.index());
+        if !rule.is_verse_text() {
+            return;
+        }
+        let marker = rule.marker.clone();
+        self.emit(
+            Code::VerseTextBeforeChapter,
+            para.span,
+            format!("`\\{marker}` (verse text) before the first `\\c`"),
+        );
+    }
+
+    /// `verse-outside-chapter` / `verse-in-heading` / `verse-in-character-style`:
+    /// a verse marker the parser kept, somewhere a verse does not belong.
+    ///
+    /// All three read the same two things: the `VerseStart` in the tree and
+    /// what it sits in. The fourth placement rule, `verse-in-note`, stays with
+    /// the parser — a verse in a note is dropped, and a check here cannot
+    /// report a node that is not there.
+    ///
+    /// The heading rule asks the *nearest enclosing paragraph*, so a verse in
+    /// a table cell is not in a heading whatever paragraph came before the
+    /// table; the parser, reading a field it set at the last paragraph marker,
+    /// said otherwise. `\s5` is exempt: unfoldingWord's chunk marker is an
+    /// empty heading written directly before a verse.
+    ///
+    /// The span is the `VerseStart`, which runs from `\v` through the number
+    /// and any `\va`/`\vp`; the parser reported the `\v` alone.
+    fn check_verse_placement(&mut self, verse: &VerseStart<'_>) {
+        if !self.chapter_seen {
+            self.emit(Code::VerseOutsideChapter, verse.span, "`\\v` before any `\\c`");
+        }
+        let heading = self.scopes.iter().rev().find_map(|scope| match scope {
+            Scope::Para(style) => Some(*style),
+            _ => None,
+        });
+        if let Some(style) = heading {
+            let rule = self.style_sheet.get_rule(style.index());
+            if matches!(rule.text_type, TextType::Title | TextType::Section) && rule.marker != "s5"
+            {
+                self.emit(
+                    Code::VerseInHeading,
+                    verse.span,
+                    "`\\v` inside a title or section heading",
+                );
+            }
+        }
+        if self.scopes.contains(&Scope::Char) {
+            self.emit(
+                Code::VerseInCharacterStyle,
+                verse.span,
+                "`\\v` inside an open character style",
+            );
+        }
+    }
+
+    /// `unexpected-table-column`: a row whose cells skip a column or go
+    /// backwards (`\th1 … \th3`, or `\tc2` first in a row).
+    ///
+    /// The cell keeps the column its marker named, so the row in the tree is
+    /// the row as written and the rule is arithmetic over it: each cell starts
+    /// where the previous one ended, the first at column 1.
+    ///
+    /// The span is the cell, which the parser opened at the same offset its
+    /// marker did; the message names the column rather than the marker,
+    /// because the marker's text is in the source and a check here has only
+    /// the tree.
+    fn check_table_columns(&mut self, table: &Table<'_>) {
+        for row in &table.rows {
+            let mut expected = 1u8;
+            for cell in &row.cells {
+                if cell.column != expected {
+                    self.emit(
+                        Code::UnexpectedTableColumn,
+                        cell.span,
+                        format!(
+                            "a cell in column {} where column {expected} was expected",
+                            cell.column
+                        ),
+                    );
+                }
+                expected = cell.column.saturating_add(cell.colspan);
+            }
+        }
+    }
+
+    /// `empty-word`: `\w |lemma="x"\w*`, a word with attributes and no word.
+    ///
+    /// Only `\w`: an empty `\jmp` is a legitimate link with nothing but its
+    /// `link-href`, and `\fig` carries everything in its attributes too. The
+    /// node is kept whatever this says, so the predicate is the tree's —
+    /// exactly the one the parser used to run on the node it had just built.
+    fn check_empty_word(&mut self, char: &Char<'_>) {
+        let rule = self.style_sheet.get_rule(char.style.index());
+        if rule.marker == "w" && char.attributes.is_some() && char.children.is_empty() {
+            self.emit(
+                Code::EmptyWord,
+                char.span,
+                "`\\w` has attributes but no text",
+            );
+        }
     }
 
     /// The parent a character style or note is placed under, or `None` where
@@ -307,25 +527,65 @@ impl<'a> Analyzer<'a> {
     }
 }
 
+impl Analyzer<'_> {
+    /// Visit a block list, keeping track of which block starts it.
+    ///
+    /// `first_in_container` is read by `visit_book`, which `walk_block` calls
+    /// with nothing in between, so no deeper walk can have overwritten it by
+    /// the time it is asked.
+    fn blocks(&mut self, blocks: &[Block<'_>]) {
+        for (index, block) in blocks.iter().enumerate() {
+            self.first_in_container = index == 0;
+            self.visit_block(block);
+        }
+    }
+}
+
 impl Visit for Analyzer<'_> {
     fn visit_document(&mut self, document: &Document<'_>) {
-        walk_document(self, document);
+        self.check_document(document);
+        self.blocks(&document.blocks);
     }
 
     fn visit_book(&mut self, book: &Book<'_>) {
         self.check_unlisted_book_code(book);
+        self.check_id_not_first(book);
+        self.book = Some(book.code);
+    }
+
+    fn visit_chapter_start(&mut self, _chapter: &ChapterStart<'_>) {
+        self.chapter_seen = true;
     }
 
     fn visit_para(&mut self, para: &Para<'_>) {
+        self.check_verse_text_before_chapter(para);
         self.in_scope(Scope::Para(para.style), |analyzer| walk_para(analyzer, para));
+    }
+
+    fn visit_verse_start(&mut self, verse: &VerseStart<'_>) {
+        self.check_verse_placement(verse);
+    }
+
+    fn visit_table(&mut self, table: &Table<'_>) {
+        self.check_table_columns(table);
+        for row in &table.rows {
+            for cell in &row.cells {
+                self.visit_table_cell(cell);
+            }
+        }
     }
 
     fn visit_table_cell(&mut self, cell: &TableCell<'_>) {
         self.in_scope(Scope::Cell, |analyzer| walk_table_cell(analyzer, cell));
     }
 
+    fn visit_sidebar(&mut self, sidebar: &Sidebar<'_>) {
+        self.blocks(&sidebar.blocks);
+    }
+
     fn visit_char(&mut self, char: &Char<'_>) {
         self.check_placement(char.style, char.span, false);
+        self.check_empty_word(char);
         if let Some(attributes) = &char.attributes {
             self.check_attributes(char.style, attributes);
         }
@@ -353,9 +613,7 @@ impl Visit for Analyzer<'_> {
         if let Some(attributes) = &periph.attributes {
             self.check_attributes(periph.style, attributes);
         }
-        for block in &periph.blocks {
-            self.visit_block(block);
-        }
+        self.blocks(&periph.blocks);
     }
 }
 
@@ -364,18 +622,54 @@ mod tests {
     use super::*;
     use std::borrow::Cow;
     use std::str::FromStr;
-    use usfm_ast::{Block, BookCode};
+    use usfm_ast::{Block, BookCode, ChapterEnd};
     use usfm_span::Span;
 
-    /// A one-block document holding `code`, built by hand: this crate does not
-    /// depend on the parser, and the integration tests in `tests/checks.rs`
-    /// cover the real path through the facade.
+    /// A document holding `code` and one empty chapter, built by hand: this
+    /// crate does not depend on the parser, and the integration tests in
+    /// `tests/checks.rs` cover the real path through the facade.
+    ///
+    /// The chapter is there so the document is not an `empty-book` (a book and
+    /// nothing else), which would report a second diagnostic and is its own
+    /// test in `tests/checks.rs`.
     fn document_with_book(code: &str, span: Span) -> Document<'static> {
-        Document::without_styles(vec![Block::Book(Book {
-            code: BookCode::from_str(code).expect("a well-formed book code"),
-            description: Cow::Borrowed(""),
-            span,
-        })])
+        Document::without_styles(vec![
+            Block::Book(Book {
+                code: BookCode::from_str(code).expect("a well-formed book code"),
+                description: Cow::Borrowed(""),
+                span,
+            }),
+            Block::ChapterEnd(ChapterEnd {
+                number: 1,
+                span: Span::new(span.end, span.end),
+            }),
+        ])
+    }
+
+    /// The table in `usfm_diagnostics`'s module documentation says which side
+    /// each code is on; [`Code::is_semantic`] is its executable form and
+    /// [`EMITS`] is this crate's half. They have to be the same set, both
+    /// ways round.
+    #[test]
+    fn semantic_emits_exactly_the_semantic_codes() {
+        let not_marked: Vec<&str> = EMITS
+            .iter()
+            .filter(|code| !code.is_semantic())
+            .map(|code| code.as_str())
+            .collect();
+        assert!(
+            not_marked.is_empty(),
+            "this crate emits codes `Code::is_semantic` does not name: {not_marked:?}"
+        );
+        let not_emitted: Vec<&str> = Code::ALL
+            .iter()
+            .filter(|code| code.is_semantic() && !EMITS.contains(code))
+            .map(|code| code.as_str())
+            .collect();
+        assert!(
+            not_emitted.is_empty(),
+            "`Code::is_semantic` names codes this crate does not emit: {not_emitted:?}"
+        );
     }
 
     #[test]
@@ -398,24 +692,34 @@ mod tests {
         );
     }
 
+    /// A book that is not the first block of its list is `id-not-first`,
+    /// whatever else is wrong with it: the second `\id` here reports that as
+    /// well as its unlisted code.
     #[test]
     fn diagnostics_come_back_sorted_by_span_start() {
         let document = Document::without_styles(vec![
             Block::Book(Book {
                 code: BookCode::from_str("ZZZ").unwrap(),
                 description: Cow::Borrowed(""),
-                span: Span::new(40, 47),
+                span: Span::new(0, 7),
             }),
             Block::Book(Book {
                 code: BookCode::from_str("YYY").unwrap(),
                 description: Cow::Borrowed(""),
-                span: Span::new(0, 7),
+                span: Span::new(40, 47),
             }),
         ]);
-        let starts: Vec<u32> = analyze(&document)
+        let reported: Vec<(u32, Code)> = analyze(&document)
             .iter()
-            .map(|diagnostic| diagnostic.span.start)
+            .map(|diagnostic| (diagnostic.span.start, diagnostic.code))
             .collect();
-        assert_eq!(starts, vec![0, 40]);
+        assert_eq!(
+            reported,
+            vec![
+                (0, Code::UnlistedBookCode),
+                (40, Code::UnlistedBookCode),
+                (40, Code::IdNotFirst),
+            ]
+        );
     }
 }
