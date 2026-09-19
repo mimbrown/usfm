@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
-# Seed both fuzz corpora from the tcdocs inputs. Idempotent: rerun it after
+# Seed both fuzz corpora from the conformance inputs: the tcdocs submodule and
+# the vendored usfm-grammar fixtures. Idempotent: rerun it after
 # `git submodule update` and only new or changed files are written.
 #
-# A seed is named after the tcdocs test it came from, with `/` replaced by
-# `__`, so a finding traces back to a real file. Both targets get their own
-# copy (a copy, not a symlink, so a Windows checkout works and so libFuzzer can
+# A seed is named after the test it came from, with `/` replaced by `__`, so a
+# finding traces back to a real file. usfm-grammar's carry a `usfm-grammar__`
+# prefix (`usfm-grammar__bugfixes__q4.usfm`,
+# `usfm-grammar__autofix__slash_in_text.usfm`). Both targets get their own copy
+# (a copy, not a symlink, so a Windows checkout works and so libFuzzer can
 # prune one corpus without touching the other).
 #
 # `--prune` also deletes everything in the corpora that is not a seed, which is
@@ -21,6 +24,7 @@ cd "$(dirname "$0")"
 # Matches the `-max_len` in README.md's run commands.
 MAX_LEN=${MAX_LEN:-65536}
 TCDOCS=../../tcdocs
+FIXTURES=../../tests/fixtures/usfm-grammar
 
 if [[ ! -d $TCDOCS/tests ]]; then
   echo "tcdocs is not checked out: run 'git submodule update --init tcdocs'" >&2
@@ -43,12 +47,10 @@ done
 written=0
 truncated=0
 seeded=()
-while IFS= read -r -d '' origin; do
-  # tcdocs/tests/<category>/<case>/origin.usfm -> <category>__<case>.usfm
-  relative=${origin#"$TCDOCS/tests/"}
-  relative=${relative%/origin.usfm}
-  name=${relative//\//__}.usfm
 
+# stage <source file> <seed name>
+stage() {
+  local origin=$1 name=$2 staged
   staged=$(mktemp)
   if [[ $(wc -c <"$origin") -gt $MAX_LEN ]]; then
     head -c "$MAX_LEN" "$origin" | head -n -1 >"$staged"
@@ -62,11 +64,37 @@ while IFS= read -r -d '' origin; do
     destination="corpus/$target/$name"
     if ! cmp -s "$staged" "$destination"; then
       cp "$staged" "$destination"
+      # `mktemp` makes the staging file 0600; a corpus file is ordinary data.
+      chmod 644 "$destination"
       written=$((written + 1))
     fi
   done
   rm -f "$staged"
+}
+
+while IFS= read -r -d '' origin; do
+  # tcdocs/tests/<category>/<case>/origin.usfm -> <category>__<case>.usfm
+  relative=${origin#"$TCDOCS/tests/"}
+  relative=${relative%/origin.usfm}
+  stage "$origin" "${relative//\//__}.usfm"
 done < <(find "$TCDOCS/tests" -name origin.usfm -print0 | sort -z)
+
+# fixtures/usfm-grammar/bugfixes/<case>/origin.usfm
+#     -> usfm-grammar__bugfixes__<case>.usfm
+while IFS= read -r -d '' origin; do
+  relative=${origin#"$FIXTURES/"}
+  relative=${relative%/origin.usfm}
+  stage "$origin" "usfm-grammar__${relative//\//__}.usfm"
+done < <(find "$FIXTURES/bugfixes" -name origin.usfm -print0 | sort -z)
+
+# fixtures/usfm-grammar/autofix/<name>.{usfm,txt}
+#     -> usfm-grammar__autofix__<name>.usfm
+# The one `.txt` there is USFM too (it opens with `\id TIT`); only the
+# extension differs, and the seed carries `.usfm` like every other.
+while IFS= read -r -d '' origin; do
+  name=$(basename "$origin")
+  stage "$origin" "usfm-grammar__autofix__${name%.*}.usfm"
+done < <(find "$FIXTURES/autofix" -type f \( -name '*.usfm' -o -name '*.txt' \) -print0 | sort -z)
 
 pruned=0
 if [[ $prune == true ]]; then

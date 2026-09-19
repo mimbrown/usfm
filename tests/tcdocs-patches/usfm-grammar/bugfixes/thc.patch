@@ -1,0 +1,18 @@
+Accepted deviation: verse-end placement in a table.
+
+The same difference as `usfm-grammar/bugfixes/tcc.patch`: usfm-grammar ends
+the verse after the last `<cell>`, tcdocs and this parser end it inside the
+cell, at the last content position.
+
+--- origin.xml
++++ origin.xml
+@@ -45,8 +45,7 @@
+     <row style="tr">
+       <cell style="tcc1" align="center">5th </cell>
+       <cell style="tc2" align="start">Simeon </cell>
+-      <cell style="tcr3" align="end">Shelumiel son of Zurishaddai</cell>
+-      <verse eid="MAT 136:12-83"/>
++      <cell style="tcr3" align="end">Shelumiel son of Zurishaddai<verse eid="MAT 136:12-83"/></cell>
+     </row>
+   </table>
+   <chapter eid="MAT 136"/>

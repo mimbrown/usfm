@@ -1,0 +1,26 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\ipc (50.24)\n\\c 1\n\\p \\v 1 \\ta color|a-uk=\"colour\"\\ta* and \\wl tăiat|lang=\"ro\"\\wl*\\ex + \\xo 1:1 \\xo* \\xt Matt 1:1\\xt* \\xta and\\xta*\\ex*"
+---
+Book GEN "" @0..7
+Para ipc@8..21
+  Text "(50.24)"@13..21
+ChapterStart 1@21..25
+Para p@26..143
+  VerseStart 1@29..33
+  Char ta@34..61 a-uk="colour"
+    Text "color"@38..43
+  Text " and "@61..66
+  Char wl@66..90 lang="ro"
+    Text "tăiat"@70..76
+  Note ex caller=+@90..143
+    Char xo@96..108
+      Text "1:1 "@100..104
+    Text " "@108..109
+    Char xt@109..125
+      Text "Matt 1:1"@113..121
+    Text " "@125..126
+    Char xta@126..139
+      Text "and"@131..134
+  VerseEnd 1
+ChapterEnd 1

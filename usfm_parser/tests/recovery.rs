@@ -404,12 +404,32 @@ fn missing_book_code() {
     check(Code::MissingBookCode, "\\id\n\\c 1\n\\p \\v 1 a");
 }
 
+/// A code that is not a book code at all: `book@code` in `usx.rnc` is the
+/// list of books *or* `[A-Z][A-Z0-9]{2}|[0-9][A-Z][0-9]|[0-9]{2}[A-Z]`, and a
+/// seven-letter word matches neither. The `\id` line is dropped, which is why
+/// `missing-id` follows.
 #[test]
 fn unknown_book_code() {
     check(
         Code::UnknownBookCode,
-        "\\id ZZZ Some book\n\\c 1\n\\p \\v 1 a",
+        "\\id GENESIS Some book\n\\c 1\n\\p \\v 1 a",
     );
+}
+
+/// A code that *is* well formed but is not one of the books `BookCode` names.
+/// USX accepts it, so nothing is dropped: the book is kept as
+/// `BookCode::Other` and `\id ZZZ` reaches the output as written. Reported at
+/// Warning because a typo in a real code has exactly this shape.
+#[test]
+fn unlisted_book_code() {
+    let source = "\\id ZZZ Some book\n\\c 1\n\\p \\v 1 a";
+    assert_eq!(common::codes(source), vec![Code::UnlistedBookCode]);
+    assert!(
+        common::render(source).contains("Book ZZZ"),
+        "the book is kept: {}",
+        common::render(source)
+    );
+    check(Code::UnlistedBookCode, source);
 }
 
 #[test]
@@ -747,6 +767,150 @@ fn newline_in_attributes() {
         Code::NewlineInAttributes,
         "\\id GEN\n\\c 1\n\\p \\v 1 \\w a|lemma=\"x\"\nstrong=\"H1\"\\w* b",
     );
+}
+
+/// The markers Paratext's `usfm.sty` predates and the one entry it gets wrong,
+/// supplied by `usfm_parser/usfm-extra.sty`: `\ipc`, `\ta` and `\wl` are in
+/// `usx.rnc`'s paragraph and character enums, and `\xta` occurs under `\ex` as
+/// well as `\x` (`CrossReferenceChar` under `CrossReference.style.enum`, which
+/// usfm.sty already reflects on `\xo` and `\xt`). All of it parses silently.
+///
+/// One consequence the supplement does not undo: no character style's
+/// `\OccursUnder` in usfm.sty mentions `\ipc`, since the sheet predates it, so
+/// `\bd` inside an `\ipc` is `marker-not-listed-here` (Info, and those lists
+/// are advisory anyway).
+#[test]
+fn markers_supplied_by_the_stylesheet_supplement() {
+    let source = "\\id GEN\n\\ipc (50.24)\n\\c 1\n\\p \\v 1 \\ta color|a-uk=\"colour\"\\ta* and \\wl tăiat|lang=\"ro\"\\wl*\\ex + \\xo 1:1 \\xo* \\xt Matt 1:1\\xt* \\xta and\\xta*\\ex*";
+    assert_eq!(common::codes(source), Vec::<Code>::new());
+    snapshot("markers_supplied_by_the_stylesheet_supplement", source);
+}
+
+// The twelve inputs in `tests/fixtures/usfm-grammar/autofix/`, one test each,
+// named after the file. Upstream repairs each of them before parsing; here
+// each one is a recovery shape, and the test says which `Code` we report, or
+// snapshots the tree for the shapes that are ordinary USFM and report nothing.
+// `wrong_book_code.usfm` is `\id` on a line of its own, which is exactly the
+// input of `missing_book_code` above, so it has no test of its own.
+
+/// `c_without_p.usfm`: a book with no `\p` at all. Every verse opens an
+/// implicit paragraph, including the one after the `\c 3 \ca 4 \ca*` /
+/// `\cp Three` pair, which is the shape the other two variants miss.
+#[test]
+fn content_outside_paragraph_c_without_p() {
+    check_variant(
+        Code::ContentOutsideParagraph,
+        "c_without_p",
+        "\\id GEN genesis Some desc\n\\c 1\n\\v 1 test verse\n\\s5\nsome more text\n\\v 2 more verse\n\\c 2\n\\v 1 next chapter\t\n\\c 3 \\ca 4 \\ca*\n\\cp Three\n\\v 1 text",
+    );
+}
+
+/// `space_in_chapter_number.usfm`: `\c 2 3` is chapter 2 followed by a stray
+/// `3`, which opens an implicit paragraph. `\v 3 4 text of 34` is verse 3 with
+/// the rest as its text, since a verse number stops at the first space.
+#[test]
+fn content_outside_paragraph_space_in_chapter_number() {
+    check_variant(
+        Code::ContentOutsideParagraph,
+        "space_in_chapter_number",
+        "\\id GEN genesis Some desc\n\\c 1\n\\p\n\\v 1 test verse\n\\s3 test\n\\p\n\\v 2 more verse \n\\c 2 3\n\\p\n\\v 1 text\n\\v 2 more text\n\\v 3 4 text of 34\n\\p\n\\v 35 rest",
+    );
+}
+
+/// `no_space_before_chapternumber.usfm`: `\v1` and `\c2` are markers in their
+/// own right, and unknown ones, rather than `\v`/`\c` with a number.
+#[test]
+fn unknown_marker_no_space_before_chapternumber() {
+    check_variant(
+        Code::UnknownMarker,
+        "no_space_before_chapternumber",
+        "\\id GEN genesis Some desc\n\\c 1\n\\p\n\\v1 test verse\n\\s3 test\n\\v 2 more verse\n\\c2\n\\p\n\\v 1 next chapter\n\\v2 error text",
+    );
+}
+
+/// `no_space_before_versenumber.usfm`: the same file with a well-formed
+/// `\c 2`, so only the two `\v1`/`\v2` markers are unknown.
+#[test]
+fn unknown_marker_no_space_before_versenumber() {
+    check_variant(
+        Code::UnknownMarker,
+        "no_space_before_versenumber",
+        "\\id GEN genesis Some desc\n\\c 1\n\\p\n\\v1 test verse\n\\s3 test\n\\v 2 more verse\n\\c 2\n\\p\n\\v 1 next chapter\n\\v2 error text",
+    );
+}
+
+/// `s3_without_p.usfm`: `\v 2` on the line after `\s3 test`, with no `\p`
+/// between them, so the verse starts inside the heading.
+#[test]
+fn verse_in_heading_s3_without_p() {
+    check_variant(
+        Code::VerseInHeading,
+        "s3_without_p",
+        "\\id GEN genesis Some desc\n\\c 1\n\\p\n\\v 1 test verse\n\\s3 test\n\\v 2 more verse\n\\c 2\n\\p\n\\v 1 next chapter\n",
+    );
+}
+
+/// `slash_in_text.usfm`: a lone `\` in running text, and `\slash` written
+/// without a space after the backslash, which is an unknown marker.
+#[test]
+fn stray_backslash_slash_in_text() {
+    check_variant(
+        Code::StrayBackslash,
+        "slash_in_text",
+        "\\id GEN genesis Some desc\n\\c 1\n\\p\n\\v 1 test verse\n\\s3 test\n\\p\n\\v 2 more verse and \\ a slash\n\\c 2\n\\p\n\\v 1 text and \\slash without space\n\\v 2 more text",
+    );
+}
+
+/// `wrong_book_code2.usfm`: `\id genesis Some desc`, a book name where the
+/// three-letter code belongs.
+#[test]
+fn unknown_book_code_wrong_book_code2() {
+    check_variant(
+        Code::UnknownBookCode,
+        "wrong_book_code2",
+        "\\id genesis Some desc\n\\c 1\n\\p\n\\v 1 test verse",
+    );
+}
+
+/// `b_without_p.usfm`: text on the line after `\b`, with no `\p` to open a
+/// paragraph for it. Upstream inserts one; we keep the text in the `\b`
+/// paragraph and report nothing, because `b` is a member of
+/// `VersePara.para.style.enum` in tcdocs' `usx.rnc` and `VersePara` admits
+/// text, so `<para style="b">text</para>` is a shape USX allows.
+#[test]
+fn autofix_b_without_p() {
+    let source = "\\id GEN genesis Some desc\n\\c 1\n\\p\n\\v 1 test verse\n\\s some poem\n\\q1\nfirst line\n\\b\n\\q1\n\\v 2 more lines\n\\b\nremaining verses\n\\v 3 text follows\n\\c 2\n\\p\n\\v 1 test verse\n\\s some poem\n\\q1\nfirst line\n\\b\n\\q1\n\\v 2 more lines\n\\b\n\\v 3 verse follows";
+    assert_eq!(common::codes(source), Vec::<Code>::new());
+    snapshot("autofix_b_without_p", source);
+}
+
+/// `s5_without_p.usfm`: text on the line after `\s5`. A marker's content runs
+/// to the next marker, so the text is the heading's, which is ordinary USFM
+/// however the author meant it.
+#[test]
+fn autofix_s5_without_p() {
+    let source = "\\id GEN genesis Some desc\n\\c 1\n\\p\n\\v 1 test verse\n\\s5\nsome more text\n\\v 2 more verse\n\\c 2\n\\p\n\\v 1 next chapter\n";
+    assert_eq!(common::codes(source), Vec::<Code>::new());
+    snapshot("autofix_s5_without_p", source);
+}
+
+/// `s5_1.usfm`: `\s5` with nothing on its line and a `\p` after it. An empty
+/// paragraph is ordinary USFM.
+#[test]
+fn autofix_s5_1() {
+    let source =
+        "\\id GEN genesis Some desc\n\\c 1\n\\p\n\\v 1 test verse\n\\s5\n\\p\nsome more text";
+    assert_eq!(common::codes(source), Vec::<Code>::new());
+    snapshot("autofix_s5_1", source);
+}
+
+/// `empty_marker.usfm`: `\sp` with no content between two paragraphs. Also an
+/// empty paragraph, and also nothing to report.
+#[test]
+fn autofix_empty_marker() {
+    let source = "\\id GEN genesis Some desc\n\\c 1\n\\p\n\\v 1 test verse\n\\s3 test\n\\sp\n\\p\n\\v 2 more verse \n\\c 2\n\\p\n\\v 1 text and \n\\v 2 more text";
+    assert_eq!(common::codes(source), Vec::<Code>::new());
+    snapshot("autofix_empty_marker", source);
 }
 
 /// Every code in the recovery table has a snapshot produced by a test in

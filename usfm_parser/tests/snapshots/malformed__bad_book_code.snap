@@ -1,13 +1,13 @@
 ---
 source: usfm_parser/tests/snapshot.rs
-description: "\\id ZZZ bad code\n\\c 1\n\\p \\v 1 x\n"
+description: "\\id GENESIS bad code\n\\c 1\n\\p \\v 1 x\n"
 ---
-ChapterStart 1@17..21
-Para p@22..32
-  VerseStart 1@25..29
-  Text "x"@30..32
+ChapterStart 1@21..25
+Para p@26..36
+  VerseStart 1@29..33
+  Text "x"@34..36
   VerseEnd 1
 ChapterEnd 1
 --- diagnostics
 error[missing-id] @0..0: document must start with `\id`
-error[unknown-book-code] @4..7: `ZZZ` is not a known book code
+error[unknown-book-code] @4..11: `GENESIS` is not a book code

@@ -350,6 +350,12 @@ The breaking change. Do it in one branch so downstream code is updated once.
 Exit criteria: no code path in the parser returns early on bad input; every tcdocs
 `fail` case produces an error diagnostic; pass rate does not drop.
 
+Conformance sources (2026-09-19): tcdocs is joined by a second harness root,
+`tests/fixtures/usfm-grammar/bugfixes` (category `usfm-grammar/bugfixes`, 16
+regression cases vendored from Bridgeconn/usfm-grammar, MIT), gated by the same
+`tests/tcdocs-baseline.txt`; its `autofix` inputs are recovery tests in
+`usfm_parser/tests/recovery.rs` and both sets are fuzz seeds.
+
 ### Phase 2. Parser correctness on the conformance suite
 
 With recovery in place, the remaining 60 failures become tractable. From the failure
@@ -463,6 +469,7 @@ over the Phase 0 leftovers and the cross-cutting fuzzing, Miri and benchmark ite
       panic, the span invariants and that the USX output is well-formed XML.
       Done 2026-09-19 by `.scratch/oxc-layout/issues/06-fuzz-target.md`:
       `tasks/fuzz` holds `parse_lossy` and `parse_utf8`, seeded from tcdocs and
+      (since 2026-09-19) the vendored usfm-grammar fixtures, and
       sharing `usfm_parser::span_check` with `tests/spans.rs`; see
       `tasks/fuzz/README.md` for the runs and the five findings they produced
       (two span-invariant wordings, control characters, duplicate attributes
