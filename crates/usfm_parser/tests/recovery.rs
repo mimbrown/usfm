@@ -9,7 +9,7 @@
 
 mod common;
 
-use usfm_parser::diagnostics::Code;
+use usfm_parser::diagnostics::{Code, Severity};
 
 /// Snapshot named `recovery__<code>`.
 fn check(code: Code, source: &str) {
@@ -471,6 +471,26 @@ fn empty_attribute_list() {
     check(
         Code::EmptyAttributeList,
         "\\id GEN\n\\c 1\n\\p \\v 1 \\w word| \\w*",
+    );
+}
+
+/// The same shape on a milestone. All 24 `\ts-s` markers in
+/// `tasks/conformance/fixtures/usfm-grammar/autofix/fr-textTranslation-FR_TLX.txt`
+/// are written `\ts-s |\*`, which is how unfoldingWord's aligned texts write
+/// a translation section. A milestone carries nothing but its attributes, so
+/// the empty list loses nothing and the file must not fail `--strict`.
+#[test]
+fn empty_milestone_attribute_list() {
+    let source = "\\id GEN\n\\c 1\n\\p \\v 1 a \\ts-s |\\* b";
+    check(Code::EmptyMilestoneAttributeList, source);
+    let errors: Vec<&str> = common::codes(source)
+        .iter()
+        .filter(|code| code.severity() == Severity::Error)
+        .map(|code| code.as_str())
+        .collect();
+    assert!(
+        errors.is_empty(),
+        "`\\ts-s |\\*` should report nothing at error severity, got {errors:?}"
     );
 }
 

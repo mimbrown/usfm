@@ -1,0 +1,15 @@
+---
+source: crates/usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 a \\ts-s |\\* b"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..34
+  VerseStart 1@16..20
+  Text "a "@21..23
+  Milestone ts-s@23..32
+  Text " b"@32..34
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+warning[empty-milestone-attribute-list] @29..30: `|` is not followed by any attribute

@@ -135,3 +135,20 @@ fn default_attribute_names_follow_the_schema() {
         "{output}"
     );
 }
+
+/// A milestone written with a pipe and no attributes (`\ts-s |\*`, how
+/// unfoldingWord's aligned texts write a translation section) is the same
+/// milestone as `\ts-s\*`: the empty list adds nothing to write, so the two
+/// sources give byte-identical USX. The parser reports
+/// `empty-milestone-attribute-list` on the first, at warning severity.
+#[test]
+fn an_empty_attribute_list_on_a_milestone_writes_the_same_usx() {
+    let with_pipe = usx("\\id GEN\n\\c 1\n\\p \\v 1 a \\ts-s |\\* b");
+    let without_pipe = usx("\\id GEN\n\\c 1\n\\p \\v 1 a \\ts-s\\* b");
+    assert!(
+        with_pipe.contains(r#"<ms style="ts-s" />"#),
+        "{with_pipe}"
+    );
+    assert_eq!(with_pipe, without_pipe);
+    XmlDocument::from(with_pipe.as_bytes()).expect("well-formed XML");
+}
