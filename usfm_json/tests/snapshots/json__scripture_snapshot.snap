@@ -1,0 +1,217 @@
+---
+source: usfm_json/tests/json.rs
+expression: json(SCRIPTURE)
+---
+{
+  "children": [
+    {
+      "code": "GEN",
+      "description": "Genesis",
+      "span": [
+        0,
+        15
+      ],
+      "type": "book"
+    },
+    {
+      "children": [
+        {
+          "content": "3.1",
+          "span": [
+            22,
+            26
+          ],
+          "type": "text"
+        }
+      ],
+      "span": [
+        16,
+        26
+      ],
+      "style": "usfm",
+      "type": "para"
+    },
+    {
+      "number": "1",
+      "pub_number": "A",
+      "span": [
+        26,
+        36
+      ],
+      "type": "chapter_start"
+    },
+    {
+      "children": [
+        {
+          "number": "1",
+          "pub_number": "1a",
+          "span": [
+            40,
+            55
+          ],
+          "type": "verse_start"
+        },
+        {
+          "content": "In the beginning ",
+          "span": [
+            56,
+            73
+          ],
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "content": "God",
+              "span": [
+                77,
+                80
+              ],
+              "type": "text"
+            }
+          ],
+          "span": [
+            73,
+            84
+          ],
+          "style": "nd",
+          "type": "char"
+        },
+        {
+          "content": " ",
+          "span": [
+            84,
+            85
+          ],
+          "type": "text"
+        },
+        {
+          "attributes": [
+            {
+              "name": "lemma",
+              "value": "create"
+            },
+            {
+              "name": "strong",
+              "value": "H1254"
+            }
+          ],
+          "children": [
+            {
+              "content": "created",
+              "span": [
+                88,
+                95
+              ],
+              "type": "text"
+            }
+          ],
+          "span": [
+            85,
+            128
+          ],
+          "style": "w",
+          "type": "char"
+        },
+        {
+          "content": " the heavens",
+          "span": [
+            128,
+            140
+          ],
+          "type": "text"
+        },
+        {
+          "span": [
+            140,
+            142
+          ],
+          "type": "opt_break"
+        },
+        {
+          "content": "and the earth.",
+          "span": [
+            142,
+            156
+          ],
+          "type": "text"
+        },
+        {
+          "caller": "+",
+          "children": [
+            {
+              "children": [
+                {
+                  "content": "1.1 ",
+                  "span": [
+                    165,
+                    169
+                  ],
+                  "type": "text"
+                }
+              ],
+              "span": [
+                161,
+                169
+              ],
+              "style": "fr",
+              "type": "char"
+            },
+            {
+              "children": [
+                {
+                  "content": "Or: a note.",
+                  "span": [
+                    173,
+                    184
+                  ],
+                  "type": "text"
+                }
+              ],
+              "span": [
+                169,
+                187
+              ],
+              "style": "ft",
+              "type": "char"
+            }
+          ],
+          "span": [
+            156,
+            187
+          ],
+          "style": "f",
+          "type": "note"
+        },
+        {
+          "number": "1",
+          "span": [
+            0,
+            0
+          ],
+          "type": "verse_end"
+        }
+      ],
+      "span": [
+        37,
+        188
+      ],
+      "style": "p",
+      "type": "para"
+    },
+    {
+      "number": "1",
+      "span": [
+        0,
+        0
+      ],
+      "type": "chapter_end"
+    }
+  ],
+  "span": [
+    0,
+    188
+  ],
+  "type": "document",
+  "usfm_version": "3.1"
+}

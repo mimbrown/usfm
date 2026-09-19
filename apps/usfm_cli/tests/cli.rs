@@ -105,6 +105,26 @@ fn usx_output_is_the_library_output() {
     }
 }
 
+/// `parse --format json` writes the AST as one line of JSON (ticket 16). The
+/// shape is `usfm_json`'s and is snapshotted there; what this checks is that
+/// the arm is wired up and that nothing is printed around the object.
+#[test]
+fn json_output_is_one_object() {
+    let path = input("json.usfm", "\\id GEN\n\\c 1\n\\p \\v 1 verse one\n");
+    let output = usfm([
+        "parse".as_ref(),
+        "--format".as_ref(),
+        "json".as_ref(),
+        path.as_os_str(),
+    ]);
+    assert!(output.status.success(), "{}", stderr(&output));
+
+    let json = stdout(&output);
+    assert!(json.starts_with('{'), "{json}");
+    assert!(json.contains(r#""type":"document""#), "{json}");
+    assert_eq!(json.lines().count(), 1, "{json}");
+}
+
 /// An error diagnostic is reported either way; only `--strict` makes it fatal.
 /// A document without `\id` is `missing-id`, which is an error.
 #[test]

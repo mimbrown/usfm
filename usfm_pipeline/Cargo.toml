@@ -15,6 +15,9 @@ license = "MIT"
 usfm_ast = { path = "../usfm_ast" }
 # HTML output, and `write_escaped` for the diglot serializer's own writes.
 usfm_html = { path = "../usfm_html" }
+# JSON output: the AST as it is, for the language server and other consumers
+# (ticket 16).
+usfm_json = { path = "../usfm_json" }
 # `StyleSheet`/`StyleRule`, to ask whether a marker is vernacular.
 usfm_style = { path = "../usfm_style" }
 # USX output, which the SILE output is a renamed root of.

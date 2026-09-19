@@ -11,14 +11,15 @@ use usfm_style::StyleSheet;
 use crate::diglot::{serialize_html_diglot, weave_prompt};
 use crate::sile::to_sile_string;
 
-/// What the pipeline writes. `usfm_cli`'s `--format` is this list; ticket 16
-/// adds `Json`.
+/// What the pipeline writes. `usfm_cli`'s `--format` is this list.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum OutputFormat {
     /// USX, the XML serialisation of the AST.
     Usx,
     /// HTML.
     Html,
+    /// The AST as JSON, one object per node (ticket 16).
+    Json,
     /// SILE's flavour of USX.
     Sile,
     /// Two translations woven section by section, for a language model.
@@ -41,6 +42,7 @@ impl OutputFormat {
         match self {
             OutputFormat::Usx => "usx",
             OutputFormat::Html => "html",
+            OutputFormat::Json => "json",
             OutputFormat::Sile => "sile",
             OutputFormat::Prompt => "prompt",
         }
@@ -92,6 +94,13 @@ pub fn render(
     match format {
         OutputFormat::Usx => Ok(usfm_usx::to_usx_string(document)),
         OutputFormat::Html => Ok(usfm_html::to_html_string(document, style_sheet)),
+        OutputFormat::Json => {
+            // The compact form, which is what a pipe wants, with the trailing
+            // newline every other format here ends with.
+            let mut json = usfm_json::to_json_string(document);
+            json.push('\n');
+            Ok(json)
+        }
         OutputFormat::Sile => Ok(to_sile_string(document)),
         OutputFormat::Prompt => Err(RenderError::NeedsDiglot(OutputFormat::Prompt)),
     }
@@ -118,7 +127,9 @@ pub fn render_diglot(
             right,
             right_style_sheet,
         )),
-        OutputFormat::Usx | OutputFormat::Sile => Err(RenderError::NoDiglotForm(format)),
+        OutputFormat::Usx | OutputFormat::Json | OutputFormat::Sile => {
+            Err(RenderError::NoDiglotForm(format))
+        }
     }
 }
 
@@ -139,6 +150,10 @@ mod tests {
         assert!(html.contains("<p class=\"p\">"), "{html}");
         let sile = render(&document, &style_sheet, OutputFormat::Sile).unwrap();
         assert!(sile.starts_with("<sile>"), "{sile}");
+        let json = render(&document, &style_sheet, OutputFormat::Json).unwrap();
+        assert!(json.starts_with('{'), "{json}");
+        assert!(json.ends_with("}\n"), "{json}");
+        assert!(json.contains(r#""type":"document""#), "{json}");
     }
 
     /// The combinations that used to be `todo!()` and `unimplemented!()` are
@@ -158,7 +173,7 @@ mod tests {
                 .to_string()
                 .contains("--diglot")
         );
-        for format in [OutputFormat::Usx, OutputFormat::Sile] {
+        for format in [OutputFormat::Usx, OutputFormat::Json, OutputFormat::Sile] {
             assert_eq!(
                 render_diglot(&document, &style_sheet, &other, &other_sheet, format),
                 Err(RenderError::NoDiglotForm(format))
@@ -174,6 +189,7 @@ mod tests {
         for format in [
             OutputFormat::Usx,
             OutputFormat::Html,
+            OutputFormat::Json,
             OutputFormat::Sile,
             OutputFormat::Prompt,
         ] {
