@@ -52,11 +52,9 @@ use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 use usfm_parser::DEFAULT_STYLESHEET;
-use usfm_parser::context::Context;
 use usfm_parser::diagnostics::Diagnostic;
 use usfm_parser::parser::Parser;
-use usfm_parser::usx::ToUsx;
-use usfm_parser::xml_document::{XmlDocument, XmlElement, XmlNode};
+use usfm_usx::{UsxOptions, XmlDocument, XmlElement, XmlNode, to_usx_node_with_options};
 use xml::reader::{EventReader, XmlEvent};
 
 /// Root path to the tcdocs test suite
@@ -305,11 +303,10 @@ impl TestCase {
         let usfm = self.read_usfm()?;
         let result =
             Parser::new(&usfm).parse_with_options(&DEFAULT_STYLESHEET, insert_end_milestones);
-        // Serialize against the document's own stylesheet, which is the base
-        // sheet plus anything the parser derived (hardening plan D3).
-        let mut context = Context::new(result.document.style_sheet());
-        context.include_vid = include_vid;
-        let usx = result.document.to_usx(&mut context);
+        // The serializer resolves styles against the document's own
+        // stylesheet, which is the base sheet plus anything the parser derived
+        // (hardening plan D3); `include_vid` is the one thing a caller varies.
+        let usx = to_usx_node_with_options(&result.document, UsxOptions { include_vid });
         Ok((usx, result.diagnostics))
     }
 

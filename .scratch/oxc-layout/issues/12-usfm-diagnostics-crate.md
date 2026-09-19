@@ -30,7 +30,7 @@ diagnostic type except through the re-export.
 
 ## Answer
 
-Landed via PR #15 (2026-09-19). `usfm_diagnostics` (depends on `usfm_span`
+Landed in `fe63ec3` (PR #15, 2026-09-19). `usfm_diagnostics` (depends on `usfm_span`
 and `usfm_ast`) holds the moved `diagnostics.rs` with its recovery table;
 `usfm_parser::diagnostics` re-exports it so no caller changed. New:
 `Code::parse`/`FromStr` as the inverse of `as_str`, tests that every name is
