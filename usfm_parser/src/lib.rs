@@ -90,7 +90,13 @@ mod parser_parse {
         }
     }
 }
+#[cfg(not(feature = "benchmarking"))]
 use parser_parse::UniquePromise;
+// Re-exported under `benchmarking` only, so `tasks/benchmark` can name the type
+// `Lexer::new` needs and construct a `Lexer`. The default build keeps the
+// private `use` above and exposes nothing.
+#[cfg(feature = "benchmarking")]
+pub use parser_parse::UniquePromise;
 
 /// Maximum length of source which can be parsed (in bytes).
 /// ~4 GiB on 64-bit systems, ~2 GiB on 32-bit systems.
