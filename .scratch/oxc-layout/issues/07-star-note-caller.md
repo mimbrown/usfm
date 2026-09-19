@@ -1,6 +1,6 @@
 # 07. A `*` note caller is lexed as a closing star
 
-Status: ready-for-agent
+Status: resolved
 Milestone: M2
 Blocked by: 03
 
@@ -23,3 +23,12 @@ fails. A `*` that does not follow a marker name cannot be a closing marker.
   diagnostic table: the corpus should then parse with zero errors.
 
 Done when the corpus reports zero error diagnostics and the gate is green.
+
+## Answer
+
+Landed via PR #11 (2026-09-19). `ParserImpl::eat_note_caller` accepts a
+`Kind::Star` as the caller (and a word glued to it, so `*abc` reads like
+`+abc`); the lexer is unchanged. Tests: `recovery.rs::star_note_caller`,
+`star_note_caller_with_trailing_word`, `usx_text.rs::star_note_caller_is_written`;
+`missing_note_caller` still fails for a genuinely missing caller. The corpus
+now parses with zero diagnostics over `web/` (README updated).

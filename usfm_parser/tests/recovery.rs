@@ -321,6 +321,30 @@ fn missing_note_caller() {
     );
 }
 
+/// USFM 3 allows any custom caller character, `*` included. The lexer reads a
+/// bare `*` as a star because everywhere else one closes a marker, so the
+/// parser takes it as the caller itself: this is ordinary USFM, not a
+/// recovery, and reports nothing.
+#[test]
+fn star_note_caller() {
+    let source = "\\id GEN\n\\c 1\n\\p \\v 1 text\\f * \\ft note\\f* more";
+    assert_eq!(
+        common::codes(source),
+        Vec::<Code>::new(),
+        "`*` is a legitimate custom caller"
+    );
+    snapshot("star_note_caller", source);
+}
+
+/// A caller runs to the next space, so a word written straight after the `*`
+/// is part of it — the way `+abc` already is.
+#[test]
+fn star_note_caller_with_trailing_word() {
+    let source = "\\id GEN\n\\c 1\n\\p \\v 1 text\\f *abc \\ft note\\f* more";
+    assert_eq!(common::codes(source), Vec::<Code>::new());
+    snapshot("star_note_caller_with_trailing_word", source);
+}
+
 #[test]
 fn missing_verse_number() {
     check(
