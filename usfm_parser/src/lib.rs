@@ -21,38 +21,7 @@ pub mod diagnostics {
 pub mod parser;
 pub use diagnostics::{Code, Diagnostic, ParseResult, Severity};
 
-/// The state an HTML serializer carries, which lives in
-/// [`usfm_html`].
-///
-/// Re-exported under the name the module had when it was
-/// `usfm_parser/src/context.rs`, so `usfm_parser::context::Context` keeps
-/// resolving (ticket 14). Ticket 17 deletes this re-export along with the
-/// parser's binary; new code should name [`usfm_html`] directly.
-pub mod context {
-    pub use usfm_html::context::*;
-}
-
 pub mod lexer;
-
-/// The generic serializer trait an output format other than HTML would be
-/// written against, which lives in [`usfm_html`].
-///
-/// Re-exported under the name the module had when it was
-/// `usfm_parser/src/serialize.rs`; ticket 17 deletes it, as for [`context`].
-pub mod serialize {
-    pub use usfm_html::serialize::*;
-}
-
-/// HTML output, which lives in [`usfm_html`].
-///
-/// Re-exported under the name the module had when it was
-/// `usfm_parser/src/serialize_html.rs`; ticket 17 deletes it, as for
-/// [`context`].
-pub mod serialize_html {
-    pub use usfm_html::serialize_html::*;
-}
-
-pub use serialize_html::{SerializeHtml, ToHtml, serialize_html, to_html_string};
 
 // The span invariants, shared by `tests/spans.rs` and `tasks/fuzz` so the two
 // cannot drift apart. Behind a feature, so the default build is unchanged.
@@ -60,28 +29,8 @@ pub use serialize_html::{SerializeHtml, ToHtml, serialize_html, to_html_string};
 pub mod span_check;
 
 pub mod style;
-pub mod text_replacements;
-
-/// USX output, which lives in [`usfm_usx`].
-///
-/// Re-exported under the name the module had when it was
-/// `usfm_parser/src/usx.rs`, so `usfm_parser::usx::to_usx_string` and the
-/// CLI's own paths keep resolving (ticket 13). Ticket 17 deletes this
-/// re-export along with the parser's binary; new code should name
-/// [`usfm_usx`] directly.
-pub mod usx {
-    pub use usfm_usx::usx::*;
-}
 
 pub use usfm_ast::{fold, visit, visit_mut};
-
-/// The XML tree and its writer, which live in [`usfm_usx`].
-///
-/// Re-exported under the name the module had when it was
-/// `usfm_parser/src/xml_document.rs`; ticket 17 deletes it, as for [`usx`].
-pub mod xml_document {
-    pub use usfm_usx::xml_document::*;
-}
 
 mod parser_parse {
     use std::sync::Arc;
@@ -180,10 +129,8 @@ pub(crate) const MAX_LEN: usize = if std::mem::size_of::<usize>() >= 8 {
 mod tests {
     use std::borrow::Cow;
 
-    use crate::{
-        ast::*, generated::DEFAULT_STYLESHEET, lexer::span::Span, parser::Parser,
-        usx::to_usx_string,
-    };
+    use crate::{ast::*, generated::DEFAULT_STYLESHEET, lexer::span::Span, parser::Parser};
+    use usfm_usx::to_usx_string;
 
     /// The `StyleId` of a marker in the default stylesheet.
     fn style_of(marker: &str) -> StyleId {

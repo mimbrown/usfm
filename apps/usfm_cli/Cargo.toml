@@ -1,0 +1,35 @@
+[package]
+name = "usfm_cli"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+# The binary that used to be `usfm_parser/src/main.rs` (ticket 15). It is the
+# only crate in the workspace that reads arguments, touches the filesystem or
+# watches it; everything it does to a document is a call into `usfm_pipeline`.
+[[bin]]
+name = "usfm"
+path = "src/main.rs"
+
+[dependencies]
+clap = { workspace = true }
+# Watch mode. The dependency moved here with the binary; `usfm_parser` no
+# longer has it.
+notify = { workspace = true }
+# `Document`, the type the driver hands to the pipeline.
+usfm_ast = { path = "../../usfm_ast" }
+# `Diagnostic::render` / `to_json_line` for `--diagnostics`, and
+# `ParseResult::strict_with` for `--strict` / `--deny-warnings`.
+usfm_diagnostics = { path = "../../usfm_diagnostics" }
+usfm_parser = { path = "../../usfm_parser" }
+usfm_pipeline = { path = "../../usfm_pipeline" }
+# `LineIndex`, which turns a diagnostic's byte span into a line and column.
+usfm_span = { path = "../../usfm_span" }
+# A `--stylesheet` file, and the sheet a document carries.
+usfm_style = { path = "../../usfm_style" }
+
+[dev-dependencies]
+# `tests/cli.rs` runs the binary and compares its USX against the same parse
+# made in process, so it needs both halves of that pipeline.
+usfm_parser = { path = "../../usfm_parser" }
+usfm_usx = { path = "../../usfm_usx" }

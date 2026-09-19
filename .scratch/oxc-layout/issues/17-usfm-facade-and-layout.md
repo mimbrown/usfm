@@ -19,11 +19,10 @@ ADR.
   only; then fix paths in `Cargo.toml` files, `.github/workflows/ci.yml`,
   `scripts/*.sh`, `CLAUDE.md`, `docs/plans/hardening.md`, `docs/benchmarks.md`,
   `tasks/benchmark/corpus/README.md`, `NOTICE.md`, `tasks/fuzz`.
-- Remove the one-milestone re-exports left in `usfm_parser` by tickets 12–14
-  (`usfm_parser::usx`, `::xml_document`, `::serialize_html`, `::serialize`,
-  `::context`), and drop the parser's `xml-rs` and `notify` dependencies if
-  nothing in it uses them. `usfm_parser` then depends only on span, style,
-  ast and diagnostics (M3 exit).
+- Already done by ticket 15: the re-exports left in `usfm_parser` by tickets
+  13–14 are gone and `usfm_parser` depends only on `usfm_ast`,
+  `usfm_diagnostics` and `usfm_style` (span through ast). Re-check after the
+  move and record it as the M3 exit.
 - M3 exit check, recorded in the spec: `usfm_parser` has no binary and the
   dependency list above; `main.rs` logic has tests (ticket 15); benchmarks
   within 3% of M2's "After ticket 05" numbers, all five groups, three runs,

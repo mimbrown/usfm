@@ -4,8 +4,8 @@ use std::borrow::Cow;
 use std::sync::{Arc, LazyLock};
 use usfm_style::{StyleRule, StyleSheet};
 
-use crate::ast::visit_mut::{VisitMut, walk_char, walk_document, walk_note, walk_para};
-use crate::ast::{Char, Document, Note, Para, StyleId, Text};
+use usfm_ast::visit_mut::{VisitMut, walk_char, walk_document, walk_note, walk_para};
+use usfm_ast::{Char, Document, Note, Para, StyleId, Text};
 
 static MATCH_UNICODE: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r"\\u([0-9a-fA-F]{4})").unwrap());
@@ -219,6 +219,28 @@ impl VisitMut for TextReplacement {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tests::parse;
+
+    /// Over a whole document: vernacular text is rewritten in place, and a
+    /// non-vernacular paragraph (`\cl`) is left alone.
+    #[test]
+    fn a_replacement_rewrites_vernacular_text_only() {
+        let (mut document, style_sheet) =
+            parse("\\id GEN\n\\c 1\n\\cl `Chapter'\n\\p \\v 1 ``Hello''");
+        let mut replacement = TextReplacement::from_rules(
+            r#"
+ "``"  >  '\u201c'
+ "''"  >  '\u201d'
+ "`"   >  '\u2018'
+ "'"   >  '\u2019'
+"#,
+        );
+        replacement.apply_to(&mut document);
+
+        let text = usfm_ast::text::PlainText::new(&style_sheet).of_document(&document);
+        assert!(text.contains("\u{201c}Hello\u{201d}"), "{text}");
+        assert!(text.contains("`Chapter'"), "{text}");
+    }
 
     #[test]
     fn test_parse_quote_delimited() {

@@ -23,8 +23,9 @@
 # * `usfm_parser --test snapshot` — the insta corpus, hundreds of files of I/O
 #   and no byte handling the suites below do not already reach.
 # * `usfm_tests` (tcdocs) — 260 cases, hours under Miri.
-# * `usfm_parser --lib text_replacements::*` — 66 s of the lib suite's 86 s, all
-#   of it inside the `regex` crate, which is not this repo's code.
+# * `usfm_pipeline` — its lib suite is the text replacements, which spend all
+#   their time inside the `regex` crate; that is not this repo's code, and it
+#   cost 66 s of the parser's 86 s while it lived there (ticket 15 moved it).
 # * 65 of the 76 `recovery` tests — the 11 kept are the ones whose input drives
 #   the lexer somewhere unusual (a lone `\`, an unterminated quote, an escaped
 #   one, a marker name with `-` or `_`, a newline inside an attribute list, EOF
@@ -68,8 +69,9 @@ run -p usfm_usx --lib
 run -p usfm_html --lib escape::
 
 # The lexer's own unit tests, including `lexer::source`, plus the parser and
-# style unit tests.                                                   ~20 s
-run -p usfm_parser --lib -- --skip text_replacements
+# style unit tests. The `--skip text_replacements` this line carried until
+# ticket 15 is gone with the module.                                  ~20 s
+run -p usfm_parser --lib
 
 # Whole-document parses: the lexer over real markup, and the span
 # invariants checked mechanically.

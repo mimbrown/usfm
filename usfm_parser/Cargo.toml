@@ -4,26 +4,17 @@ version = "0.1.0"
 edition = "2024"
 license = "MIT"
 
+# A library, and only a library, since ticket 15 moved the binary to
+# `apps/usfm_cli`. The dependency list below is M3's exit criterion from
+# `.scratch/oxc-layout/spec.md`: span, style, ast and diagnostics, nothing
+# else. `usfm_span` is not named directly because `usfm_ast` re-exports it,
+# which is how `usfm_parser::lexer::span` resolves.
 [dependencies]
-notify.workspace = true
-regex = { workspace = true }
-regex-automata = { workspace = true }
 usfm_ast = { path = "../usfm_ast" }
 # `Diagnostic`, `Code`, `Severity`, `ParseResult`, re-exported as
 # `usfm_parser::diagnostics` (ticket 12).
 usfm_diagnostics = { path = "../usfm_diagnostics" }
-# HTML and SILE output, re-exported as `usfm_parser::serialize_html`,
-# `usfm_parser::serialize` and `usfm_parser::context` (ticket 14). Like
-# `usfm_usx` below, it is the CLI's dependency and goes with the binary in
-# ticket 17.
-usfm_html = { path = "../usfm_html" }
 usfm_style = { path = "../usfm_style" }
-# USX output, re-exported as `usfm_parser::usx` and
-# `usfm_parser::xml_document` (ticket 13). The dependency is the CLI's — the
-# binary in `main.rs` writes USX — and goes with it in ticket 17, which leaves
-# `usfm_parser` a library that depends only on span, style, ast and
-# diagnostics, as the ADR's order has it.
-usfm_usx = { path = "../usfm_usx" }
 
 [features]
 # Exposes UniquePromise::new_for_tests_and_benchmarks.
@@ -41,3 +32,7 @@ insta = "1"
 # library with `testing` on and can call `usfm_parser::span_check`. The default
 # build, and every other crate's build, is unaffected.
 usfm_parser = { path = ".", features = ["testing"] }
+# `tests/usx_text.rs` and the `test_usx` unit test compare the parse against
+# USX. A dev-dependency only: the library itself writes no output, and
+# `usfm_usx` does not depend on this crate, so nothing here is circular.
+usfm_usx = { path = "../usfm_usx" }

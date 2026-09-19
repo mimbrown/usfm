@@ -19,13 +19,13 @@ use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_m
 use std::hint::black_box;
 use usfm_ast::Document;
 use usfm_benchmark::{CorpusFile, FileClass, total_bytes};
+use usfm_html::to_html_string;
 use usfm_parser::DEFAULT_STYLESHEET;
 use usfm_parser::UniquePromise;
 use usfm_parser::lexer::Lexer;
 use usfm_parser::parser::Parser;
-use usfm_parser::serialize_html::to_html_string;
-use usfm_parser::usx::to_usx_string;
 use usfm_style::StyleSheet;
+use usfm_usx::to_usx_string;
 
 /// Criterion settings chosen so a full `cargo bench -p usfm_benchmark`
 /// finishes in a few minutes on a 4-vCPU VM: the whole-corpus input is 12.8 MB

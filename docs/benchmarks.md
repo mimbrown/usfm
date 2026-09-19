@@ -404,6 +404,21 @@ ticket 13 both ran into. The cost of the escaping itself, read off the
 over every byte of text the writer emits, which is what buys HTML that a
 browser reads back as what the AST held.
 
+## After ticket 15
+
+`usfm_pipeline` and `apps/usfm_cli` (2026-09-19): the binary, the text
+replacements, the sectioning, the diglot weaving and the SILE output left
+`usfm_parser`; no library code path the benches touch changed, so nothing
+should move. One `whole-corpus` run against the recorded medians put
+`parse_usx` 6% low (18.01 vs the 19.24 of "After ticket 13"), so the three
+groups were rerun interleaved against a `5d376e8` worktree build, both at
+`CARGO_PROFILE_BENCH_CODEGEN_UNITS=1`, three rounds each — **`parse` 47.50 →
+47.10 MiB/s (−0.8%), `parse_usx` 18.04 → 18.04 (−0.0%), `parse_html` 40.03 →
+40.14 (+0.3%)**, all inside 3%. The VM is simply a few percent slower today
+than when tickets 13 and 14 were measured: at `5d376e8` itself `parse_usx`
+measures 18.04 here, not 19.24, which is why the file says to interleave
+rather than to compare absolutes.
+
 ## Reading a regression
 
 The VM is a shared 4-vCPU cloud instance, so the numbers move on their own.

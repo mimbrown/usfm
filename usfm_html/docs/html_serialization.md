@@ -136,16 +136,6 @@ The `Context` object maintains serialization state:
 
 All `ToHtml` implementations return `std::fmt::Result`, allowing for proper error propagation during HTML generation.
 
-## Migration from Serialize Trait
-
-The existing `Serialize` trait continues to work alongside `ToHtml`. You can:
-
-1. Use `ToHtml` for new code requiring extensibility
-2. Keep using `Serialize` for existing code
-3. Mix both approaches as needed
-
-The `ToHtml` trait provides a more natural, object-oriented approach to HTML generation, while `Serialize` offers a visitor-pattern approach that may be preferred for certain use cases.
-
 ## Examples
 
 See `usfm_html/examples/custom_html_serialization.rs` for complete working examples of:
@@ -160,7 +150,6 @@ See `usfm_html/examples/custom_html_serialization.rs` for complete working examp
 The `ToHtml` trait is designed for performance:
 
 - Direct formatting without intermediate allocations
-- Minimal overhead compared to the existing `Serialize` trait
 - Efficient delegation between parent and child nodes
 - Lazy evaluation of HTML generation
 
