@@ -166,8 +166,10 @@ it leaves for callers:
 Priority areas, next: the route is `.scratch/oxc-layout/spec.md` (decision in
 `docs/adr/0001-oxc-style-crate-layout.md`): oxc's crate organisation, not its arena.
 Milestones in order: M1 workspace builds clean, M2 benchmarks + Miri + fuzz, M3
-crate split, M4 `usfm_semantic`, M5 `usfm_codegen`, M6 language server. Tickets
-are in `.scratch/oxc-layout/issues/`, written one milestone ahead. Unattended
+crate split, M4 `usfm_semantic`, M5 `usfm_codegen`, M6 language server. M1 and
+M2 closed 2026-09-19 (exit criteria recorded in the spec); M3 is ticketed
+(11–17) and in progress. Tickets are in `.scratch/oxc-layout/issues/`, written
+one milestone ahead. Unattended
 sessions follow `docs/agents/loop.md`; `scripts/gate.sh` is the gate before every push.
 
 ## Boundaries

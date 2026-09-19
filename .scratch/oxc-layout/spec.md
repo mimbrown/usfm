@@ -33,6 +33,24 @@ on a committed corpus; the numbers are recorded in `docs/benchmarks.md`; Miri ru
 the lexer and `string_parser` tests clean in CI; a fuzz target asserts no panic and
 the span invariants, and has run 10 minutes without a finding.
 
+Closed 2026-09-19 (tickets 03–06; `10cb9dd`, `991d902`, `84ee98e`, `bfaa57f`).
+Checked on `main` at `bfaa57f`:
+- `cargo bench -p usfm_benchmark` reports lex, parse, parse + USX, parse + HTML
+  and reference_index throughput in MiB/s over `tasks/benchmark/corpus/` (WEB,
+  12.8 MB, plus synthetic attribute and alignment classes). Yes.
+- Recorded in `docs/benchmarks.md`: the M2 baseline, the ticket 05 before/after,
+  and the "M2 close" table that M3 compares against. Yes.
+- Miri runs the lexer and `string_parser` tests clean in CI: `scripts/miri.sh`
+  is the gate's last step, CI installs nightly Miri. Yes. On the way, 26 of 27
+  `unsafe` uses became safe code at no measured cost.
+- A fuzz target asserts no panic and the span invariants (and USX
+  well-formedness), and has run 10 minutes without a finding: `tasks/fuzz`,
+  both targets, 10 minutes clean on `bfaa57f` after seven findings were fixed.
+  Yes.
+Follow-ups ticketed: 07 (`*` note caller), 08–09 (public fixtures), 10
+(licence call, `ready-for-human`); the HTML writer's control-character hazard is
+folded into ticket 14.
+
 ## M3. Split into the ADR's layout
 
 Order: `usfm_span` and `usfm_diagnostics` out first (leaf crates), then
@@ -67,8 +85,9 @@ Rebuilt in `apps/` on `ParseResult`, `usfm_semantic` and `usfm_codegen`
 
 ## Open, to settle when reached
 
-- M2: which corpus. Needs a full Bible with a licence that allows committing it
-  (WEB is public domain). tcdocs files are too small to benchmark.
+- M2: which corpus. Settled: WEB (public domain) via its USFX rendering, since
+  ebible.org is blocked from the cloud environment; see
+  `tasks/benchmark/corpus/README.md`.
 - M3: whether `Context` (note numbering, counters) survives as HTML-only state.
 - M4: whether verse-end emission is syntax or semantics. It is in the parser now
   (plan D4) and USX needs it; default is to leave it.
