@@ -297,10 +297,23 @@ pub enum Code {
     /// **Recovery:** treated as a space.
     /// **Severity:** Error.
     NewlineInAttributes,
-    /// **Trigger:** `|` followed by no attribute at all (`\w word| \w*`).
+    /// **Trigger:** `|` followed by no attribute at all on a character style
+    /// (`\w word| \w*`). The `|` announces an attribute list, so the value
+    /// the author meant to write is missing.
     /// **Recovery:** the style carries an empty attribute list.
-    /// **Severity:** Error.
+    /// **Severity:** Error. On a milestone the same shape is
+    /// [`Code::EmptyMilestoneAttributeList`] instead.
     EmptyAttributeList,
+    /// **Trigger:** `|` followed by no attribute at all on a milestone
+    /// (`\ts-s |\*`). unfoldingWord's aligned texts write their translation
+    /// sections this way, and a milestone carries nothing but its
+    /// attributes, so there is no value to have lost: `\ts-s |\*` and
+    /// `\ts-s\*` describe the same milestone.
+    /// **Recovery:** none. The milestone is kept, with no attributes, and
+    /// the output is the same either way (`<ms style="ts-s"/>`).
+    /// **Severity:** Warning. The empty list is not USFM, but nothing about
+    /// the document is a guess.
+    EmptyMilestoneAttributeList,
     /// **Trigger:** a bare value (`|value`) on a marker that has no default
     /// attribute, such as `\em` or `\fig`.
     /// **Recovery:** kept in the tree with an empty name; USX serializers
@@ -393,6 +406,7 @@ impl Code {
         Code::UnterminatedAttributeValue,
         Code::NewlineInAttributes,
         Code::EmptyAttributeList,
+        Code::EmptyMilestoneAttributeList,
         Code::NoDefaultAttribute,
         Code::DefaultAttributeWithOthers,
         Code::AttributeValueNotQuoted,
@@ -452,6 +466,7 @@ impl Code {
             Code::UnterminatedAttributeValue => "unterminated-attribute-value",
             Code::NewlineInAttributes => "newline-in-attributes",
             Code::EmptyAttributeList => "empty-attribute-list",
+            Code::EmptyMilestoneAttributeList => "empty-milestone-attribute-list",
             Code::NoDefaultAttribute => "no-default-attribute",
             Code::DefaultAttributeWithOthers => "default-attribute-with-others",
             Code::AttributeValueNotQuoted => "attribute-value-not-quoted",
@@ -471,6 +486,7 @@ impl Code {
             | Code::NestedMarkerNotNested
             | Code::CharacterStyleNotClosed
             | Code::VerseInCharacterStyle
+            | Code::EmptyMilestoneAttributeList
             | Code::UnlistedBookCode => Severity::Warning,
             Code::CharacterStyleImplicitlyClosed
             | Code::CharacterStyleNestedWithoutPlus
@@ -798,7 +814,8 @@ mod tests {
             Code::UnexpectedPipe => Code::UnterminatedAttributeValue,
             Code::UnterminatedAttributeValue => Code::NewlineInAttributes,
             Code::NewlineInAttributes => Code::EmptyAttributeList,
-            Code::EmptyAttributeList => Code::NoDefaultAttribute,
+            Code::EmptyAttributeList => Code::EmptyMilestoneAttributeList,
+            Code::EmptyMilestoneAttributeList => Code::NoDefaultAttribute,
             Code::NoDefaultAttribute => Code::DefaultAttributeWithOthers,
             Code::DefaultAttributeWithOthers => Code::AttributeValueNotQuoted,
             Code::AttributeValueNotQuoted => Code::MissingAttributeValue,

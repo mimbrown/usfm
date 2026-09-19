@@ -45,6 +45,11 @@ auto-correction pass. Here they are recovery shapes, covered by tests in
 ordinary USFM and reports nothing, and `wrong_book_code.usfm` is byte-for-byte
 the input of the `missing_book_code` test that was already there.
 
+`fr-textTranslation-FR_TLX.txt` parses with no error diagnostic (ticket 18):
+its 24 `\ts-s |\*` translation sections are `empty-milestone-attribute-list`
+(Warning, covered by the recovery test of that name) and `\zaln-s`/`\zaln-e`
+are `unknown-custom-milestone` (Info).
+
 Every `autofix` input and every `bugfixes/*/origin.usfm` is also a fuzz seed;
 `tasks/fuzz/seed.sh` copies them into both corpora as
 `usfm-grammar__<dir>__<name>.usfm`.
