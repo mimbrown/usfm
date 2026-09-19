@@ -65,8 +65,10 @@ impl<'a> StringParser<'a> {
         if i == 0 {
             Err(NoMatch)
         } else {
-            let expected = unsafe { self.source.get_unchecked(0..i) };
-            self.source = unsafe { self.source.get_unchecked(i..self.source.len()) };
+            // `i` is a sum of `char::len_utf8`s taken from the front of
+            // `self.source`, so it is a character boundary within it.
+            let (expected, rest) = self.source.split_at(i);
+            self.source = rest;
             Ok(expected)
         }
     }

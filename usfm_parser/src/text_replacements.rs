@@ -156,7 +156,8 @@ impl TextReplacement {
                 }
             }
             // At this point, we failed to match any and need to advance a char
-            // SAFETY: We know that text is not empty because we checked that above
+            // Not `unsafe`, so not a `// SAFETY:` note: the `unwrap` cannot fire
+            // because the loop above already established `index < text.len()`.
             let unmatched_char = &text[index..].chars().next().unwrap();
             replaced.push(*unmatched_char);
             index += unmatched_char.len_utf8();

@@ -13,7 +13,7 @@ Done when `cargo bench -p usfm_benchmark` runs and the baseline is committed.
 
 ## Answer
 
-Landed via PR #7 (2026-09-19). `tasks/benchmark` (`usfm_benchmark`, in the
+Landed in `991d902` (PR #7, 2026-09-19). `tasks/benchmark` (`usfm_benchmark`, in the
 workspace) with `benches/corpus.rs`: `lex`, `parse`, `parse_usx`, `parse_html`,
 `reference_index`, each over the five file classes (plain, attributes-heavy,
 alignment-heavy, note-heavy, whole-corpus) with `Throughput::Bytes`. Baseline
