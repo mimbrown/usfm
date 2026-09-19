@@ -214,7 +214,7 @@ fn read_token(source: &mut Source) -> Token {
             source.next_char();
             lex_after_backslash(source)
         }
-        b'/' if source.peek_2_bytes() == Some([b'/', b'/']) => {
+        b'/' if source.peek_2_bytes() == Some(*b"//") => {
             source.next_char();
             source.next_char();
             Kind::OptBreak
@@ -239,7 +239,7 @@ fn read_token(source: &mut Source) -> Token {
                 while let Some(c) = source.peek_char() {
                     if c.is_ascii_whitespace()
                         || (c.is_ascii() && is_word_byte_terminator(c as u8))
-                        || source.peek_2_bytes() == Some([b'/', b'/'])
+                        || source.peek_2_bytes() == Some(*b"//")
                     {
                         break;
                     }

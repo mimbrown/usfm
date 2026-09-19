@@ -2,10 +2,6 @@ use std::{marker::PhantomData, slice, str};
 
 use crate::{MAX_LEN, UniquePromise};
 
-// use super::search::SEARCH_BATCH_SIZE;
-
-pub const SEARCH_BATCH_SIZE: usize = 32;
-
 /// `Source` holds the source text for the lexer, and provides APIs to read it.
 ///
 /// It provides a cursor which allows consuming source text either as `char`s, or as bytes.
@@ -18,7 +14,7 @@ pub const SEARCH_BATCH_SIZE: usize = 32;
 ///
 /// * Safe API for consuming source char-by-char (`Source::next_char`, `Source::peek_char`).
 /// * Safe API for peeking next source byte (`Source::peek_byte`).
-/// * Unsafe API for consuming source byte-by-byte (`Source::next_byte`).
+/// * Unsafe API for advancing over a known ASCII byte (`Source::advance_if_ascii_eq`).
 /// * Mostly-safe API for rewinding to a previous position in source
 ///   (`Source::position`, `Source::set_position`).
 ///
@@ -39,27 +35,19 @@ pub const SEARCH_BATCH_SIZE: usize = 32;
 /// 4. `ptr` must always point to a UTF-8 character boundary, or EOF.
 ///    i.e. pointing to *1st* byte of a UTF-8 character.
 ///
-/// These invariants are the same as `std::str::Chars`, except `Source` allows temporarily
-/// breaking invariant (4) to step through source text byte-by-byte.
-///
-/// Invariants (1), (2) and (3) must be upheld at all times.
-/// Invariant (4) can be temporarily broken, as long as caller ensures it's satisfied again.
+/// These invariants are the same as `std::str::Chars`, and all four must be upheld at all
+/// times: `Source` has no API that steps into the middle of a UTF-8 character.
 ///
 /// Invariants (1) and (2) are enforced by initializing `start` and `end` from a valid `&str`,
 /// and they are never modified after initialization.
 ///
 /// Safe methods of `Source` enforce invariant (3) i.e. they do not allow reading past EOF.
-/// Unsafe methods e.g. `Source::next_byte_unchecked` and `Source::peek_byte_unchecked`
-/// require caller to uphold this invariant.
+/// Unsafe methods e.g. `Source::peek_byte_unchecked` require caller to uphold this invariant.
 ///
 /// Invariant (4) is the most difficult to satisfy.
 /// `Source::next_char` relies on source text being valid UTF-8 to provide a safe API which
-/// upholds this invariant.
-/// `Source::next_byte` requires very careful use as it may violate invariant (4).
-/// That is fine temporarily, but caller *must* ensure the safety conditions of `Source::next_byte`
-/// are satisfied, to restore this invariant before passing control back to other code.
-/// It will often be preferable to instead use `Source::peek_byte`, followed by `Source::next_char`,
-/// which are safe methods, and compiler will often reduce to equally efficient code.
+/// upholds this invariant, and `Source::advance_if_ascii_eq` only ever advances over a byte
+/// it has checked is ASCII.
 pub(super) struct Source<'a> {
     /// Pointer to start of source string. Never altered after initialization.
     start: *const u8,
@@ -67,10 +55,6 @@ pub(super) struct Source<'a> {
     end: *const u8,
     /// Pointer to current position in source string
     ptr: *const u8,
-    /// Memory address past which not enough bytes remaining in source to process a batch of
-    /// `SEARCH_BATCH_SIZE` bytes in one go.
-    /// Must be `usize`, not a pointer, as if source is very short, a pointer could be out of bounds.
-    end_for_batch_search_addr: usize,
     /// Marker for immutable borrow of source string
     _marker: PhantomData<&'a str>,
 }
@@ -94,32 +78,11 @@ impl<'a> Source<'a> {
         // for direct pointer equality with `ptr` to check if at end of file.
         let end = unsafe { start.add(source_text.len()) };
 
-        // `saturating_sub` not `wrapping_sub` so that value doesn't wrap around if source
-        // is very short, and has very low memory address (e.g. 16). If that's the case,
-        // `end_for_batch_search_addr` will be 0, so a test whether any non-null pointer is past end
-        // will always test positive, and disable batch search.
-        let end_for_batch_search_addr = (end as usize).saturating_sub(SEARCH_BATCH_SIZE);
-
         Self {
             start,
             end,
             ptr: start,
-            end_for_batch_search_addr,
             _marker: PhantomData,
-        }
-    }
-
-    /// Get entire source text as `&str`.
-    #[inline]
-    pub(super) fn whole(&self) -> &'a str {
-        // SAFETY:
-        // `start` and `end` are created from a `&str` in `Source::new`, so `start` cannot be after `end`.
-        // `start` and `end` are by definition on UTF-8 char boundaries.
-        unsafe {
-            self.str_between_positions_unchecked(
-                SourcePosition::new(self.start),
-                SourcePosition::new(self.end),
-            )
         }
     }
 
@@ -141,19 +104,6 @@ impl<'a> Source<'a> {
     #[inline]
     pub(super) fn is_eof(&self) -> bool {
         self.ptr == self.end
-    }
-
-    /// Get end address.
-    #[inline]
-    pub(super) fn end_addr(&self) -> usize {
-        self.end as usize
-    }
-
-    /// Get last memory address at which a batch of `Lexer::search::SEARCH_BATCH_SIZE` bytes
-    /// can be read without going out of bounds.
-    #[inline]
-    pub(super) fn end_for_batch_search_addr(&self) -> usize {
-        self.end_for_batch_search_addr
     }
 
     /// Get current position.
@@ -197,12 +147,6 @@ impl<'a> Source<'a> {
         self.ptr = pos.ptr;
     }
 
-    /// Advance `Source`'s cursor to end.
-    #[inline]
-    pub(super) fn advance_to_end(&mut self) {
-        self.ptr = self.end;
-    }
-
     /// Advance `Source`'s cursor by one byte if it is equal to the given ASCII value.
     ///
     /// # SAFETY
@@ -218,56 +162,6 @@ impl<'a> Source<'a> {
             self.ptr = unsafe { self.ptr.add(1) };
         }
         matched
-    }
-
-    /// Get string slice from a `SourcePosition` up to the current position of `Source`.
-    pub(super) fn str_from_pos_to_current(&self, pos: SourcePosition<'a>) -> &'a str {
-        assert!(pos.ptr <= self.ptr);
-        // SAFETY: The above assertion satisfies `str_from_pos_to_current_unchecked`'s requirements
-        unsafe { self.str_from_pos_to_current_unchecked(pos) }
-    }
-
-    /// Get string slice from a `SourcePosition` up to current position of `Source`, without checks.
-    ///
-    /// # SAFETY
-    /// `pos` must not be after current position of `Source`.
-    /// This is always the case if both:
-    /// 1. `Source::set_position` has not been called since `pos` was created.
-    /// 2. `pos` has not been advanced with `SourcePosition::add`.
-    #[inline]
-    pub(super) unsafe fn str_from_pos_to_current_unchecked(
-        &self,
-        pos: SourcePosition<'a>,
-    ) -> &'a str {
-        // SAFETY: Caller guarantees `pos` is not after current position of `Source`.
-        // `self.ptr` is always a valid `SourcePosition` due to invariants of `Source`.
-        unsafe { self.str_between_positions_unchecked(pos, SourcePosition::new(self.ptr)) }
-    }
-
-    /// Get string slice from current position of `Source` up to a `SourcePosition`, without checks.
-    ///
-    /// # SAFETY
-    /// `pos` must not be before current position of `Source`.
-    /// This is always the case if both:
-    /// 1. `Source::set_position` has not been called since `pos` was created.
-    /// 2. `pos` has not been moved backwards with `SourcePosition::sub`.
-    #[inline]
-    pub(super) unsafe fn str_from_current_to_pos_unchecked(
-        &self,
-        pos: SourcePosition<'a>,
-    ) -> &'a str {
-        // SAFETY: Caller guarantees `pos` is not before current position of `Source`.
-        // `self.ptr` is always a valid `SourcePosition` due to invariants of `Source`.
-        unsafe { self.str_between_positions_unchecked(SourcePosition::new(self.ptr), pos) }
-    }
-
-    /// Get string slice from a `SourcePosition` up to the end of `Source`.
-    #[inline]
-    pub(super) fn str_from_pos_to_end(&self, pos: SourcePosition<'a>) -> &'a str {
-        // SAFETY: Invariants of `SourcePosition` is that it cannot be after end of `Source`,
-        // and always on a UTF-8 character boundary.
-        // `self.end` is always a valid `SourcePosition` due to invariants of `Source`.
-        unsafe { self.str_between_positions_unchecked(pos, SourcePosition::new(self.end)) }
     }
 
     /// Get string slice of source between 2 `SourcePosition`s, without checks.
@@ -324,49 +218,6 @@ impl<'a> Source<'a> {
         (pos.addr() - self.start as usize) as u32
     }
 
-    /// Move current position back by `n` bytes.
-    ///
-    /// # Panic
-    /// Panics if:
-    /// * `n` is 0.
-    /// * `n` is greater than current offset in source.
-    /// * Moving back `n` bytes would not place current position on a UTF-8 character boundary.
-    #[inline]
-    pub(super) fn back(&mut self, n: usize) {
-        // This assertion is essential to ensure safety of `new_pos.read()` call below.
-        // Without this check, calling `back(0)` on an empty `Source` would cause reading
-        // out of bounds.
-        // Compiler should remove this assertion when inlining this function,
-        // as long as it can deduce from calling code that `n` is non-zero.
-        assert!(n > 0, "Cannot call `Source::back` with 0");
-
-        // Ensure not attempting to go back to before start of source
-        let offset = self.ptr as usize - self.start as usize;
-        assert!(
-            n <= offset,
-            "Cannot go back {n} bytes - only {offset} bytes consumed"
-        );
-
-        // SAFETY: We have checked that `n` is less than distance between `start` and `ptr`,
-        // so `new_ptr` cannot be outside of allocation of original `&str`
-        let new_pos = unsafe { self.position().sub(n) };
-
-        // Enforce invariant that `ptr` must be positioned on a UTF-8 character boundary.
-        // SAFETY: `new_ptr` is in bounds of original `&str`, and `n > 0` assertion ensures
-        // not at the end, so valid to read a byte.
-        // `Source`'s invariants guarantee that `self.start` - `self.end` contains allocated memory.
-        // `Source::new` takes an immutable ref `&str`, guaranteeing that the memory `new_ptr`
-        // addresses cannot be aliased by a `&mut` ref as long as `Source` exists.
-        let byte = unsafe { new_pos.read() };
-        assert!(
-            !is_utf8_cont_byte(byte),
-            "Offset is not on a UTF-8 character boundary"
-        );
-
-        // Move current position. The checks above satisfy `Source`'s invariants.
-        self.ptr = new_pos.ptr;
-    }
-
     /// Get next char of source, and advance position to after it.
     #[inline]
     pub(super) fn next_char(&mut self) -> Option<char> {
@@ -393,112 +244,6 @@ impl<'a> Source<'a> {
         let c = unsafe { chars.next().unwrap_unchecked() };
         self.ptr = chars.as_str().as_ptr();
         Some(c)
-    }
-
-    /// Get next 2 chars of source, and advance position to after them.
-    #[inline]
-    pub(super) fn next_2_chars(&mut self) -> Option<[char; 2]> {
-        // Check not at EOF and handle if 2 x ASCII bytes
-        let [byte1, byte2] = self.peek_2_bytes()?;
-        if byte1.is_ascii() && byte2.is_ascii() {
-            // SAFETY: We just checked that there are at least 2 bytes remaining,
-            // and next 2 bytes are ASCII, so advancing by 2 bytes must put `ptr`
-            // in bounds and on a UTF-8 character boundary
-            unsafe { self.ptr = self.ptr.add(2) };
-            return Some([byte1 as char, byte2 as char]);
-        }
-
-        // Multi-byte Unicode character.
-        // Check invariant that `ptr` is on a UTF-8 character boundary.
-        debug_assert!(!is_utf8_cont_byte(byte1));
-
-        // Create a `Chars` iterator, get next 2 chars from it, and then update `self.ptr`
-        // to match `Chars` iterator's updated pointer afterwards.
-        // `Chars` iterator upholds same invariants as `Source`, so its pointer is guaranteed
-        // to be valid as `self.ptr`.
-        let mut chars = self.remaining().chars();
-        // SAFETY: We know that there's 2 bytes to be consumed, so first call to
-        // `chars.next()` must return `Some(_)`
-        let c1 = unsafe { chars.next().unwrap_unchecked() };
-        let c2 = chars.next()?;
-        self.ptr = chars.as_str().as_ptr();
-        Some([c1, c2])
-    }
-
-    /// Get next byte of source, and advance position to after it.
-    ///
-    /// # SAFETY
-    /// This function may leave `Source` positioned in middle of a UTF-8 character sequence,
-    /// which would violate one of `Source`'s invariants.
-    ///
-    /// This is OK temporarily, but caller *must* ensure the invariant is restored again.
-    ///
-    /// Caller must ensure one of:
-    ///
-    /// 1. No byte is returned (end of file).
-    /// 2. The byte returned is ASCII.
-    /// 3. Further calls to `Source::next_byte` or `Source::next_byte_unchecked` are made
-    ///    to consume the rest of the multi-byte UTF-8 character, before calling any other methods
-    ///    of `Source` (even safe methods) which rely on `Source` being positioned on a UTF-8
-    ///    character boundary, or before passing control back to other safe code which may call them.
-    ///
-    /// In particular, safe methods `Source::next_char`, `Source::peek_char`, and `Source::remaining`
-    /// are *not* safe to call until one of above conditions is satisfied.
-    ///
-    /// It will often be preferable to instead use `Source::peek_byte`, followed by `Source::next_char`,
-    /// which are safe methods, and compiler will often reduce to equally efficient code, if calling
-    /// code tests the byte returned. e.g.:
-    ///
-    /// ```ignore
-    /// // Consume a space
-    /// let byte = source.peek_byte();
-    /// if byte == Some(b' ') {
-    ///   source.next_char().unwrap();
-    /// }
-    /// ```
-    #[expect(dead_code)]
-    #[inline]
-    unsafe fn next_byte(&mut self) -> Option<u8> {
-        #[expect(clippy::if_not_else)] // Hot path first
-        if !self.is_eof() {
-            // SAFETY: Safe to read from `ptr` as we just checked it's not out of bounds
-            Some(unsafe { self.next_byte_unchecked() })
-        } else {
-            None
-        }
-    }
-
-    /// Get next bytes of source, and advance position to after it, without EOF bounds-check.
-    ///
-    /// # SAFETY
-    /// Caller must ensure `Source` is not at end of file.
-    ///
-    /// This function may leave `Source` positioned in middle of a UTF-8 character sequence,
-    /// which would violate one of `Source`'s invariants.
-    ///
-    /// This is OK temporarily, but caller *must* ensure the invariant is restored again.
-    ///
-    /// Caller must ensure one of:
-    ///
-    /// 1. The byte returned is ASCII.
-    /// 2. Further calls to `Source::next_byte` or `Source::next_byte_unchecked` are made
-    ///    to consume the rest of the multi-byte UTF-8 character, before calling any other methods
-    ///    of `Source` (even safe methods) which rely on `Source` being positioned on a UTF-8
-    ///    character boundary, or before passing control back to other safe code which may call them.
-    ///
-    /// In particular, safe methods `Source::next_char`, `Source::peek_char`, and `Source::remaining`
-    /// are *not* safe to call until one of above conditions is satisfied.
-    #[inline]
-    pub(super) unsafe fn next_byte_unchecked(&mut self) -> u8 {
-        // SAFETY: Caller guarantees not at end of file i.e. `ptr != end`.
-        // Methods of this type provide no way for `ptr` to be before `start` or after `end`.
-        // Therefore always valid to read a byte from `ptr`, and incrementing `ptr` cannot result
-        // in `ptr > end`.
-        unsafe {
-            let byte = self.peek_byte_unchecked();
-            self.ptr = self.ptr.add(1);
-            byte
-        }
     }
 
     /// Peek next char of source, without consuming it.
@@ -600,32 +345,6 @@ impl SourcePosition<'_> {
     #[inline]
     pub(super) fn addr(self) -> usize {
         self.ptr as usize
-    }
-
-    /// Create new `SourcePosition` which is `n` bytes after this one.
-    /// The provenance of the pointer `SourcePosition` contains is maintained.
-    ///
-    /// # SAFETY
-    /// Caller must ensure that advancing `SourcePosition` by `n` bytes does not make it past the end
-    /// of `Source` this `SourcePosition` was created from.
-    /// NB: It is legal to use `add` to create a `SourcePosition` which is *on* the end of `Source`,
-    /// just not past it.
-    #[inline]
-    pub(super) unsafe fn add(self, n: usize) -> Self {
-        // SAFETY: Caller guarantees that `add` will not go out of bounds
-        unsafe { Self::new(self.ptr.add(n)) }
-    }
-
-    /// Create new `SourcePosition` which is `n` bytes before this one.
-    /// The provenance of the pointer `SourcePosition` contains is maintained.
-    ///
-    /// # SAFETY
-    /// Caller must ensure that reversing `SourcePosition` by `n` bytes does not make it before the start
-    /// of `Source` this `SourcePosition` was created from.
-    #[inline]
-    pub(super) unsafe fn sub(self, n: usize) -> Self {
-        // SAFETY: Caller guarantees that `sub` will not go out of bounds
-        unsafe { Self::new(self.ptr.sub(n)) }
     }
 
     /// Read byte from this `SourcePosition`.

@@ -1,12 +1,6 @@
-use std::{
-    borrow::Cow,
-    collections::HashMap,
-    fmt::{Display, Formatter, Result},
-    iter::Map,
-};
+use std::borrow::Cow;
 
-use usfm_style::StyleSheet;
-use xml::{name::OwnedName, namespace::Namespace};
+use xml::namespace::Namespace;
 
 use crate::{ast::*, context::Context, xml, xml_document::*};
 
@@ -21,7 +15,7 @@ impl<'a> ToUsx for Text<'a> {
 }
 
 impl<'a> ToUsx for Cow<'a, str> {
-    fn to_usx(&self, context: &mut Context) -> XmlNode {
+    fn to_usx(&self, _context: &mut Context) -> XmlNode {
         XmlNode::Text(self.to_string())
     }
 }
@@ -329,19 +323,19 @@ impl<'a> ToUsx for Para<'a> {
         )];
 
         // Add vid attribute if we're continuing a verse from a previous paragraph
-        if context.include_vid {
-            if let Some(verse_number) = &context.verse_number {
-                let vid = format!(
-                    "{} {}:{}",
-                    context.book_code.unwrap_or(crate::ast::BookCode::Oth),
-                    context.chapter_number.unwrap_or(0),
-                    verse_number
-                );
-                attrs.push(xml::attribute::OwnedAttribute::new(
-                    xml::name::OwnedName::local("vid"),
-                    vid,
-                ));
-            }
+        if context.include_vid
+            && let Some(verse_number) = &context.verse_number
+        {
+            let vid = format!(
+                "{} {}:{}",
+                context.book_code.unwrap_or(crate::ast::BookCode::Oth),
+                context.chapter_number.unwrap_or(0),
+                verse_number
+            );
+            attrs.push(xml::attribute::OwnedAttribute::new(
+                xml::name::OwnedName::local("vid"),
+                vid,
+            ));
         }
 
         XmlNode::Element(XmlElement {
@@ -361,19 +355,19 @@ impl<'a> ToUsx for Table<'a> {
     fn to_usx(&self, context: &mut Context) -> XmlNode {
         // Build attributes, starting with vid if we're in a verse
         let mut attrs = Vec::new();
-        if context.include_vid {
-            if let Some(verse_number) = &context.verse_number {
-                let vid = format!(
-                    "{} {}:{}",
-                    context.book_code.unwrap_or(crate::ast::BookCode::Oth),
-                    context.chapter_number.unwrap_or(0),
-                    verse_number
-                );
-                attrs.push(xml::attribute::OwnedAttribute::new(
-                    xml::name::OwnedName::local("vid"),
-                    vid,
-                ));
-            }
+        if context.include_vid
+            && let Some(verse_number) = &context.verse_number
+        {
+            let vid = format!(
+                "{} {}:{}",
+                context.book_code.unwrap_or(crate::ast::BookCode::Oth),
+                context.chapter_number.unwrap_or(0),
+                verse_number
+            );
+            attrs.push(xml::attribute::OwnedAttribute::new(
+                xml::name::OwnedName::local("vid"),
+                vid,
+            ));
         }
 
         XmlNode::Element(XmlElement {
@@ -474,130 +468,3 @@ pub fn to_usx_node(document: &Document) -> XmlNode {
 pub fn to_usx_string(document: &Document) -> String {
     format!("{}\n", to_usx_node(document))
 }
-
-// impl<S: SerializeUsx> Serialize for S {
-//     fn serialize_chapter_start(&self, f: &mut Formatter<'_>, context: &mut Context, chapter: &ChapterStart) -> Result {
-//         write!(f, "  <chapter style=\"c\" number=\"{}\"", chapter.number)?;
-//         if let Some(alt_number) = &chapter.alt_number {
-//             write!(f, " altnumber=\"{}\"", alt_number)?;
-//         }
-//         if let Some(pub_number) = &chapter.pub_number {
-//             write!(f, " pubnumber=\"{}\"", pub_number)?;
-//         }
-//         write!(f, " sid=\"{} {}\"/>\n", context.book_code.unwrap_or(BookCode::Oth), chapter.number)
-//     }
-
-//     fn serialize_chapter_end(&self, f: &mut Formatter<'_>, context: &mut Context, chapter: &ChapterEnd) -> Result {
-//         write!(f, "  <chapter style=\"c\" number=\"{}\" eid=\"{} {}\"/>\n", chapter.number, context.book_code.unwrap_or(BookCode::Oth), chapter.number)
-//     }
-
-//     fn serialize_verse_start(&self, f: &mut Formatter<'_>, context: &mut Context, verse: &VerseStart) -> Result {
-//         write!(f, "<verse style=\"v\" number=\"{}\" sid=\"{} {}:{}\"/>", verse.number, context.book_code.unwrap_or(BookCode::Oth), context.chapter_number.unwrap_or(0), verse.number)
-//     }
-
-//     fn serialize_verse_end(&self, f: &mut Formatter<'_>, context: &mut Context, verse: &VerseEnd) -> Result {
-//         write!(f, "<verse style=\"v\" eid=\"{} {}:{}\"/>", context.book_code.unwrap_or(BookCode::Oth), context.chapter_number.unwrap_or(0), verse.number)
-//     }
-
-//     fn serialize_text(&self, f: &mut Formatter<'_>, context: &mut Context, text: &str) -> Result {
-//         write!(f, "{text}")
-//     }
-
-//     fn serialize_table(&self, f: &mut Formatter<'_>, context: &mut Context, table: &Table) -> Result {
-//         write!(f, "  <table")?;
-//         if let Some(verse_number) = &context.verse_number {
-//             write!(f, " vid=\"{} {}:{}\"", context.book_code.unwrap_or(BookCode::Oth), context.chapter_number.unwrap_or(0), verse_number)?;
-//         }
-//         write!(f, ">\n")?;
-//         for row in table.rows.iter() {
-//             write!(f, "    <row style=\"tr\">\n")?;
-//             let mut column = 1;
-//             for cell in row.cells.iter() {
-//                 write!(f, "      <cell style=\"t{}{}{}\" align=\"{}\"",
-//                     if cell.header { 'h' } else { 'c' },
-//                     match cell.alignment {
-//                         Alignment::Start => "",
-//                         Alignment::Center => "c",
-//                         Alignment::End => "r",
-//                     },
-//                     if cell.colspan > 1 {
-//                         format!("{}-{}", column, column + cell.colspan - 1)
-//                     } else {
-//                         column.to_string()
-//                     },
-//                     cell.alignment
-//                 )?;
-//                 if cell.colspan > 1 {
-//                     write!(f, " colspan=\"{}\"", cell.colspan)?;
-//                 }
-//                 write!(f, ">")?;
-//                 column += cell.colspan;
-//                 for inner in cell.children.iter() {
-//                     inner.serialize(self, f, context)?;
-//                 }
-//                 write!(f, "</cell>\n")?;
-//             }
-//             write!(f, "    </row>\n")?;
-//         }
-//         write!(f, "  </table>\n")?;
-//         Ok(())
-//     }
-
-//     fn serialize_char(&self, f: &mut Formatter<'_>, context: &mut Context, char: &Char) -> Result {
-//         write!(f, "<char style=\"{}\"", context.rule(char.style).marker)?;
-//         if char.children.len() > 0 {
-//             write!(f, ">")?;
-//             char.serialize(self, f, context)?;
-//             write!(f, "</char>")?;
-//         } else {
-//             write!(f, "/>")?;
-//         }
-//         Ok(())
-//     }
-
-//     fn serialize_note(&self, f: &mut Formatter<'_>, context: &mut Context, note: &Note) -> Result {
-//         write!(f, "<note caller=\"{}\" style=\"{}\"", note.caller, context.rule(note.style).marker)?;
-//         if note.children.len() > 0 {
-//             write!(f, ">")?;
-//             note.serialize(self, f, context)?;
-//             write!(f, "</note>")?;
-//         } else {
-//             write!(f, "/>")?;
-//         }
-//         Ok(())
-//     }
-
-//     fn serialize_para(&self, f: &mut Formatter<'_>, context: &mut Context, para: &Para) -> Result {
-//         write!(f, "  <para style=\"{}\"", context.rule(para.style).marker)?;
-//         if let Some(verse_number) = &context.verse_number {
-//             write!(f, " vid=\"{} {}:{}\"", context.book_code.unwrap_or(BookCode::Oth), context.chapter_number.unwrap_or(0), verse_number)?;
-//         }
-//         if para.children.len() > 0 {
-//             write!(f, ">\n    ")?;
-//             para.serialize(self, f, context)?;
-//             write!(f, "\n  </para>\n")?;
-//         } else {
-//             write!(f, "/>\n")?;
-//         }
-//         Ok(())
-//     }
-
-//     fn serialize_book(&self, f: &mut Formatter<'_>, context: &mut Context, book: &Book) -> Result {
-//         write!(f, "  <book code=\"{}\" style=\"id\"", book.code)?;
-//         if !book.description.is_empty() {
-//             write!(f, ">{}</book>\n", book.description)?;
-//         } else {
-//             write!(f, "/>\n")?;
-//         }
-//         Ok(())
-//     }
-
-//     fn serialize_document(&self, f: &mut Formatter<'_>, context: &mut Context, document: &Document) -> Result {
-//         let tag = self.document_tag();
-//         let attributes = self.document_attributes();
-//         write!(f, "<{tag}{attributes}>\n")?;
-//         document.serialize(self, f, context)?;
-//         write!(f, "</{tag}>")?;
-//         Ok(())
-//     }
-// }

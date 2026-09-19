@@ -1,7 +1,7 @@
 use core::fmt;
 use std::fmt::Display;
 
-use crate::{parse_error::ParseError, string_parser::{ParseStr, StringParser}};
+use crate::{parse_error::ParseError, string_parser::{NoMatch, ParseStr, StringParser}};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct NumberRange {
@@ -47,7 +47,7 @@ pub struct NumberList {
 impl ParseStr for NumberList {
     type Err = ParseError;
 
-    fn consume_parser(parser: &mut StringParser) -> Result<Self, ()> {
+    fn consume_parser(parser: &mut StringParser) -> Result<Self, NoMatch> {
         let mut ranges = Vec::new();
         let mut guard_rtl_list = false;
         loop {
@@ -71,7 +71,7 @@ impl ParseStr for NumberList {
                 continue;
             } else {
                 if parser.has_remaining() {
-                    return Err(());
+                    return Err(NoMatch);
                 } else {
                     break;
                 }
@@ -79,7 +79,7 @@ impl ParseStr for NumberList {
         }
 
         if ranges.is_empty() {
-            return Err(());
+            return Err(NoMatch);
         }
 
         Ok(Self { ranges, guard_rtl: guard_rtl_list })
@@ -107,7 +107,7 @@ impl Display for NumberList {
     }
 }
 
-impl<'a> NumberList {
+impl NumberList {
     pub fn collapsed(number: usize) -> Self {
         Self {
             ranges: vec![NumberRange { start: number, start_modifier: None, end: number, end_modifier: None, guard_rtl: false }],
@@ -166,7 +166,7 @@ mod tests {
     #[test]
     fn test_verse_number_range() {
         let verse_number = NumberList::parse_str("1-3").unwrap();
-        assert_eq!(verse_number.is_collapsed(), false);
+        assert!(!verse_number.is_collapsed());
         assert_eq!(verse_number, NumberList {
             ranges: vec![NumberRange { start: 1, start_modifier: None, end: 3, end_modifier: None, guard_rtl: false }],
             guard_rtl: false,
@@ -176,7 +176,7 @@ mod tests {
     #[test]
     fn test_verse_number_range_with_modifier() {
         let verse_number = NumberList::parse_str("1a-3b").unwrap();
-        assert_eq!(verse_number.is_collapsed(), false);
+        assert!(!verse_number.is_collapsed());
         assert_eq!(verse_number, NumberList {
             ranges: vec![NumberRange { start: 1, start_modifier: Some('a'), end: 3, end_modifier: Some('b'), guard_rtl: false }],
             guard_rtl: false,
@@ -186,7 +186,7 @@ mod tests {
     #[test]
     fn test_verse_number_range_with_guard_rtl() {
         let verse_number = NumberList::parse_str("1\u{200F}-3").unwrap();
-        assert_eq!(verse_number.is_collapsed(), false);
+        assert!(!verse_number.is_collapsed());
         assert_eq!(verse_number, NumberList {
             ranges: vec![NumberRange { start: 1, start_modifier: None, end: 3, end_modifier: None, guard_rtl: true }],
             guard_rtl: false,
@@ -214,6 +214,6 @@ mod tests {
     #[test]
     fn test_not_collapsed_verse_number() {
         let verse_number = NumberList::parse_str("1,3-5").unwrap();
-        assert_eq!(verse_number.is_collapsed(), false);
+        assert!(!verse_number.is_collapsed());
     }
 }

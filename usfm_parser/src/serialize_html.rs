@@ -126,6 +126,12 @@ pub trait SerializeHtml {
 
 pub struct XmlAttributes<'a>(Vec<(&'a str, &'a str)>);
 
+impl<'a> Default for XmlAttributes<'a> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'a> XmlAttributes<'a> {
     pub fn new() -> Self {
         Self(Vec::new())
@@ -201,14 +207,14 @@ impl<'a> ToHtml for Periph<'a> {
                 }
             }
         }
-        write!(f, ">\n")?;
+        writeln!(f, ">")?;
         if let Some(title) = &self.title {
-            write!(f, "<h1>{}</h1>\n", title.content)?;
+            writeln!(f, "<h1>{}</h1>", title.content)?;
         }
         for block in &self.blocks {
             block.to_html(f, context)?;
         }
-        write!(f, "</section>\n")
+        writeln!(f, "</section>")
     }
 }
 
@@ -218,11 +224,11 @@ impl<'a> ToHtml for Sidebar<'a> {
         if let Some(category) = &self.category {
             write!(f, " data-category=\"{}\"", category.content)?;
         }
-        write!(f, ">\n")?;
+        writeln!(f, ">")?;
         for block in &self.blocks {
             block.to_html(f, context)?;
         }
-        write!(f, "</aside>\n")
+        writeln!(f, "</aside>")
     }
 }
 
@@ -344,9 +350,9 @@ impl<'a> ToHtml for Para<'a> {
             for child in &self.children {
                 child.to_html(f, context)?;
             }
-            write!(f, "\n")?;
+            writeln!(f)?;
         }
-        write!(f, "</{tag}>\n")?;
+        writeln!(f, "</{tag}>")?;
         Ok(())
     }
 }
@@ -426,7 +432,7 @@ impl<'a> ToHtml for Table<'a> {
 
 impl<'a> ToHtml for TableRow<'a> {
     fn to_html<W: Write>(&self, f: &mut W, context: &mut Context) -> Result {
-        write!(f, "  <tr>\n")?;
+        writeln!(f, "  <tr>")?;
         for cell in &self.cells {
             let column = cell.column;
             write!(
@@ -452,9 +458,9 @@ impl<'a> ToHtml for TableRow<'a> {
             for child in &cell.children {
                 child.to_html(f, context)?;
             }
-            write!(f, "</td>\n")?;
+            writeln!(f, "</td>")?;
         }
-        write!(f, "  </tr>\n")?;
+        writeln!(f, "  </tr>")?;
         Ok(())
     }
 }

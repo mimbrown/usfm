@@ -52,7 +52,10 @@ tcdocs status (260 tests, 2026-09-12):
   fails on purpose, so a zero-test run can never report a pass rate.
 - CI (`.github/workflows/ci.yml`) runs the unit and integration suites
   (`recovery`, `snapshot`, `spans`, `whitespace`, `attributes`, `verse_ends`, `usx_text`,
-  parser lib) and
+  parser lib), gates lint with
+  `cargo clippy --workspace --all-targets -- -D warnings` (in `scripts/gate.sh`
+  since 2026-09-19, ticket 02: the workspace is clippy-clean, so a new warning
+  fails the build) and
   gates tcdocs on `tests/tcdocs-baseline.txt`, the list of known failures
   (currently empty). It fails on a regression *and* on a stale entry, so when
   you fix a tcdocs case, remove it from the baseline (or regenerate with

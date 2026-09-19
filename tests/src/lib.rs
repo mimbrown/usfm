@@ -612,10 +612,10 @@ pub fn compare_xml(actual: &XmlNode, expected: &XmlNode) -> Result<(), XmlMismat
                     (Some(a), Some(e)) => compare_xml(a, e)?,
                     (Some(node), None) => {
                         // TODO: this shouldn't be necessary
-                        if let XmlNode::Text(text) = node {
-                            if text.is_empty() {
-                                continue;
-                            }
+                        if let XmlNode::Text(text) = node
+                            && text.is_empty()
+                        {
+                            continue;
                         }
                         return Err(XmlMismatch {
                             description: format!("Extra child in <{}>", actual.name),
@@ -624,10 +624,10 @@ pub fn compare_xml(actual: &XmlNode, expected: &XmlNode) -> Result<(), XmlMismat
                         });
                     }
                     (None, Some(node)) => {
-                        if let XmlNode::Text(text) = node {
-                            if text.is_empty() {
-                                continue;
-                            }
+                        if let XmlNode::Text(text) = node
+                            && text.is_empty()
+                        {
+                            continue;
                         }
                         return Err(XmlMismatch {
                             description: format!("Missing child in <{}>", actual.name),
@@ -684,10 +684,8 @@ fn discover_tests_recursive(dir: &Path, tests: &mut Vec<TestCase>) {
     // Check if this directory is a test case (has metadata.xml or origin.usfm)
     let is_test_dir = dir.join("metadata.xml").exists() || dir.join("origin.usfm").exists();
 
-    if is_test_dir {
-        if let Ok(test) = TestCase::load(dir) {
-            tests.push(test);
-        }
+    if is_test_dir && let Ok(test) = TestCase::load(dir) {
+        tests.push(test);
     }
 
     // Recurse into subdirectories
