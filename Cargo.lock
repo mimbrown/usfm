@@ -557,6 +557,7 @@ checksum = "adb9e6ca4f869e1180728b7950e35922a7fc6397f7b641499e8f3ef06e50dc83"
 name = "usfm_ast"
 version = "0.1.0"
 dependencies = [
+ "usfm_span",
  "usfm_style",
 ]
 
@@ -583,6 +584,10 @@ dependencies = [
  "usfm_style",
  "xml-rs",
 ]
+
+[[package]]
+name = "usfm_span"
+version = "0.1.0"
 
 [[package]]
 name = "usfm_style"

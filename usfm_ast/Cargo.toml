@@ -8,3 +8,5 @@ license = "MIT"
 # The AST is self-describing about style (hardening plan D3): a `Document`
 # owns the stylesheet its `StyleId`s resolve against.
 usfm_style = { path = "../usfm_style" }
+# `Span` and `SPAN`, re-exported as `usfm_ast::span` (ticket 11).
+usfm_span = { path = "../usfm_span" }

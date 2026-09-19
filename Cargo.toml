@@ -5,6 +5,7 @@ members = [
   "tests",
   "usfm_ast",
   "usfm_parser",
+  "usfm_span",
   "usfm_style",
 ]
 # `wip/` is parked outside the workspace (ticket 01); M6 rebuilds the language

@@ -13,7 +13,7 @@
 use std::fmt;
 
 use crate::ast::Document;
-use crate::lexer::span::Span;
+use crate::lexer::span::{LineIndex, Span};
 
 /// How serious a diagnostic is. Ordered so that `Error > Warning > Info`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -573,13 +573,13 @@ impl<'a> ParseResult<'a> {
 /// Convert a byte offset into a 1-based (line, column) pair, counting
 /// columns in characters. Offsets past the end of the source map to the
 /// last position.
+///
+/// This builds a [`LineIndex`] and throws it away, so it scans the whole
+/// source once per call. Converting more than one offset of the same source —
+/// printing a list of diagnostics, say — should build the index once and call
+/// [`LineIndex::line_col`] instead.
 pub fn line_col(source: &str, offset: u32) -> (usize, usize) {
-    let offset = (offset as usize).min(source.len());
-    let before = &source[..offset];
-    let line = before.matches('\n').count() + 1;
-    let line_start = before.rfind('\n').map_or(0, |i| i + 1);
-    let col = before[line_start..].chars().count() + 1;
-    (line, col)
+    LineIndex::new(source).line_col(offset)
 }
 
 #[cfg(test)]

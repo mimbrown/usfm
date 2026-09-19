@@ -9,7 +9,6 @@ mod parse_error;
 mod periph;
 pub mod reference;
 mod sidebar;
-pub mod span;
 pub mod string_parser;
 mod styled;
 mod table;
@@ -20,6 +19,15 @@ mod verse;
 #[macro_use]
 pub mod visit;
 pub mod visit_mut;
+
+/// Source positions, which live in the leaf crate [`usfm_span`].
+///
+/// Re-exported under the name the module had when it was
+/// `usfm_ast/src/span.rs`, so `usfm_ast::span::Span` and
+/// `usfm_parser::lexer::span::Span` keep resolving (ticket 11).
+pub mod span {
+    pub use usfm_span::*;
+}
 
 use std::borrow::Cow;
 use std::fmt;

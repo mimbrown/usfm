@@ -21,7 +21,7 @@ Done when the vendored files have roles, tests pass, and the gate is green.
 
 ## Answer
 
-Landed via PR #13 (2026-09-19). `tests/fixtures/machine-py/` (MIT, commit
+Landed in `977deb3` (PR #13, 2026-09-19). `tests/fixtures/machine-py/` (MIT, commit
 `e2af2c8`): the five `Tes` books, `custom.sty`, and the two `07JDG.SFM`
 project-mismatch files (seeds and a README note only: a parser cannot see a
 filename mismatch). `41MATTes.SFM` is a whole-file snapshot with its eight

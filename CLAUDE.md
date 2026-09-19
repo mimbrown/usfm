@@ -186,7 +186,8 @@ it leaves for callers:
 - D2: every node has a `span`. **A `Text` span covers the source run it was read
   from; `&source[text.span]` is not expected to equal `text.content`** (whitespace
   is normalised, escapes resolved, trailing whitespace trimmed). Synthesized nodes
-  carry `SPAN`.
+  carry `SPAN`. `Span`, `SPAN` and `LineIndex` (line/column lookup, built once per
+  source) live in the `usfm_span` crate, re-exported as `usfm_ast::span` (ticket 11).
 - D6: `Char::attributes` is a field; `Inline::Attributes` and `Chunk` are gone.
 - D5: `Document::into_owned()` detaches a parse from its source.
 
@@ -215,6 +216,7 @@ Minimal restrictions - work freely as long as changes are revertable:
 usfm-tools/
 ├── usfm_ast/              # AST node definitions
 ├── usfm_parser/           # Parser implementation
+├── usfm_span/             # Span and LineIndex (leaf crate, no dependencies)
 ├── usfm_style/            # Styling/output
 ├── tests/                 # Integration tests (usfm_tests crate)
 ├── tcdocs/                # Git submodule: official USFM test suite
