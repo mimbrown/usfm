@@ -18,7 +18,7 @@ sample projects, unfoldingWord ULT/UST) and ticket any that are, with licence.
 
 ## Answer
 
-Landed via PR #6 (2026-09-19). `tasks/benchmark/corpus/`: the whole WEB as 86
+Landed in `10cb9dd` (PR #6, 2026-09-19). `tasks/benchmark/corpus/`: the whole WEB as 86
 USFM files (5.4 MB), `synthetic/attributes-heavy/` (GEN, PSA, LUK; 3.9 MB) and
 `synthetic/alignment-heavy/` (LUK; 3.8 MB), both tools committed, output
 byte-identical on regeneration (checked by the orchestrator too). Note-heavy

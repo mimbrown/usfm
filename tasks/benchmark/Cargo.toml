@@ -1,0 +1,22 @@
+[package]
+name = "usfm_benchmark"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[dependencies]
+usfm_ast = { path = "../../usfm_ast" }
+usfm_parser = { path = "../../usfm_parser", features = ["benchmarking"] }
+usfm_style = { path = "../../usfm_style" }
+
+[dev-dependencies]
+# `html_reports` is off: the benches are run on demand and read from stdout,
+# and the plotters backend is a large dependency that measures nothing.
+criterion = { version = "0.6.0", default-features = false, features = [
+  "cargo_bench_support",
+] }
+
+[[bench]]
+name = "corpus"
+harness = false
