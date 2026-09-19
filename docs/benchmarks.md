@@ -146,7 +146,8 @@ book's worth of chapters and verses wrapped in milestone markup.
 
 Ticket 05 (Miri on the unsafe code, 2026-09-19) rewrote the lexer's `Source` and
 took 26 of the workspace's 27 `unsafe` uses out, so the numbers above no longer
-describe the code in the tree. **These are the numbers M3 compares against.**
+describe the code in the tree. Ticket 06 then changed the USX writer, so the
+numbers M3 compares against are the ones under "M2 close" below, not these.
 
 ### `unsafe` before and after
 
@@ -245,6 +246,51 @@ for every word, every marker name and every attribute. That is over the 2% the
 ADR asks of an `unsafe` block, so it stayed — with a `debug_assert` that makes
 every test run and every Miri run check the invariant the `SAFETY` comment
 claims.
+
+## M2 close: the numbers M3 compares against
+
+Taken on `bfaa57f` (2026-09-19, ticket 06 merged, the code M3 starts from),
+same VM and toolchain as the baseline, `cargo bench -p usfm_benchmark` three
+times in a row on an otherwise idle machine, all five groups. MiB/s; median of
+three; spread = (max − min) / median.
+
+| Id | R1 | R2 | R3 | Median | Spread |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `lex/plain` | 120.9 | 120.8 | 120.3 | **120.8** | 0.5% |
+| `lex/attributes-heavy` | 151.4 | 148.5 | 149.3 | **149.3** | 1.9% |
+| `lex/alignment-heavy` | 174.8 | 174.0 | 174.1 | **174.1** | 0.4% |
+| `lex/note-heavy` | 123.5 | 122.3 | 123.3 | **123.3** | 1.0% |
+| `lex/whole-corpus` | 142.8 | 140.1 | 141.9 | **141.9** | 1.9% |
+| `parse/plain` | 65.0 | 63.9 | 64.8 | **64.8** | 1.7% |
+| `parse/attributes-heavy` | 31.8 | 31.9 | 32.7 | **31.9** | 2.7% |
+| `parse/alignment-heavy` | 61.3 | 61.1 | 61.8 | **61.3** | 1.2% |
+| `parse/note-heavy` | 46.9 | 47.4 | 47.4 | **47.4** | 0.9% |
+| `parse/whole-corpus` | 49.3 | 49.4 | 48.4 | **49.3** | 2.1% |
+| `parse_usx/plain` | 28.5 | 28.3 | 28.1 | **28.3** | 1.3% |
+| `parse_usx/attributes-heavy` | 11.9 | 11.5 | 11.7 | **11.7** | 3.1% |
+| `parse_usx/alignment-heavy` | 21.6 | 22.1 | 22.1 | **22.1** | 2.1% |
+| `parse_usx/note-heavy` | 18.4 | 19.1 | 18.9 | **18.9** | 3.4% |
+| `parse_usx/whole-corpus` | 18.9 | 19.0 | 18.5 | **18.9** | 2.7% |
+| `parse_html/plain` | 53.5 | 54.0 | 53.4 | **53.5** | 1.2% |
+| `parse_html/attributes-heavy` | 25.3 | 25.9 | 25.5 | **25.5** | 2.5% |
+| `parse_html/alignment-heavy` | 48.1 | 47.6 | 48.5 | **48.1** | 1.8% |
+| `parse_html/note-heavy` | 37.0 | 36.8 | 37.5 | **37.0** | 1.8% |
+| `parse_html/whole-corpus` | 39.4 | 38.0 | 39.7 | **39.4** | 4.3% |
+| `reference_index/plain` | 238.3 | 228.5 | 240.6 | **238.3** | 5.1% |
+| `reference_index/attributes-heavy` | 177.7 | 184.9 | 198.4 | **184.9** | 11.2% |
+| `reference_index/alignment-heavy` | 1458.1 | 1483.1 | 942.5 | **1458.1** | 37.1% |
+| `reference_index/note-heavy` | 526.9 | 551.9 | 551.7 | **551.7** | 4.5% |
+| `reference_index/whole-corpus` | 246.2 | 239.6 | 239.9 | **239.9** | 2.7% |
+
+Against the M2 baseline medians: `lex/whole-corpus` 153.0 → 141.9 (−7%, the
+codegen-placement effect described above, not a code change: the lexer is
+byte-identical to the "After ticket 05" build), `parse/whole-corpus` 50.0 →
+49.3 (−1.4%), `parse_usx/whole-corpus` 19.6 → 18.9 (−3.6%: ticket 06's
+control-character replacement in the writer, and the `duplicate-attribute`
+check per attribute), `parse_html/whole-corpus` 40.8 → 39.4 (−3.4%, no HTML
+code changed; placement again). The M3 exit test is the median of three runs
+per group against **this** table, interleaved with a build of `bfaa57f` as
+"Reading a regression" says, and `reference_index` is judged only past ~15%.
 
 ## Reading a regression
 
