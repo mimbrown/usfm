@@ -138,10 +138,8 @@ impl XmlElement {
                 XmlEvent::EndElement { name: _end_name } => {
                     return Ok((event_reader, element));
                 }
-                XmlEvent::Whitespace(s) => {
-                    if s == " " {
-                        element.append_text(s);
-                    }
+                XmlEvent::Whitespace(s) if s == " " => {
+                    element.append_text(s);
                 }
                 _ => {}
             }
