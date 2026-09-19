@@ -7,13 +7,18 @@ mod into_owned;
 mod number;
 mod parse_error;
 mod periph;
-pub mod reference;
 mod sidebar;
 pub mod string_parser;
 mod styled;
 mod table;
-#[cfg(test)]
-mod test_fixtures;
+/// A hand-built document for the traversal tests.
+///
+/// Compiled for this crate's own tests, and for anything that turns on the
+/// `testing` feature: `usfm_semantic`'s reference-index tests (ticket 22) were
+/// written against this tree and kept it when they moved, rather than growing
+/// a second copy of it.
+#[cfg(any(test, feature = "testing"))]
+pub mod test_fixtures;
 pub mod text;
 mod verse;
 #[macro_use]
@@ -43,7 +48,6 @@ pub use into_owned::*;
 pub use number::*;
 pub use parse_error::*;
 pub use periph::*;
-pub use reference::{ChapterRef, NodePath, ReferenceIndex, VerseRef};
 pub use sidebar::*;
 pub use span::{SPAN, Span};
 pub use styled::*;
@@ -143,12 +147,6 @@ impl<'a> Document<'a> {
     /// The marker name for a style, e.g. `"p"`, without the leading `\`.
     pub fn marker(&self, id: StyleId) -> &str {
         &self.style(id).marker
-    }
-
-    /// Index the chapters and verses (plan D4). The index borrows the
-    /// document, so it cannot go stale; build a new one after mutating.
-    pub fn reference_index(&self) -> ReferenceIndex<'_> {
-        ReferenceIndex::build(self)
     }
 
     /// The version declared by a `\usfm` marker, e.g. `"3.1"`, or `None` when

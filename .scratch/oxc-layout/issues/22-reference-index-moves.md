@@ -1,6 +1,6 @@
 # 22. `ReferenceIndex` moves to `usfm_semantic`
 
-Status: ready-for-agent
+Status: resolved
 Milestone: M4
 Blocked by: 19
 
@@ -17,3 +17,15 @@ is a derived index, not a node: the ADR puts it in `usfm_semantic`.
   order and each verse's span.
 
 Done when the gate is green and `usfm_ast` has no `reference` module.
+
+## Answer
+
+Landed via PR #26 (2026-09-19). `reference.rs` moved by `git mv` into
+`usfm_semantic` (`ReferenceIndex::new(&Document)`, `ChapterRef`, `VerseRef`;
+lifted to the facade root); `usfm_ast` keeps only `NodePath`, now in
+`cursor.rs` beside what uses it, and `Document::reference_index()` is gone.
+The moved tests kept the hand-built fixture through a new off-by-default
+`testing` feature on `usfm_ast`. Document order was already what ticket 23
+needs and is now pinned: a duplicated verse or chapter number appears twice
+in order, `verse(c, v)`/`chapter(n)` return the first, and a verse before
+the first `\c` is kept with `chapter() == None`.

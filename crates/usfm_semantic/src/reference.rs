@@ -11,17 +11,22 @@
 //! [`VerseRef::nodes`] yields it as the largest nodes that fit, so a
 //! paragraph wholly inside the verse comes as one node and a paragraph the
 //! verse starts or ends in comes as its inlines.
+//!
+//! The index is derived from the tree, not part of it, so it lives in this
+//! crate rather than in `usfm_ast` (ADR 0001; ticket 22). The types it walks
+//! with — [`NodePath`], [`NodeRef`] — are tree types and stayed there.
 
 use std::ops::Range;
 
-use crate::text::PlainText;
-use crate::{Block, BookCode, ChapterStart, Document, NodeRef, NumberList, VerseStart};
+use usfm_ast::text::PlainText;
+use usfm_ast::{
+    Block, BookCode, ChapterStart, Document, NodePath, NodeRef, NumberList, VerseStart,
+};
 
-/// The path to a node from the document root: the block index, then the
-/// index of each child on the way down. Paths order like document order: a
-/// parent sorts before its descendants, a node before its later siblings.
-pub type NodePath = Vec<usize>;
-
+/// The chapters and verses of a document, in document order.
+///
+/// Built with [`ReferenceIndex::new`]; the index borrows the document, so it
+/// can never be stale.
 pub struct ReferenceIndex<'a> {
     document: &'a Document<'a>,
     book: Option<BookCode>,
@@ -53,7 +58,11 @@ impl<'a> ReferenceIndex<'a> {
     /// Index `document`. Chapters are read from the top-level blocks; verse
     /// starts are found anywhere, including inside sidebars and periphs,
     /// where the parser never places an end.
-    pub fn build(document: &'a Document<'a>) -> Self {
+    ///
+    /// Nothing is deduplicated or reordered: the tree is reported as it
+    /// stands, which is what lets a check over the index say that a verse
+    /// number repeats or runs backwards.
+    pub fn new(document: &'a Document<'a>) -> Self {
         let mut index = Self {
             document,
             book: None,
@@ -152,6 +161,9 @@ impl<'a> ReferenceIndex<'a> {
         self.book
     }
 
+    /// Every chapter in document order, one per `\c` — including a number
+    /// that repeats or goes backwards, which is exactly what the order checks
+    /// read.
     pub fn chapters(&self) -> impl ExactSizeIterator<Item = ChapterRef<'_, 'a>> {
         (0..self.chapters.len()).map(|position| ChapterRef {
             index: self,
@@ -164,8 +176,9 @@ impl<'a> ReferenceIndex<'a> {
         self.chapters().find(|chapter| chapter.number() == number)
     }
 
-    /// Every verse in document order, including any before the first
-    /// chapter.
+    /// Every verse in document order, one per `\v`, including any before the
+    /// first chapter (whose [`VerseRef::chapter`] is `None`, and which no
+    /// [`ChapterRef::verses`] yields) and any whose number repeats.
     pub fn verses(&self) -> impl ExactSizeIterator<Item = VerseRef<'_, 'a>> {
         (0..self.verses.len()).map(|position| VerseRef {
             index: self,
@@ -174,7 +187,8 @@ impl<'a> ReferenceIndex<'a> {
     }
 
     /// The verse of chapter `chapter` whose number covers `verse`: verse 4
-    /// is found in `\v 3-5`.
+    /// is found in `\v 3-5`. The *first* one, where the number repeats;
+    /// [`ReferenceIndex::verses`] has them all.
     pub fn verse(&self, chapter: usize, verse: usize) -> Option<VerseRef<'_, 'a>> {
         self.chapter(chapter)?.verse(verse)
     }
@@ -210,6 +224,8 @@ impl<'i, 'a> ChapterRef<'i, 'a> {
         &self.index.document.blocks[entry.start + 1..entry.end]
     }
 
+    /// The chapter's verses in document order, one per `\v` between its start
+    /// and end milestones, repeats and all.
     pub fn verses(&self) -> impl ExactSizeIterator<Item = VerseRef<'i, 'a>> {
         let index = self.index;
         self.entry()
@@ -218,7 +234,7 @@ impl<'i, 'a> ChapterRef<'i, 'a> {
             .map(move |position| VerseRef { index, position })
     }
 
-    /// The verse whose number covers `number`: 4 is found in `\v 3-5`.
+    /// The first verse whose number covers `number`: 4 is found in `\v 3-5`.
     pub fn verse(&self, number: usize) -> Option<VerseRef<'i, 'a>> {
         self.verses().find(|verse| verse.number().contains(number))
     }
@@ -338,12 +354,19 @@ fn collect<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_fixtures::sample_document;
+    use usfm_ast::test_fixtures::sample_document;
+
+    /// Parse through the facade, for the cases that are about what the parser
+    /// puts in the tree (verse order) rather than about walking a tree of a
+    /// known shape. A dev-dependency cycle, as in `tests/checks.rs`.
+    fn parse(source: &str) -> Document<'_> {
+        usfm::parse(source).document
+    }
 
     #[test]
     fn chapters_and_verses_are_found() {
         let document = sample_document();
-        let index = document.reference_index();
+        let index = ReferenceIndex::new(&document);
         assert_eq!(index.book(), Some(BookCode::Gen));
         assert_eq!(index.chapters().len(), 1);
         let chapter = index.chapter(1).unwrap();
@@ -359,7 +382,7 @@ mod tests {
     #[test]
     fn a_verse_knows_its_milestones() {
         let document = sample_document();
-        let index = document.reference_index();
+        let index = ReferenceIndex::new(&document);
         let verse = index.verse(1, 2).unwrap();
         assert_eq!(verse.start().number.to_string(), "2");
         assert_eq!(verse.start_path(), [3, 2]);
@@ -370,7 +393,7 @@ mod tests {
     #[test]
     fn verse_content_is_the_largest_nodes_between_the_milestones() {
         let document = sample_document();
-        let index = document.reference_index();
+        let index = ReferenceIndex::new(&document);
         let verse = index.verse(1, 1).unwrap();
         let kinds: Vec<(NodePath, &str)> = verse
             .nodes()
@@ -407,10 +430,10 @@ mod tests {
         for block in &mut document.blocks {
             if let Block::Para(para) = block {
                 para.children
-                    .retain(|inline| !matches!(inline, crate::Inline::VerseEnd(_)));
+                    .retain(|inline| !matches!(inline, usfm_ast::Inline::VerseEnd(_)));
             }
         }
-        let index = document.reference_index();
+        let index = ReferenceIndex::new(&document);
         let first = index.verse(1, 1).unwrap();
         assert!(first.end_path().is_none());
         // Up to `\v 2`: the rest of the first paragraph, the milestone and
@@ -418,5 +441,61 @@ mod tests {
         assert_eq!(first.text(), "In the beginning God created the heavens and");
         // The last verse runs to the end of the document.
         assert_eq!(index.verse(1, 2).unwrap().text(), "the earth Aside Reuben");
+    }
+
+    /// The index reports the tree, not a tidied version of it: a chapter's
+    /// `verses()` is one entry per `\v` in document order, so a number written
+    /// twice is there twice and a number that goes backwards stays where it
+    /// was written. That is what the order checks (ticket 23) read; `verse()`
+    /// keeps answering with the first match, because a lookup wants *the*
+    /// verse.
+    #[test]
+    fn verses_keep_document_order_when_a_number_repeats() {
+        let document = parse("\\id MAT\n\\c 1\n\\p \\v 5 e \\v 6 f \\v 6 g \\v 4 h\n");
+        let index = ReferenceIndex::new(&document);
+        let chapter = index.chapter(1).unwrap();
+        let numbers: Vec<String> = chapter.verses().map(|v| v.number().to_string()).collect();
+        assert_eq!(numbers, ["5", "6", "6", "4"]);
+        // Every verse is a distinct `\v`, in the order they were written.
+        let starts: Vec<u32> = chapter.verses().map(|v| v.start().span.start).collect();
+        assert!(starts.windows(2).all(|w| w[0] < w[1]), "{starts:?}");
+        // The lookup takes the first of the two sixes.
+        assert_eq!(chapter.verse(6).unwrap().text(), "f");
+        // `verses()` on the index is the same run, since every verse is in a
+        // chapter here.
+        assert_eq!(index.verses().len(), 4);
+    }
+
+    /// A `\v` before the first `\c` belongs to no chapter: it is in
+    /// `index.verses()` with `chapter() == None` and in no `ChapterRef`'s
+    /// verses. Nothing is dropped, so a check can see it.
+    #[test]
+    fn a_verse_before_the_first_chapter_belongs_to_no_chapter() {
+        let document = parse("\\id MAT\n\\p \\v 1 a\n\\c 1\n\\p \\v 2 b\n");
+        let index = ReferenceIndex::new(&document);
+        let numbers: Vec<String> = index.verses().map(|v| v.number().to_string()).collect();
+        assert_eq!(numbers, ["1", "2"]);
+        assert!(index.verses().next().unwrap().chapter().is_none());
+        let in_chapter: Vec<String> = index
+            .chapter(1)
+            .unwrap()
+            .verses()
+            .map(|v| v.number().to_string())
+            .collect();
+        assert_eq!(in_chapter, ["2"]);
+    }
+
+    /// Chapters likewise: one entry per `\c`, in document order.
+    #[test]
+    fn chapters_keep_document_order_when_a_number_repeats() {
+        let document =
+            parse("\\id MAT\n\\c 1\n\\p \\v 1 a\n\\c 1\n\\p \\v 1 b\n\\c 3\n\\p \\v 1 c\n");
+        let index = ReferenceIndex::new(&document);
+        let numbers: Vec<usize> = index.chapters().map(|c| c.number()).collect();
+        assert_eq!(numbers, [1, 1, 3]);
+        let starts: Vec<u32> = index.chapters().map(|c| c.start().span.start).collect();
+        assert!(starts.windows(2).all(|w| w[0] < w[1]), "{starts:?}");
+        // The lookup takes the first chapter 1, whose verse is `a`.
+        assert_eq!(index.verse(1, 1).unwrap().text(), "a");
     }
 }

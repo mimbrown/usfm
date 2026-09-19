@@ -21,6 +21,10 @@ usfm_style = { path = "../usfm_style" }
 
 [dev-dependencies]
 insta = "1"
+# `test_fixtures::sample_document`, the tree the reference-index tests walk;
+# they came from `usfm_ast` with the index (ticket 22) and kept its fixture
+# rather than copying it.
+usfm_ast = { path = "../usfm_ast", features = ["testing"] }
 # The integration tests parse through the facade, because the union of the
 # parser's diagnostics and this crate's is what the facade produces and what
 # the tests are really about. A dev-dependency cycle (`usfm` depends on this

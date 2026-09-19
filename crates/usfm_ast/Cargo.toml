@@ -10,3 +10,10 @@ license = "MIT"
 usfm_style = { path = "../usfm_style" }
 # `Span` and `SPAN`, re-exported as `usfm_ast::span` (ticket 11).
 usfm_span = { path = "../usfm_span" }
+
+[features]
+# Expose `test_fixtures::sample_document`, the hand-built tree this crate's
+# traversal tests walk. Off by default, so the fixture is not in a normal
+# build; `usfm_semantic` turns it on as a dev-dependency because the
+# reference-index tests it inherited (ticket 22) are written against that tree.
+testing = []

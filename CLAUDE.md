@@ -120,11 +120,17 @@ Conformance status (276 tests across two roots, 2026-09-19):
 **Traversal API (Phase 3, complete 2026-09-12)** lives in `usfm_ast`:
 `visit::Visit` / `visit_mut::VisitMut` (generated from one macro, same method
 names, no context parameter: hold `document.style_sheet()` if you resolve
-styles), `fold::Fold` (bottom-up, one associated type per node kind),
-`document.reference_index()` (`ReferenceIndex`: chapters, verses, their
-milestone paths, `verse(c, v)`, `VerseRef::nodes()` / `text()`), and
+styles), `fold::Fold` (bottom-up, one associated type per node kind), and
 `text::PlainText`. The parser re-exports the visitor modules. `Cursor` stays
-read-only.
+read-only. `ReferenceIndex` (chapters, verses, their milestone paths,
+`verse(c, v)`, `VerseRef::nodes()` / `text()`) left for `usfm_semantic` with
+ticket 22 — it is derived from the tree, not part of it, and the AST freeze is
+about node shape, not this helper. Build it with
+`usfm_semantic::ReferenceIndex::new(&document)` (`usfm::ReferenceIndex` on the
+facade); `Document::reference_index()` is gone. Chapters and verses come in
+document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
+`verse(c, v)` answer with the first match, and a `\v` before the first `\c`
+has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
 - **Every `Code` audited, structure and tables moved (ticket 21, M4).** The
@@ -304,9 +310,9 @@ crate split, M4 `usfm_semantic`, M5 `usfm_codegen`, M6 language server. M1, M2
 and M3 all closed 2026-09-19 (exit criteria recorded in the spec); **M4
 (`usfm_semantic`) is under way**: the checks that read a finished tree rather
 than a token stream leave the parser for `usfm_semantic`, with `usfm::parse()`
-returning the union so tcdocs is unchanged. Tickets 18–21 are done (the crate,
-placement and attributes, and the audit of every `Code`); 22 (`ReferenceIndex`)
-and 23 (verse order) are what is left. M4 is ticketed (18–23). Tickets are in
+returning the union so tcdocs is unchanged. Tickets 18–22 are done (the crate,
+placement and attributes, the audit of every `Code`, and `ReferenceIndex`'s
+move); 23 (verse order) is what is left. M4 is ticketed (18–24). Tickets are in
 `.scratch/oxc-layout/issues/`, written one milestone ahead. Unattended
 sessions follow `docs/agents/loop.md`; `scripts/gate.sh` is the gate before every push.
 
@@ -338,7 +344,8 @@ usfm-tools/
 │   ├── usfm_diagnostics/  # Diagnostic, Code, Severity, ParseResult, rendering
 │   ├── usfm_parser/       # Lexer + parser. A library, no binary
 │   ├── usfm_semantic/     # Checks over a finished tree: analyze(&Document)
-│   │                      #   -> Vec<Diagnostic>. Reports, never repairs
+│   │                      #   -> Vec<Diagnostic>. Reports, never repairs.
+│   │                      #   Also ReferenceIndex, the chapter/verse index
 │   ├── usfm_usx/          # AST -> USX: the XML tree, its writer and reader
 │   ├── usfm_html/         # AST -> HTML: ToHtml, SerializeHtml, Context
 │   ├── usfm_json/         # AST -> JSON: the tree as it is, one object per node
