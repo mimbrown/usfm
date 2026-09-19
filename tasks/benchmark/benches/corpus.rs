@@ -96,6 +96,20 @@ fn bench_parse(c: &mut Criterion) {
     });
 }
 
+/// `usfm::parse`: the same parse as `parse` above, plus `usfm_semantic`'s walk
+/// of the tree it produced and the merge of the two diagnostic lists (ticket
+/// 19). The pair is what says what the semantic pass costs, which is why both
+/// groups are kept. The facade parses with `DEFAULT_STYLESHEET`, the same
+/// `Arc` `style_sheet()` hands the other groups, so the only difference
+/// measured is the second pass.
+fn bench_parse_semantic(c: &mut Criterion) {
+    throughput_group(c, "parse_semantic", |files, _sheet| {
+        for file in files {
+            black_box(usfm::parse(black_box(&file.text)));
+        }
+    });
+}
+
 fn bench_parse_usx(c: &mut Criterion) {
     throughput_group(c, "parse_usx", |files, sheet| {
         for file in files {
@@ -156,7 +170,7 @@ fn bench_reference_index(c: &mut Criterion) {
 criterion_group! {
     name = benches;
     config = configured();
-    targets = bench_lex, bench_parse, bench_parse_usx, bench_parse_html, bench_parse_json,
-        bench_reference_index
+    targets = bench_lex, bench_parse, bench_parse_semantic, bench_parse_usx, bench_parse_html,
+        bench_parse_json, bench_reference_index
 }
 criterion_main!(benches);

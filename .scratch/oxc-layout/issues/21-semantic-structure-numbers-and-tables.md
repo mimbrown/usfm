@@ -20,6 +20,12 @@ re-parents content stays.
   ticket's answer and into `crates/usfm_diagnostics/src/diagnostics.rs`'s
   module doc as the new rule: "a parser code repairs; a semantic code
   reports".
+- Spans: a moved check reports the node's span, which can be wider than the
+  parser's token span (ticket 19: `unlisted-book-code` went from the code
+  word `@4..7` to the whole `\id` line). Decide once for all moved codes
+  whether a narrower span matters for the language server; if it does, give
+  `Book` (and any other node whose check needs a sub-span) an additive
+  field for it, filled by the parser.
 - Move what the table says, tests and snapshots with them, as in ticket 20.
 - `ParserImpl::check_document_structure` goes if everything in it moved.
 

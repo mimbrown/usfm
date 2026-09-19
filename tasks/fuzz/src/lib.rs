@@ -4,7 +4,9 @@
 //! properties a fuzz target can assert are the ones that hold for *any* input,
 //! valid or not:
 //!
-//! 1. parsing does not panic;
+//! 1. parsing does not panic — the targets go through `usfm::parse`, so
+//!    that is the parser *and* the semantic checks over what it built
+//!    (ticket 19), and every seed exercises both;
 //! 2. every span points at the source it was read from
 //!    (`usfm::parser::span_check`, the same invariants `crates/usfm_parser/tests/spans.rs`
 //!    asserts over hand-written inputs);
@@ -17,13 +19,12 @@
 //! to see it.
 
 use usfm::html::to_html_string;
-use usfm::parser::parser::Parser;
-use usfm::parser::{DEFAULT_STYLESHEET, span_check};
+use usfm::parser::span_check;
 use usfm::usx::to_usx_string;
 
 /// Run every check over one input.
 pub fn check_source(source: &str) {
-    let result = Parser::new(source).parse(&DEFAULT_STYLESHEET);
+    let result = usfm::parse(source);
     span_check::check_parse(source, &result);
     let usx = to_usx_string(&result.document);
     assert_well_formed(&usx, source);
@@ -36,7 +37,7 @@ pub fn check_source(source: &str) {
 /// resolving against `DEFAULT_STYLESHEET` instead would panic on an input
 /// holding an unknown marker.
 pub fn check_html(source: &str) {
-    let result = Parser::new(source).parse(&DEFAULT_STYLESHEET);
+    let result = usfm::parse(source);
     let document = result.document;
     let html = to_html_string(&document, document.style_sheet());
     assert_html_well_formed(&html, source);

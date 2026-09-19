@@ -848,17 +848,11 @@ impl<'a> ParserImpl<'a> {
         match BookCode::from_str(word) {
             Ok(code) => {
                 // A well-formed code USX accepts but this parser does not name
-                // is kept as written; it is still worth reporting, since a
-                // typo in a real code looks the same.
-                if !code.is_listed() {
-                    self.emit(
-                        Code::UnlistedBookCode,
-                        code_span,
-                        format!(
-                            "`{code}` is not one of the book codes USFM lists; kept as written"
-                        ),
-                    );
-                }
+                // is kept as written, so there is no repair to report and
+                // nothing is emitted here: `unlisted-book-code` is a judgement
+                // about the finished document and belongs to `usfm_semantic`
+                // (ticket 19). `unknown-book-code` below stays, because that
+                // one drops the `\id` line.
                 self.book = Some(code);
                 blocks.push(Block::Book(Book {
                     code,

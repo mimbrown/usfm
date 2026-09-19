@@ -1,6 +1,6 @@
 # 19. `usfm_semantic`: the crate, the union in the facade, the first moved check
 
-Status: ready-for-agent
+Status: resolved
 Milestone: M4
 
 The parser should report only what it needs to recover (spec, M4). Everything
@@ -36,3 +36,18 @@ with one check, so the later moves are mechanical.
 
 Done when the gate is green, tcdocs unchanged, and `unlisted-book-code` is
 reported by `usfm::parse` and not by `usfm_parser::Parser::parse`.
+
+## Answer
+
+Landed via PR #23 (2026-09-19). `crates/usfm_semantic`: `analyze(&Document)
+-> Vec<Diagnostic>`, an `Analyzer: Visit` holding the document's stylesheet,
+diagnostics stably sorted by span start; never depends on the parser. The
+facade's `parse`/`parse_with`/new `parse_with_options` return the union
+(parser first, then semantic, stable sort). The harness, the fuzz targets,
+the CLI driver and a new `parse_semantic` bench group go through the facade
+(whole-corpus 47.5 vs `parse` 49.0 MiB/s: about 8 ms of walk). First moved
+check: `unlisted-book-code`, now reported over the whole `\id` line (the
+`Book` node's span; the parser had the code word's). `Code::is_semantic()`
+splits the one-snapshot-per-code rule between `recovery.rs` and
+`usfm_semantic/tests/checks.rs`. D4 settled in the spec: verse-end emission
+stays in the parser. Not under Miri (no byte handling).

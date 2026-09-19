@@ -9,6 +9,14 @@
 //! - A curated subset of tcdocs inputs (read from the submodule; skipped if absent).
 //! - Local malformed inputs under `tests/fixtures/malformed/`.
 //!
+//! The diagnostics rendered here are the **parser's** — `common::render` calls
+//! `Parser::parse` — so a code the semantic pass owns
+//! (`usfm_diagnostics::Code::is_semantic`) does not appear in these snapshots
+//! even when the input triggers it. `unlisted-book-code.usfm` is the one such
+//! fixture today: its snapshot is the tree alone, and what a caller of
+//! `usfm::parse` would additionally see is snapshotted in
+//! `usfm_semantic/tests/snapshots/checks__unlisted_book_code.snap`.
+//!
 //! Review and accept changes with `cargo insta review` (or set
 //! `INSTA_UPDATE=always` for a bulk accept).
 

@@ -28,6 +28,11 @@
 #   and string writers, which are not this repo's code and are slow under Miri.
 #   The `usfm_ast` suite above already covers every `&str` the JSON writer
 #   hands on.
+# * `usfm_semantic` (ticket 19) — it slices no bytes at all. A check there reads
+#   a built tree: it compares a `BookCode`, copies a `Span` a node already
+#   carries and formats a message. There is no `unsafe`, no indexing into a
+#   `&str` and no source text in the crate, so Miri would only re-run three
+#   assertions over hand-built nodes. Revisit if a check ever reads source text.
 # * `usfm_pipeline` — its lib suite is the text replacements, which spend all
 #   their time inside the `regex` crate; that is not this repo's code, and it
 #   cost 66 s of the parser's 86 s while it lived there (ticket 15 moved it).

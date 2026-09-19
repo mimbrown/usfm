@@ -23,7 +23,7 @@ Done when the file parses with no Error diagnostics and the gate is green.
 
 ## Answer
 
-Landed via PR #22 (2026-09-19). A milestone with `|\*` now reports the new
+Landed in `09f2ca4` (PR #22, 2026-09-19). A milestone with `|\*` now reports the new
 `empty-milestone-attribute-list` (Warning, nothing dropped, same USX as
 without the pipe); `empty-attribute-list` (Error) is the character-style
 case only. Severity stays a property of the `Code`, hence a second code

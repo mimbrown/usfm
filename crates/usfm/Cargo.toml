@@ -13,6 +13,9 @@ license = "MIT"
 usfm_ast = { path = "../usfm_ast" }
 usfm_diagnostics = { path = "../usfm_diagnostics" }
 usfm_parser = { path = "../usfm_parser" }
+# The semantic pass, with no feature of its own: `parse` is the parser plus
+# these checks, so it is part of parsing here rather than an optional output.
+usfm_semantic = { path = "../usfm_semantic" }
 usfm_span = { path = "../usfm_span" }
 usfm_style = { path = "../usfm_style" }
 

@@ -6,6 +6,13 @@
 //! the recovery table documented on `Code`.
 //!
 //! Snapshots live in `tests/snapshots/recovery__<code>.snap`.
+//!
+//! **Every [`Code`] has a test in this file or in
+//! `usfm_semantic/tests/checks.rs`**, and [`Code::is_semantic`] says which.
+//! A code the parser repairs and reports is tested here; a code the semantic
+//! pass reports about a tree that parsed exactly as written is tested there,
+//! through `usfm::parse`. [`recovery_table_is_covered`] skips the semantic
+//! codes for that reason, and the check test file requires them.
 
 mod common;
 
@@ -416,22 +423,10 @@ fn unknown_book_code() {
     );
 }
 
-/// A code that *is* well formed but is not one of the books `BookCode` names.
-/// USX accepts it, so nothing is dropped: the book is kept as
-/// `BookCode::Other` and `\id ZZZ` reaches the output as written. Reported at
-/// Warning because a typo in a real code has exactly this shape.
-#[test]
-fn unlisted_book_code() {
-    let source = "\\id ZZZ Some book\n\\c 1\n\\p \\v 1 a";
-    assert_eq!(common::codes(source), vec![Code::UnlistedBookCode]);
-    assert!(
-        common::render(source).contains("Book ZZZ"),
-        "the book is kept: {}",
-        common::render(source)
-    );
-    check(Code::UnlistedBookCode, source);
-}
-
+/// `unlisted-book-code` — a well-formed code that is not one of the books
+/// `BookCode` names — is not here: nothing is repaired, so the parser has
+/// nothing to say about it, and the test lives in
+/// `usfm_semantic/tests/checks.rs` (ticket 19).
 #[test]
 fn content_outside_paragraph_text() {
     check(
@@ -1116,7 +1111,10 @@ fn machine_py_custom_stylesheet() {
 
 /// Every code in the recovery table has a snapshot produced by a test in
 /// this file. Codes that cannot be triggered from the default stylesheet
-/// are listed explicitly.
+/// are listed explicitly, and the codes the semantic pass owns
+/// ([`Code::is_semantic`]) are covered by `usfm_semantic/tests/checks.rs`
+/// instead — its `semantic_checks_are_covered` requires a
+/// `checks__<code>.snap` for each of them.
 #[test]
 fn recovery_table_is_covered() {
     let exempt = [
@@ -1127,7 +1125,7 @@ fn recovery_table_is_covered() {
     ];
     let missing: Vec<&str> = Code::ALL
         .iter()
-        .filter(|code| !exempt.contains(code))
+        .filter(|code| !exempt.contains(code) && !code.is_semantic())
         .map(|code| code.as_str())
         .filter(|name| {
             let path = format!(

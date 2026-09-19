@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use usfm::ast::Document;
 use usfm::diagnostics::{ParseResult, Severity};
-use usfm::parser::{DEFAULT_STYLESHEET, parser::Parser};
+use usfm::parser::DEFAULT_STYLESHEET;
 use usfm::pipeline::{OutputFormat, TextReplacement};
 use usfm::span::LineIndex;
 use usfm::style::StyleSheet;
@@ -239,7 +239,10 @@ impl Driver {
     /// Parse, transform and render, without writing anything.
     pub fn render(&mut self) -> Result<String, Error> {
         let input = join(&self.inputs);
-        let result = Parser::new(&input).parse(&sheet_or_default(&self.style_sheet));
+        // Through the facade, not `Parser` directly: `--strict`,
+        // `--deny-warnings` and `--diagnostics json` should see the semantic
+        // checks as well as the parser's repairs (ticket 19).
+        let result = usfm::parse_with(&input, &sheet_or_default(&self.style_sheet));
         let mut document = report("input", &input, result, &self.diagnostics)?;
         // Everything downstream resolves styles against the document's own
         // stylesheet, not the one handed to the parser: they differ whenever
@@ -259,7 +262,7 @@ impl Driver {
             return Err(usfm::pipeline::RenderError::NoDiglotForm(self.format).into());
         }
         let diglot = join(&self.diglots);
-        let result = Parser::new(&diglot).parse(&sheet_or_default(&self.diglot_style_sheet));
+        let result = usfm::parse_with(&diglot, &sheet_or_default(&self.diglot_style_sheet));
         let mut diglot_document = report("diglot", &diglot, result, &self.diagnostics)?;
         let diglot_style_sheet = Arc::clone(diglot_document.style_sheet());
         for replacement in self.diglot_replacements.iter_mut() {

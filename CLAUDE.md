@@ -38,7 +38,14 @@ pipelines. Those four types (`Diagnostic`, `Code`, `Severity`, `ParseResult`,
 plus `Diagnostic::render` / `to_json_line`) live in the `usfm_diagnostics`
 crate, re-exported as `usfm_parser::diagnostics` (ticket 12) and as
 `usfm::diagnostics` on the facade (ticket 17). Every recovery
-rule is a `Code` variant with a test in `crates/usfm_parser/tests/recovery.rs`.
+rule is a `Code` variant with a test in `crates/usfm_parser/tests/recovery.rs`;
+every *semantic* rule — a check that reads the finished tree and repairs
+nothing, so `Code::is_semantic()` is true and `usfm_semantic::analyze` emits it
+— is a `Code` variant with a test in `crates/usfm_semantic/tests/checks.rs`
+(ticket 19). Between them the two files cover every `Code`, and each one's
+coverage test reads `is_semantic()` to know which half is its own. Only
+`usfm::parse` / `parse_with` / `parse_with_options` return both halves;
+`usfm_parser::Parser::parse` returns the parser's alone.
 
 Conformance status (276 tests across two roots, 2026-09-19):
 - tcdocs (260 tests): 215 passed, 0 failed, 0 panicked, 1 skipped,
@@ -82,7 +89,8 @@ Conformance status (276 tests across two roots, 2026-09-19):
   fails on purpose, so a zero-test run can never report a pass rate.
 - CI (`.github/workflows/ci.yml`) runs the unit and integration suites
   (`recovery`, `snapshot`, `spans`, `whitespace`, `attributes`, `verse_ends`, `usx_text`,
-  `usfm_html`'s `footnotes`, `usfm_json`'s `json` and `coverage`, parser lib),
+  `usfm_html`'s `footnotes`, `usfm_json`'s `json` and `coverage`,
+  `usfm_semantic`'s `checks`, parser lib),
   gates lint with
   `cargo clippy --workspace --all-targets -- -D warnings` (in `scripts/gate.sh`
   since 2026-09-19, ticket 02: the workspace is clippy-clean, so a new warning
@@ -279,8 +287,10 @@ Minimal restrictions - work freely as long as changes are revertable:
 
 The layout is the one in `docs/adr/0001-oxc-style-crate-layout.md`, reached by
 ticket 17 (M3, 2026-09-19). Dependencies point one way: span <- style, ast <-
-diagnostics <- parser <- outputs <- pipeline <- facade <- apps. No output crate
-depends on another output crate.
+diagnostics <- {parser, semantic} <- outputs <- pipeline <- facade <- apps. No
+output crate depends on another output crate, and `usfm_semantic` does not
+depend on `usfm_parser`: a check there is a function of a `Document` and its
+stylesheet, whoever built them.
 
 ```
 usfm-tools/
@@ -290,14 +300,18 @@ usfm-tools/
 │   ├── usfm_ast/          # AST nodes, Visit / VisitMut / Fold, Cursor, PlainText
 │   ├── usfm_diagnostics/  # Diagnostic, Code, Severity, ParseResult, rendering
 │   ├── usfm_parser/       # Lexer + parser. A library, no binary
+│   ├── usfm_semantic/     # Checks over a finished tree: analyze(&Document)
+│   │                      #   -> Vec<Diagnostic>. Reports, never repairs
 │   ├── usfm_usx/          # AST -> USX: the XML tree, its writer and reader
 │   ├── usfm_html/         # AST -> HTML: ToHtml, SerializeHtml, Context
 │   ├── usfm_json/         # AST -> JSON: the tree as it is, one object per node
 │   ├── usfm_pipeline/     # Document -> Document/text: replacements, sections,
 │   │                      #   diglot, prompt, SILE, the format dispatch
 │   └── usfm/              # Facade: re-exports the above behind features, and
-│                          #   `usfm::parse` / `usfm::parse_with`. `apps/` and
-│                          #   `tasks/` depend on this, not on the pieces
+│                          #   `usfm::parse` / `parse_with` / `parse_with_options`,
+│                          #   whose diagnostics are the parser's plus
+│                          #   usfm_semantic's. `apps/` and `tasks/` depend on
+│                          #   this, not on the pieces
 ├── apps/
 │   └── usfm_cli/          # The `usfm` binary: clap, watch mode, diagnostics
 ├── tasks/
@@ -311,8 +325,9 @@ usfm-tools/
     └── data_layer/            # Data persistence (parked)
 ```
 
-`crates/usfm_semantic` (M4) and `crates/usfm_codegen` (M5) are the two the
-ADR's tree still lacks; M6 rebuilds the language server under `apps/`.
+`crates/usfm_codegen` (M5) is the one the ADR's tree still lacks;
+`crates/usfm_semantic` arrived with ticket 19 and M6 rebuilds the language
+server under `apps/`.
 
 ## Running Tests
 

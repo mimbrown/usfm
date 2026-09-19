@@ -147,5 +147,21 @@ Rebuilt in `apps/` on `ParseResult`, `usfm_semantic` and `usfm_codegen`
 - M4: `usfm_semantic` should own verse-number uniqueness and order (a
   duplicated `\v 6` or a `\v 5` after `\v 7a` is reported nowhere today; found
   by ticket 09 in machine.py's `41MATTes.SFM`), which needs versification.
-- M4: whether verse-end emission is syntax or semantics. It is in the parser now
-  (plan D4) and USX needs it; default is to leave it.
+- M4: whether verse-end emission is syntax or semantics. **Settled by ticket
+  19: it stays in the parser.** It is not a check at all — it *builds* the
+  tree, adding `Inline::VerseEnd` and `Block::ChapterEnd` nodes as the parse
+  goes (plan D4, `OpenVerse` in `parser.rs`), and this crate's rule is that a
+  semantic check reads a finished tree and never changes it. Three things
+  follow from moving it that nothing wants: `<verse eid>`/`<chapter eid>` are
+  required USX, so `usfm_usx` would depend on the semantic pass or the harness
+  would have to run it to compare against reference files; the placement rules
+  are already pinned as parser tests
+  (`crates/usfm_parser/tests/verse_ends.rs`), where the tree they assert on is
+  the parser's output; and `Parser::parse_with_options`'s
+  `insert_end_milestones` knob — the harness's one use of it — would become a
+  knob on a pass the parser does not run. The parser is also where the
+  information is cheapest: it knows the open verse, the chapter boundary and
+  the enclosing paragraph as it goes, which a later pass would have to
+  reconstruct by walking. What ticket 23 does move is the *reporting* about
+  verses (duplicate and out-of-order numbers, the bullet above): the check is
+  semantic, the node is not.

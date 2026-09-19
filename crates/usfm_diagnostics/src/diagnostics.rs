@@ -9,6 +9,13 @@
 //! the severity. That documentation is the recovery table: if the parser
 //! repairs something, there is a code for it here and a test for it in
 //! `usfm_parser/tests/recovery.rs`.
+//!
+//! Not every code is the parser's. A check that reads the finished tree and
+//! repairs nothing lives in `usfm_semantic` (M4), and its codes are the ones
+//! [`Code::is_semantic`] names; their tests are in
+//! `usfm_semantic/tests/checks.rs`. Every code has a test in one file or the
+//! other, and each file's coverage test uses `is_semantic` to know which are
+//! its own.
 
 use std::fmt;
 use std::str::FromStr;
@@ -241,6 +248,9 @@ pub enum Code {
     /// **Recovery:** none. The book is kept as `BookCode::Other` and written
     /// out verbatim (`<book code="TST">`).
     /// **Severity:** Warning.
+    /// **Reported by:** `usfm_semantic` (there is no repair to report, so the
+    /// parser is silent about it; ticket 19). The span is the whole `\id`
+    /// line, which is the span the AST's `Book` carries.
     UnlistedBookCode,
     /// **Trigger:** the document does not start with `\id`.
     /// **Recovery:** none.
@@ -494,6 +504,27 @@ impl Code {
             | Code::UnknownCustomMilestone => Severity::Info,
             _ => Severity::Error,
         }
+    }
+
+    /// Whether this code is reported by the semantic pass (`usfm_semantic`)
+    /// rather than by the parser.
+    ///
+    /// The parser repairs and reports the repair; the semantic pass reads the
+    /// finished tree and reports a judgement about it (M4 in
+    /// `.scratch/oxc-layout/spec.md`). Which side a code falls on is not
+    /// visible from the variant, so it is recorded here once and read by both
+    /// crates' coverage tests: `usfm_parser/tests/recovery.rs` skips the codes
+    /// it names, and `usfm_semantic/tests/checks.rs` requires a snapshot for
+    /// each of them. A code moving from the parser to the semantic pass is
+    /// therefore one line here plus a moved snapshot.
+    ///
+    /// ```
+    /// use usfm_diagnostics::Code;
+    /// assert!(Code::UnlistedBookCode.is_semantic());
+    /// assert!(!Code::UnknownBookCode.is_semantic());
+    /// ```
+    pub fn is_semantic(self) -> bool {
+        matches!(self, Code::UnlistedBookCode)
     }
 
     /// The inverse of [`Code::as_str`]: the code with that name, if there is
