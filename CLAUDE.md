@@ -156,7 +156,8 @@ Minimal restrictions - work freely as long as changes are revertable:
 - Can modify grammar
 - Can run tests (`cargo test`)
 - Can commit changes
-- Push freely, including to main; push each commit as it is made
+- `main` is protected (PR + green `test` check, no bypass). Work on a branch,
+  open a PR, merge when CI is green; see `docs/agents/loop.md` step 5
 
 ## Project Structure
 
