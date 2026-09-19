@@ -26,7 +26,7 @@ type-level only; no bench rerun needed, say so in the answer).
 
 ## Answer
 
-Landed via PR #14 (2026-09-19). `usfm_span` is the leaf crate: `span.rs`
+Landed in `fcb4b64` (PR #14, 2026-09-19). `usfm_span` is the leaf crate: `span.rs`
 moved by `git mv` with its oxc leftovers deleted, and `LineIndex` (line
 starts recorded once, binary search per lookup, columns in chars, CRLF is one
 break, offsets clamp and never panic inside a multi-byte character) with an

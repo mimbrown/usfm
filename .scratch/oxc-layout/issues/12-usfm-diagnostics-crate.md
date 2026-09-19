@@ -1,6 +1,6 @@
 # 12. `usfm_diagnostics`: `Diagnostic`, `Code`, `Severity`, `ParseResult` policy
 
-Status: ready-for-agent
+Status: resolved
 Milestone: M3
 Blocked by: 11
 
@@ -27,3 +27,16 @@ without depending on the parser.
 
 Done when the gate is green and nothing in `usfm_parser` refers to a
 diagnostic type except through the re-export.
+
+## Answer
+
+Landed via PR #15 (2026-09-19). `usfm_diagnostics` (depends on `usfm_span`
+and `usfm_ast`) holds the moved `diagnostics.rs` with its recovery table;
+`usfm_parser::diagnostics` re-exports it so no caller changed. New:
+`Code::parse`/`FromStr` as the inverse of `as_str`, tests that every name is
+kebab-case and unique and that `Code::ALL` is every variant;
+`Diagnostic::render(label, &LineIndex)` producing the CLI's
+`label:line:col: severity[code]: message` line (the CLI calls it) and
+`Diagnostic::to_json_line` (one JSON object per line, hand-escaped, no serde)
+for ticket 15's `--diagnostics json`. `render` takes no `source`: the
+`LineIndex` is enough. Type-level move; no bench rerun.

@@ -34,8 +34,10 @@ Progress on any of these fronts is valid. When asked to "make progress":
 **Parser hardening.** See `docs/plans/hardening.md` for the phased plan and
 design decisions. The parser never fails: it recovers and reports
 `Diagnostic`s in a `ParseResult`; `ParseResult::strict()` is the policy for
-pipelines. Every recovery rule is a `Code` variant with a test in
-`usfm_parser/tests/recovery.rs`.
+pipelines. Those four types (`Diagnostic`, `Code`, `Severity`, `ParseResult`,
+plus `Diagnostic::render` / `to_json_line`) live in the `usfm_diagnostics`
+crate, re-exported as `usfm_parser::diagnostics` (ticket 12). Every recovery
+rule is a `Code` variant with a test in `usfm_parser/tests/recovery.rs`.
 
 Conformance status (276 tests across two roots, 2026-09-19):
 - tcdocs (260 tests): 215 passed, 0 failed, 0 panicked, 1 skipped,
@@ -87,7 +89,8 @@ Conformance status (276 tests across two roots, 2026-09-19):
   (currently empty). It fails on a regression *and* on a stale entry, so when
   you fix a tcdocs case, remove it from the baseline (or regenerate with
   `--write-baseline`) in the same commit. Last in the gate is `scripts/miri.sh`
-  (ticket 05): `cargo +nightly miri test` over `usfm_ast`'s lib, the parser lib
+  (ticket 05): `cargo +nightly miri test` over the `usfm_span`, `usfm_ast` and
+  `usfm_diagnostics` libs, the parser lib
   and the `whitespace`, `attributes`, `usx_text`, `verse_ends`, `spans` and
   (11 of 76) `recovery` suites, about 3 min 50 s. It needs a nightly toolchain
   with `miri` and `rust-src`, which CI installs in its own step and
@@ -215,6 +218,7 @@ Minimal restrictions - work freely as long as changes are revertable:
 ```
 usfm-tools/
 ├── usfm_ast/              # AST node definitions
+├── usfm_diagnostics/      # Diagnostic, Code, Severity, ParseResult, rendering
 ├── usfm_parser/           # Parser implementation
 ├── usfm_span/             # Span and LineIndex (leaf crate, no dependencies)
 ├── usfm_style/            # Styling/output
