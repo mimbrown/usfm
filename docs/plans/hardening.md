@@ -305,9 +305,11 @@ The breaking change. Do it in one branch so downstream code is updated once.
       corpus pins them. Fixing the invariants turned up three real bugs: containers
       closed from outside ran over the closing marker, tables/rows/cells started
       after their own marker, and `\id`/`\c` ran a byte past the end of the line.
-- [x] `Diagnostic { span, severity, code, message }` and `ParseResult` (D1) in
-      `usfm_parser/src/diagnostics.rs`. `ParseErr` is gone; the parser has no
-      failure path. `ParseResult::strict()` / `strict_with(threshold)`.
+- [x] `Diagnostic { span, severity, code, message }` and `ParseResult` (D1), in
+      `usfm_diagnostics/src/diagnostics.rs` since ticket 12 moved them out of
+      `usfm_parser` (re-exported as `usfm_parser::diagnostics`). `ParseErr` is
+      gone; the parser has no failure path. `ParseResult::strict()` /
+      `strict_with(threshold)`.
 - [x] Recovery table: each `Code` variant documents trigger, recovery, severity.
       `tests/recovery.rs` has one snapshot test per code and a coverage test that
       fails when a code has no snapshot. Structural checks (missing `\id`, verse

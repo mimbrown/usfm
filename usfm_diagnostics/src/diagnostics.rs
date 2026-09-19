@@ -8,12 +8,13 @@
 //! Each [`Code`] documents its trigger, the recovery the parser performs, and
 //! the severity. That documentation is the recovery table: if the parser
 //! repairs something, there is a code for it here and a test for it in
-//! `tests/recovery.rs`.
+//! `usfm_parser/tests/recovery.rs`.
 
 use std::fmt;
+use std::str::FromStr;
 
-use crate::ast::Document;
-use crate::lexer::span::{LineIndex, Span};
+use usfm_ast::Document;
+use usfm_span::{LineIndex, Span};
 
 /// How serious a diagnostic is. Ordered so that `Error > Warning > Info`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -478,11 +479,47 @@ impl Code {
             _ => Severity::Error,
         }
     }
+
+    /// The inverse of [`Code::as_str`]: the code with that name, if there is
+    /// one.
+    ///
+    /// The language server and the CLI's `--deny <code>` key on these names,
+    /// so this is a lookup over [`Code::ALL`] rather than a second `match`
+    /// that could drift out of step with `as_str`.
+    ///
+    /// ```
+    /// use usfm_diagnostics::Code;
+    /// assert_eq!(Code::parse("unknown-marker"), Some(Code::UnknownMarker));
+    /// assert_eq!(Code::parse("UnknownMarker"), None);
+    /// ```
+    pub fn parse(name: &str) -> Option<Code> {
+        Code::ALL.iter().copied().find(|c| c.as_str() == name)
+    }
 }
 
 impl fmt::Display for Code {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.as_str())
+    }
+}
+
+/// The name of a [`Code`] that is not one of ours.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UnknownCode(pub String);
+
+impl fmt::Display for UnknownCode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "unknown diagnostic code: {}", self.0)
+    }
+}
+
+impl std::error::Error for UnknownCode {}
+
+impl FromStr for Code {
+    type Err = UnknownCode;
+
+    fn from_str(name: &str) -> Result<Self, Self::Err> {
+        Code::parse(name).ok_or_else(|| UnknownCode(name.to_owned()))
     }
 }
 
@@ -510,6 +547,110 @@ impl Diagnostic {
     pub fn is_error(&self) -> bool {
         self.severity == Severity::Error
     }
+
+    /// One line of human-readable output:
+    /// `label:line:col: severity[code]: message`, with no trailing newline.
+    ///
+    /// `label` names the input the diagnostic came from (a path, or `input` /
+    /// `diglot` when the CLI concatenated several files). `index` is the
+    /// [`LineIndex`] of that input's source, built once for the whole file:
+    /// the position printed is the start of [`Diagnostic::span`].
+    ///
+    /// ```
+    /// use usfm_diagnostics::{Code, Diagnostic};
+    /// use usfm_span::{LineIndex, Span};
+    ///
+    /// let source = "\\p one\n\\zz two\n";
+    /// let diagnostic = Diagnostic::new(
+    ///     Code::UnknownCustomMarker,
+    ///     Span::new(7, 10),
+    ///     "unknown marker \\zz",
+    /// );
+    /// assert_eq!(
+    ///     diagnostic.render("book.usfm", &LineIndex::new(source)),
+    ///     "book.usfm:2:1: warning[unknown-custom-marker]: unknown marker \\zz",
+    /// );
+    /// ```
+    pub fn render(&self, label: &str, index: &LineIndex) -> String {
+        let (line, col) = index.line_col(self.span.start);
+        format!(
+            "{label}:{line}:{col}: {}[{}]: {}",
+            self.severity, self.code, self.message
+        )
+    }
+
+    /// One JSON object on one line, for `--diagnostics json`: the same
+    /// information as [`Diagnostic::render`] plus the byte span, as
+    /// `{"file":…,"line":…,"col":…,"severity":…,"code":…,"message":…,"span":[start,end]}`.
+    ///
+    /// Written by hand — the key order is fixed and the strings are escaped by
+    /// [`escape_json`] — so that neither this crate nor anything downstream
+    /// needs `serde`. There is no trailing newline; a caller printing a stream
+    /// of these writes one object per line.
+    ///
+    /// ```
+    /// use usfm_diagnostics::{Code, Diagnostic};
+    /// use usfm_span::{LineIndex, Span};
+    ///
+    /// let source = "\\p one\n\\zz two\n";
+    /// let diagnostic = Diagnostic::new(
+    ///     Code::UnknownCustomMarker,
+    ///     Span::new(7, 10),
+    ///     "unknown marker \\zz",
+    /// );
+    /// assert_eq!(
+    ///     diagnostic.to_json_line("book.usfm", &LineIndex::new(source)),
+    ///     r#"{"file":"book.usfm","line":2,"col":1,"severity":"warning","code":"unknown-custom-marker","message":"unknown marker \\zz","span":[7,10]}"#,
+    /// );
+    /// ```
+    pub fn to_json_line(&self, label: &str, index: &LineIndex) -> String {
+        let (line, col) = index.line_col(self.span.start);
+        format!(
+            concat!(
+                r#"{{"file":"{}","line":{},"col":{},"severity":"{}","#,
+                r#""code":"{}","message":"{}","span":[{},{}]}}"#,
+            ),
+            escape_json(label),
+            line,
+            col,
+            self.severity,
+            self.code,
+            escape_json(&self.message),
+            self.span.start,
+            self.span.end,
+        )
+    }
+}
+
+/// Escape a string for a JSON string literal: `"` and `\`, the short forms
+/// JSON gives `\n`, `\r`, `\t`, `\u0008` and `\u000c`, and every other control
+/// character as `\uXXXX`. Everything else, including non-ASCII text, is copied
+/// through as UTF-8, which JSON allows.
+///
+/// ```
+/// use usfm_diagnostics::escape_json;
+/// assert_eq!(escape_json(r#"say "hi"\"#), r#"say \"hi\"\\"#);
+/// assert_eq!(escape_json("a\nb\u{1}"), r"a\nb\u0001");
+/// assert_eq!(escape_json("héllo"), "héllo");
+/// ```
+pub fn escape_json(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    for c in value.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            '\u{8}' => out.push_str("\\b"),
+            '\u{c}' => out.push_str("\\f"),
+            c if (c as u32) < 0x20 => {
+                out.push_str(&format!("\\u{:04x}", c as u32));
+            }
+            c => out.push(c),
+        }
+    }
+    out
 }
 
 impl fmt::Display for Diagnostic {
@@ -603,11 +744,233 @@ mod tests {
         assert_eq!(line_col(source, 100), (3, 2));
     }
 
+    /// The variant declared after `code`, or `None` at the end of the enum.
+    ///
+    /// An exhaustive `match` with no wildcard arm, so a new `Code` does not
+    /// compile until it is given a place in this chain. [`all_variants`] walks
+    /// the chain rather than repeating a hand-written list, which is what makes
+    /// it complete: a variant left out of the chain has nowhere to hide.
+    fn next_variant(code: Code) -> Option<Code> {
+        Some(match code {
+            Code::UnknownMarker => Code::UnknownCustomMarker,
+            Code::UnknownCustomMarker => Code::UnknownMilestone,
+            Code::UnknownMilestone => Code::UnknownCustomMilestone,
+            Code::UnknownCustomMilestone => Code::UnmatchedClosingMarker,
+            Code::UnmatchedClosingMarker => Code::ParagraphMarkerClosed,
+            Code::ParagraphMarkerClosed => Code::UnmatchedMilestoneEnd,
+            Code::UnmatchedMilestoneEnd => Code::MilestoneNotClosed,
+            Code::MilestoneNotClosed => Code::StrayBackslash,
+            Code::StrayBackslash => Code::MarkerNotAllowedHere,
+            Code::MarkerNotAllowedHere => Code::MarkerNotListedHere,
+            Code::MarkerNotListedHere => Code::NestedMarkerNotNested,
+            Code::NestedMarkerNotNested => Code::CharacterStyleNotClosed,
+            Code::CharacterStyleNotClosed => Code::CharacterStyleImplicitlyClosed,
+            Code::CharacterStyleImplicitlyClosed => Code::CharacterStyleNestedWithoutPlus,
+            Code::CharacterStyleNestedWithoutPlus => Code::FigureNotClosed,
+            Code::FigureNotClosed => Code::EmptyWord,
+            Code::EmptyWord => Code::NoteNotClosed,
+            Code::NoteNotClosed => Code::MissingNoteCaller,
+            Code::MissingNoteCaller => Code::MissingVerseNumber,
+            Code::MissingVerseNumber => Code::MalformedVerseNumber,
+            Code::MalformedVerseNumber => Code::VerseInNote,
+            Code::VerseInNote => Code::VerseInCharacterStyle,
+            Code::VerseInCharacterStyle => Code::VerseInHeading,
+            Code::VerseInHeading => Code::VerseOutsideChapter,
+            Code::VerseOutsideChapter => Code::VerseTextBeforeChapter,
+            Code::VerseTextBeforeChapter => Code::MissingChapterNumber,
+            Code::MissingChapterNumber => Code::MalformedChapterNumber,
+            Code::MalformedChapterNumber => Code::NumberHasLeadingZero,
+            Code::NumberHasLeadingZero => Code::AlternateChapterNotClosed,
+            Code::AlternateChapterNotClosed => Code::AlternateVerseNotClosed,
+            Code::AlternateVerseNotClosed => Code::MissingBookCode,
+            Code::MissingBookCode => Code::UnknownBookCode,
+            Code::UnknownBookCode => Code::UnlistedBookCode,
+            Code::UnlistedBookCode => Code::MissingId,
+            Code::MissingId => Code::IdNotFirst,
+            Code::IdNotFirst => Code::EmptyBook,
+            Code::EmptyBook => Code::SidebarNotClosed,
+            Code::SidebarNotClosed => Code::UnmatchedSidebarEnd,
+            Code::UnmatchedSidebarEnd => Code::ContentOutsideParagraph,
+            Code::ContentOutsideParagraph => Code::ContentDropped,
+            Code::ContentDropped => Code::UnexpectedTableColumn,
+            Code::UnexpectedTableColumn => Code::ExpectedTableCell,
+            Code::ExpectedTableCell => Code::UnexpectedPipe,
+            Code::UnexpectedPipe => Code::UnterminatedAttributeValue,
+            Code::UnterminatedAttributeValue => Code::NewlineInAttributes,
+            Code::NewlineInAttributes => Code::EmptyAttributeList,
+            Code::EmptyAttributeList => Code::NoDefaultAttribute,
+            Code::NoDefaultAttribute => Code::DefaultAttributeWithOthers,
+            Code::DefaultAttributeWithOthers => Code::AttributeValueNotQuoted,
+            Code::AttributeValueNotQuoted => Code::MissingAttributeValue,
+            Code::MissingAttributeValue => Code::MalformedAttributeName,
+            Code::MalformedAttributeName => Code::DuplicateAttribute,
+            Code::DuplicateAttribute => Code::Internal,
+            Code::Internal => return None,
+        })
+    }
+
+    /// Every variant, in declaration order, built by walking [`next_variant`]
+    /// from the first one.
+    fn all_variants() -> Vec<Code> {
+        let mut chain = vec![Code::UnknownMarker];
+        while let Some(next) = next_variant(*chain.last().unwrap()) {
+            assert!(
+                !chain.contains(&next),
+                "{next:?} appears twice in next_variant's chain"
+            );
+            chain.push(next);
+        }
+        // `Code` is a fieldless enum with default discriminants, so
+        // `code as usize` is its position in the declaration. Checking the
+        // chain runs 0, 1, 2, … proves it visits consecutive variants: a
+        // variant inserted anywhere but after the last one leaves a gap here.
+        // (Which is why `Internal`, the catch-all, stays last.)
+        for (i, code) in chain.iter().enumerate() {
+            assert_eq!(
+                *code as usize, i,
+                "next_variant skips the variant declared before {code:?}"
+            );
+        }
+        chain
+    }
+
+    #[test]
+    fn all_is_every_variant() {
+        let every = all_variants();
+        for code in &every {
+            assert!(
+                Code::ALL.contains(code),
+                "{code:?} is missing from Code::ALL"
+            );
+        }
+        assert_eq!(
+            Code::ALL.len(),
+            every.len(),
+            "Code::ALL has an entry that is not a variant, or a duplicate"
+        );
+    }
+
     #[test]
     fn every_code_has_a_unique_name() {
         let mut names: Vec<_> = Code::ALL.iter().map(|c| c.as_str()).collect();
         names.sort_unstable();
         names.dedup();
         assert_eq!(names.len(), Code::ALL.len());
+    }
+
+    /// The names are the CLI's `--deny <code>` and the language server's
+    /// `Diagnostic.code`, so they are an interface: kebab case, no
+    /// underscores, no capitals, no leading or doubled `-`.
+    #[test]
+    fn every_code_name_is_kebab_case() {
+        for code in Code::ALL {
+            let name = code.as_str();
+            assert!(!name.is_empty(), "{code:?} has an empty name");
+            for (i, word) in name.split('-').enumerate() {
+                assert!(
+                    !word.is_empty(),
+                    "{name:?} has an empty segment (leading, trailing or doubled `-`)"
+                );
+                assert!(
+                    word.bytes()
+                        .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit()),
+                    "{name:?} has a segment that is not lowercase ASCII or digits: {word:?}"
+                );
+                if i == 0 {
+                    assert!(
+                        word.as_bytes()[0].is_ascii_lowercase(),
+                        "{name:?} does not start with a letter"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn code_name_round_trips() {
+        for code in Code::ALL {
+            assert_eq!(Code::parse(code.as_str()), Some(*code));
+            assert_eq!(code.as_str().parse::<Code>(), Ok(*code));
+            // `Display` is the name too, so the round trip closes either way.
+            assert_eq!(Code::parse(&code.to_string()), Some(*code));
+        }
+        assert_eq!(Code::parse("no-such-code"), None);
+        assert_eq!(
+            "no-such-code".parse::<Code>(),
+            Err(UnknownCode("no-such-code".to_owned()))
+        );
+    }
+
+    /// The exact line `main.rs` printed before this moved here.
+    #[test]
+    fn render_is_the_cli_line() {
+        let source = "\\id GEN\n\\p text\n\\zz oops\n";
+        let index = LineIndex::new(source);
+        let start = source.find("\\zz").unwrap() as u32;
+        let diagnostic = Diagnostic::new(
+            Code::UnknownCustomMarker,
+            Span::new(start, start + 3),
+            "unknown marker \\zz",
+        );
+        assert_eq!(
+            diagnostic.render("book.usfm", &index),
+            "book.usfm:3:1: warning[unknown-custom-marker]: unknown marker \\zz"
+        );
+        assert!(!diagnostic.render("book.usfm", &index).ends_with('\n'));
+    }
+
+    #[test]
+    fn render_counts_columns_in_characters() {
+        let source = "\\p ré\\zz\n";
+        let index = LineIndex::new(source);
+        let start = source.find("\\zz").unwrap() as u32;
+        let diagnostic =
+            Diagnostic::new(Code::UnknownCustomMarker, Span::new(start, start + 3), "x");
+        // `é` is two bytes at offset 4, so the marker is byte 6 but column 6.
+        assert_eq!(start, 6);
+        assert_eq!(
+            diagnostic.render("book.usfm", &index),
+            "book.usfm:1:6: warning[unknown-custom-marker]: x"
+        );
+    }
+
+    #[test]
+    fn json_line_shape() {
+        let source = "\\id GEN\n\\p text\n";
+        let index = LineIndex::new(source);
+        let diagnostic = Diagnostic::new(Code::UnknownMarker, Span::new(8, 10), "unknown marker");
+        assert_eq!(
+            diagnostic.to_json_line("book.usfm", &index),
+            r#"{"file":"book.usfm","line":2,"col":1,"severity":"error","code":"unknown-marker","message":"unknown marker","span":[8,10]}"#
+        );
+    }
+
+    /// A quote, a backslash and a newline in the message, and a space in the
+    /// label: the JSON stays one line and one object.
+    #[test]
+    fn json_line_escapes_message_and_label() {
+        let index = LineIndex::new("x");
+        let diagnostic = Diagnostic::new(
+            Code::StrayBackslash,
+            Span::new(0, 1),
+            "stray \"\\\" before\na new line\tand a tab",
+        );
+        let line = diagnostic.to_json_line("my book.usfm", &index);
+        assert_eq!(
+            line,
+            r#"{"file":"my book.usfm","line":1,"col":1,"severity":"error","code":"stray-backslash","message":"stray \"\\\" before\na new line\tand a tab","span":[0,1]}"#
+        );
+        // One line: the message's newline and tab are escape sequences, not
+        // the characters themselves.
+        assert_eq!(line.lines().count(), 1);
+        assert!(!line.contains('\t'));
+    }
+
+    #[test]
+    fn escape_json_control_characters() {
+        assert_eq!(escape_json("\u{0}\u{1}\u{1f}"), r"\u0000\u0001\u001f");
+        assert_eq!(escape_json("\u{8}\u{c}\r"), r"\b\f\r");
+        // Not control characters: copied through, including non-ASCII.
+        assert_eq!(escape_json("plain ünïcode /"), "plain ünïcode /");
     }
 }

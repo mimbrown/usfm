@@ -8,7 +8,16 @@ pub use generated::*;
 
 pub use usfm_ast as ast;
 pub mod cursor;
-pub mod diagnostics;
+
+/// Parse diagnostics, which live in [`usfm_diagnostics`].
+///
+/// Re-exported under the name the module had when it was
+/// `usfm_parser/src/diagnostics.rs`, so `usfm_parser::diagnostics::Code` and
+/// the parser's own `crate::diagnostics::…` paths keep resolving (ticket 12).
+pub mod diagnostics {
+    pub use usfm_diagnostics::*;
+}
+
 pub mod parser;
 pub use diagnostics::{Code, Diagnostic, ParseResult, Severity};
 pub mod context;
