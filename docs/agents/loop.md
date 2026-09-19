@@ -34,6 +34,14 @@ the tickets are a chain, and parallel edits to a crate split collide.
    criteria in the spec one by one, record the result in the spec, then write the
    next milestone's tickets from what is now known. Commit them before starting.
 
+## Tools a ticket needs
+
+The cloud image has stable Rust; the setup script adds only rustup. A ticket that
+needs more installs it in the session, as its first step: `rustup toolchain
+install nightly --component miri,rust-src` (ticket 05), `cargo install cargo-fuzz
+--locked` (06). If an install is blocked by the environment's network allowlist,
+that is a Stop: name the host that was refused.
+
 ## Stop
 
 Stop and leave a note under `## Comments` on the ticket (and in the final
