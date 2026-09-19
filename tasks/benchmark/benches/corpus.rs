@@ -23,6 +23,7 @@ use usfm::json::to_json_string;
 use usfm::parser::lexer::Lexer;
 use usfm::parser::parser::Parser;
 use usfm::parser::{DEFAULT_STYLESHEET, UniquePromise};
+use usfm::semantic::ReferenceIndex;
 use usfm::style::StyleSheet;
 use usfm::usx::to_usx_string;
 use usfm_benchmark::{CorpusFile, FileClass, total_bytes};
@@ -142,6 +143,10 @@ fn bench_parse_json(c: &mut Criterion) {
 /// the number is the cost of walking a built tree. Throughput is still counted
 /// over the bytes of source the tree came from, which keeps the unit the same
 /// as the groups above without the two being directly comparable.
+///
+/// The index moved to `usfm_semantic` in ticket 22; the call it times is the
+/// same walk under a new name (`document.reference_index()` was
+/// `ReferenceIndex::build`).
 fn bench_reference_index(c: &mut Criterion) {
     let sheet = style_sheet();
     let mut group = c.benchmark_group("reference_index");
@@ -158,7 +163,7 @@ fn bench_reference_index(c: &mut Criterion) {
             |b, documents| {
                 b.iter(|| {
                     for document in documents {
-                        black_box(document.reference_index());
+                        black_box(ReferenceIndex::new(document));
                     }
                 })
             },
