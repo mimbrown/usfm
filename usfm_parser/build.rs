@@ -35,13 +35,13 @@ fn main() -> std::io::Result<()> {
     let out = File::create(Path::new(&out_dir).join("default_stylesheet.rs"))?;
     let mut writer = BufWriter::new(out);
     writeln!(writer, "// GENERATED - DO NOT EDIT")?;
-    writeln!(writer, "")?;
+    writeln!(writer)?;
     writeln!(writer, "use std::sync::{{Arc, LazyLock}};")?;
     writeln!(
         writer,
         "use usfm_style::{{StyleSheet, StyleRule, StyleType, TextType, TextProperties}};"
     )?;
-    writeln!(writer, "")?;
+    writeln!(writer)?;
     // The stylesheet is handed out as an `Arc` so a `Document` can own it
     // (hardening plan D3) without copying ~1500 rules per parse.
     writeln!(

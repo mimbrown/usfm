@@ -158,16 +158,14 @@ impl XmlDocument {
     pub fn from<R: Read>(s: R) -> Result<Self, Error> {
         let mut parser = EventReader::new(s);
         loop {
-            match parser.next()? {
-                XmlEvent::StartElement {
-                    name,
-                    attributes,
-                    namespace,
-                } => {
-                    let (_, root) = XmlElement::read(parser, name, attributes, namespace)?;
-                    return Ok(XmlDocument { root });
-                }
-                _ => {}
+            if let XmlEvent::StartElement {
+                name,
+                attributes,
+                namespace,
+            } = parser.next()?
+            {
+                let (_, root) = XmlElement::read(parser, name, attributes, namespace)?;
+                return Ok(XmlDocument { root });
             }
         }
     }

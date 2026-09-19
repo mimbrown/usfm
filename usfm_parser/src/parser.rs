@@ -1819,7 +1819,7 @@ impl<'a> ParserImpl<'a> {
     ) -> Option<InnerListCloser> {
         let name = self.marker_name(marker);
         let caller = match self.eat_word() {
-            Some(word) => Caller::from_str(word),
+            Some(word) => Caller::from(word),
             None => {
                 self.emit(
                     Code::MissingNoteCaller,
@@ -2079,7 +2079,7 @@ impl<'a> ParserImpl<'a> {
             return;
         }
         let parent_name = self.marker_name(parent);
-        if rule.occurs_under.iter().any(|allowed| *allowed == parent_name) {
+        if rule.occurs_under.contains(&parent_name) {
             return;
         }
         let name = self.marker_name(marker);

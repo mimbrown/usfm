@@ -125,7 +125,9 @@ impl<'a> ReferenceIndex<'a> {
         for (position, verse) in index.verses.iter().enumerate() {
             if let Some(chapter) = verse.chapter {
                 let range = &mut index.chapters[chapter].verses;
-                if range.is_empty() {
+                // Called as a path, because on a `&mut Range` the method call
+                // would be ambiguous with unstable `ExactSizeIterator::is_empty`.
+                if Range::is_empty(range) {
                     *range = position..position + 1;
                 } else {
                     range.end = position + 1;

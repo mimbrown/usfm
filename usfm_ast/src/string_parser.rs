@@ -17,6 +17,12 @@ where
     }
 }
 
+/// What a [`StringParser`] returns when the input does not match. It carries
+/// no position: the caller turns it into its own error with
+/// [`ParseStr::create_err`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NoMatch;
+
 pub struct StringParser<'a> {
     source: &'a str,
 }
@@ -48,7 +54,7 @@ impl<'a> StringParser<'a> {
         }
     }
 
-    pub fn expect_str<M: Matcher>(&mut self, mut matcher: M) -> Result<&str, ()> {
+    pub fn expect_str<M: Matcher>(&mut self, mut matcher: M) -> Result<&str, NoMatch> {
         let mut i = 0;
         for c in self.source.chars() {
             if !matcher.matches(c) {
@@ -57,7 +63,7 @@ impl<'a> StringParser<'a> {
             i += c.len_utf8();
         }
         if i == 0 {
-            Err(())
+            Err(NoMatch)
         } else {
             let expected = unsafe { self.source.get_unchecked(0..i) };
             self.source = unsafe { self.source.get_unchecked(i..self.source.len()) };
@@ -65,9 +71,9 @@ impl<'a> StringParser<'a> {
         }
     }
 
-    pub fn expect_usize(&mut self) -> Result<usize, ()> {
+    pub fn expect_usize(&mut self) -> Result<usize, NoMatch> {
         let number = self.expect_str(|c: char| c.is_ascii_digit())?;
-        number.parse::<usize>().map_err(|_| ())
+        number.parse::<usize>().map_err(|_| NoMatch)
     }
 
     pub fn has_remaining(&self) -> bool {
@@ -81,7 +87,7 @@ where
 {
     type Err;
 
-    fn consume_parser(parser: &mut StringParser) -> Result<Self, ()>;
+    fn consume_parser(parser: &mut StringParser) -> Result<Self, NoMatch>;
 
     fn parse_str(string: &str) -> Result<Self, Self::Err> {
         let mut parser = StringParser::new(string);
