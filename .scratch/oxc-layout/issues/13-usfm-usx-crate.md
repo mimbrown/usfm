@@ -33,7 +33,7 @@ Done when the gate is green, tcdocs is unchanged, and the bench is within 3%.
 
 ## Answer
 
-Landed via PR #16 (2026-09-19). `usfm_usx` (depends on `usfm_ast`,
+Landed in `d918bd4` (PR #16, 2026-09-19). `usfm_usx` (depends on `usfm_ast`,
 `usfm_style`, `xml-rs`; never on the parser) owns `usx.rs` and
 `xml_document.rs`. The walk is a `usfm_ast::visit::Visit` over private state
 (book code, chapter, open verse, `include_vid`, the document's stylesheet); no

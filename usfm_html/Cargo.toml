@@ -1,0 +1,26 @@
+[package]
+name = "usfm_html"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+# An output crate in `docs/adr/0001-oxc-style-crate-layout.md`: it turns a
+# `Document` into HTML, and owns the generic `Serialize` trait the SILE output
+# is built on. "No output crate depends on another output crate", and no output
+# crate depends on the parser either — this one reads the AST and the
+# stylesheet the document carries, so neither `usfm_parser` nor `usfm_usx` is
+# in the list below. The character escaping in `escape.rs` is a deliberate copy
+# of `usfm_usx::xml_document`'s rather than a dependency on it.
+[dependencies]
+# The tree it walks.
+usfm_ast = { path = "../usfm_ast" }
+# `StyleSheet` and `StyleRule`, to resolve a node's `StyleId` to its marker.
+usfm_style = { path = "../usfm_style" }
+
+[dev-dependencies]
+# Tests and the example need a parsed `Document` and the default stylesheet,
+# which only the parser can build. `usfm_parser` depends on this crate for its
+# `serialize_html` / `serialize` / `context` re-exports (ticket 14), so this is
+# a cycle — cargo allows one that goes through dev-dependencies, and the
+# non-test build of either crate is unaffected.
+usfm_parser = { path = "../usfm_parser" }

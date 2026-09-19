@@ -255,8 +255,17 @@ name = "usfm_fuzz"
 version = "0.0.0"
 dependencies = [
  "libfuzzer-sys",
+ "usfm_html",
  "usfm_parser",
  "xml-rs",
+]
+
+[[package]]
+name = "usfm_html"
+version = "0.1.0"
+dependencies = [
+ "usfm_ast",
+ "usfm_style",
 ]
 
 [[package]]
@@ -268,6 +277,7 @@ dependencies = [
  "regex-automata",
  "usfm_ast",
  "usfm_diagnostics",
+ "usfm_html",
  "usfm_style",
  "usfm_usx",
 ]

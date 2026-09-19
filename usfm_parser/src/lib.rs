@@ -20,10 +20,38 @@ pub mod diagnostics {
 
 pub mod parser;
 pub use diagnostics::{Code, Diagnostic, ParseResult, Severity};
-pub mod context;
+
+/// The state an HTML serializer carries, which lives in
+/// [`usfm_html`].
+///
+/// Re-exported under the name the module had when it was
+/// `usfm_parser/src/context.rs`, so `usfm_parser::context::Context` keeps
+/// resolving (ticket 14). Ticket 17 deletes this re-export along with the
+/// parser's binary; new code should name [`usfm_html`] directly.
+pub mod context {
+    pub use usfm_html::context::*;
+}
+
 pub mod lexer;
-pub mod serialize;
-pub mod serialize_html;
+
+/// The generic serializer trait an output format other than HTML would be
+/// written against, which lives in [`usfm_html`].
+///
+/// Re-exported under the name the module had when it was
+/// `usfm_parser/src/serialize.rs`; ticket 17 deletes it, as for [`context`].
+pub mod serialize {
+    pub use usfm_html::serialize::*;
+}
+
+/// HTML output, which lives in [`usfm_html`].
+///
+/// Re-exported under the name the module had when it was
+/// `usfm_parser/src/serialize_html.rs`; ticket 17 deletes it, as for
+/// [`context`].
+pub mod serialize_html {
+    pub use usfm_html::serialize_html::*;
+}
+
 pub use serialize_html::{SerializeHtml, ToHtml, serialize_html, to_html_string};
 
 // The span invariants, shared by `tests/spans.rs` and `tasks/fuzz` so the two

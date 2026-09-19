@@ -81,7 +81,7 @@ Conformance status (276 tests across two roots, 2026-09-19):
   fails on purpose, so a zero-test run can never report a pass rate.
 - CI (`.github/workflows/ci.yml`) runs the unit and integration suites
   (`recovery`, `snapshot`, `spans`, `whitespace`, `attributes`, `verse_ends`, `usx_text`,
-  parser lib), gates lint with
+  `usfm_html`'s `footnotes`, parser lib), gates lint with
   `cargo clippy --workspace --all-targets -- -D warnings` (in `scripts/gate.sh`
   since 2026-09-19, ticket 02: the workspace is clippy-clean, so a new warning
   fails the build) and
@@ -90,7 +90,8 @@ Conformance status (276 tests across two roots, 2026-09-19):
   you fix a tcdocs case, remove it from the baseline (or regenerate with
   `--write-baseline`) in the same commit. Last in the gate is `scripts/miri.sh`
   (ticket 05): `cargo +nightly miri test` over the `usfm_span`, `usfm_ast` and
-  `usfm_diagnostics` libs, the parser lib
+  `usfm_diagnostics` libs, `usfm_usx`'s lib, `usfm_html`'s `escape` tests, the
+  parser lib
   and the `whitespace`, `attributes`, `usx_text`, `verse_ends`, `spans` and
   (11 of 76) `recovery` suites, about 3 min 50 s. It needs a nightly toolchain
   with `miri` and `rust-src`, which CI installs in its own step and
@@ -98,9 +99,12 @@ Conformance status (276 tests across two roots, 2026-09-19):
   stays pinned at 1.98.0 for everything else.
 - Fuzzing is on demand, not in the gate or CI (ticket 06): `cargo +nightly fuzz
   run --fuzz-dir tasks/fuzz parse_lossy -- -max_total_time=600 -max_len=65536`,
-  and the same for `parse_utf8`. The targets assert no panic, the span
-  invariants (`usfm_parser::span_check`, shared with `tests/spans.rs` behind the
-  `testing` feature) and that the USX output is well-formed XML. `tasks/fuzz` is
+  and the same for `parse_utf8` and `parse_html`. The first two assert no panic,
+  the span invariants (`usfm_parser::span_check`, shared with `tests/spans.rs`
+  behind the `testing` feature) and that the USX output is well-formed XML;
+  `parse_html` (ticket 14) asserts no panic and that the HTML output is balanced
+  and properly escaped, checked by a scanner in `tasks/fuzz/src/lib.rs` rather
+  than by an HTML parser. `tasks/fuzz` is
   outside the workspace, so run its clippy separately; see `tasks/fuzz/README.md`.
 
 **Traversal API (Phase 3, complete 2026-09-12)** lives in `usfm_ast`:
@@ -113,6 +117,16 @@ milestone paths, `verse(c, v)`, `VerseRef::nodes()` / `text()`), and
 read-only.
 
 Recent progress:
+- HTML output lives in `usfm_html` (ticket 14): `serialize_html.rs`,
+  `serialize.rs` and `context.rs` moved out of `usfm_parser`, which keeps
+  `::serialize_html`, `::serialize` and `::context` as re-exports until ticket
+  17. `Context` (note numbering, generated ids, the `metadata` map) is
+  HTML state and went with them; its dead `from_book` and `marker` are
+  gone. The writer escapes `&`, `<`, `>` in text and `"` as well in an
+  attribute value, and replaces the characters HTML cannot carry with U+FFFD —
+  the same set and the same byte-table scan as the USX writer, copied rather
+  than shared because no output crate depends on another. `tasks/fuzz`'s
+  `parse_html` target checks the markup is balanced and properly escaped
 - USX output is well-formed XML for any input (found by the fuzz targets,
   ticket 06): the `XmlNode` writer replaces characters XML 1.0 cannot carry
   (the C0 controls, U+FFFE/U+FFFF) with U+FFFD in text and attribute values,
@@ -227,6 +241,7 @@ usfm-tools/
 ├── usfm_span/             # Span and LineIndex (leaf crate, no dependencies)
 ├── usfm_style/            # Styling/output
 ├── usfm_usx/              # AST -> USX: the XML tree, its writer and reader
+├── usfm_html/             # AST -> HTML: ToHtml, SerializeHtml, Context
 ├── tests/                 # Integration tests (usfm_tests crate)
 ├── tcdocs/                # Git submodule: official USFM test suite
 ├── wip/                   # Outside the workspace, parked until M6, does not build
