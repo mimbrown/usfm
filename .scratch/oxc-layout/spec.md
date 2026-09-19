@@ -102,7 +102,8 @@ Rebuilt in `apps/` on `ParseResult`, `usfm_semantic` and `usfm_codegen`
   The `ToHtml`/`SerializeHtml` traits were **not** rewritten as a `Visit`: they
   are the crate's public customisation surface (the example and the CLI's
   diglot serializer override single hooks), so that rewrite is its own ticket
-  if it is ever wanted. `usfm_parser::context` is a re-export until ticket 17.
+  if it is ever wanted. The parser has no `context` module since ticket 15 (nor `serialize`:
+  the trait had no implementor and was deleted).
 - M4: `usfm_semantic` should own verse-number uniqueness and order (a
   duplicated `\v 6` or a `\v 5` after `\v 7a` is reported nowhere today; found
   by ticket 09 in machine.py's `41MATTes.SFM`), which needs versification.

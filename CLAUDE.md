@@ -117,10 +117,22 @@ milestone paths, `verse(c, v)`, `VerseRef::nodes()` / `text()`), and
 read-only.
 
 Recent progress:
-- HTML output lives in `usfm_html` (ticket 14): `serialize_html.rs`,
-  `serialize.rs` and `context.rs` moved out of `usfm_parser`, which keeps
-  `::serialize_html`, `::serialize` and `::context` as re-exports until ticket
-  17. `Context` (note numbering, generated ids, the `metadata` map) is
+- The binary left the parser (ticket 15). `usfm_pipeline` holds the text
+  replacements, the punctuation sectioning, the diglot HTML and the prompt
+  weave, the SILE output and the format dispatch, each a function over
+  `Document`s with a unit test; `apps/usfm_cli` is the `usfm` binary —
+  `usfm parse <files> --format usx|html|sile|prompt`, `--stylesheet`,
+  `--output`, `--replace`, `--diglot…`, `--watch`, `--strict`,
+  `--deny-warnings`, `--diagnostics text|json` — on `clap`, tested by running
+  it (`apps/usfm_cli/tests/cli.rs`). `usfm_parser` is a library with no
+  binary, and depends only on `usfm_ast`, `usfm_style` and `usfm_diagnostics`
+  (M3's exit criterion): its `::usx`, `::xml_document`, `::serialize_html`,
+  `::serialize` and `::context` re-exports are gone, so name the output crate
+  directly
+- HTML output lives in `usfm_html` (ticket 14): `serialize_html.rs` and
+  `context.rs` moved out of `usfm_parser` (`serialize.rs` moved too, and
+  ticket 15 deleted it: the generic `Serialize` trait had no implementor).
+  `Context` (note numbering, generated ids, the `metadata` map) is
   HTML state and went with them; its dead `from_book` and `marker` are
   gone. The writer escapes `&`, `<`, `>` in text and `"` as well in an
   attribute value, and replaces the characters HTML cannot carry with U+FFFD —
@@ -133,9 +145,8 @@ Recent progress:
   and the serializers drop an attribute they cannot write — a name that is not
   an XML name (`malformed-attribute-name`) or a repeat of one already written
   (`duplicate-attribute`), both new `Code`s
-- The CLI writes USX through the `usfm_usx` crate (`usfm_usx::to_usx_string`,
-  re-exported as `usfm_parser::usx` until ticket 17; `serialize_usx.rs` is
-  gone), so it keeps word-level attributes. The walk is a `usfm_ast::visit::Visit`
+- The CLI writes USX through the `usfm_usx` crate (`usfm_usx::to_usx_string`;
+  `serialize_usx.rs` is gone), so it keeps word-level attributes. The walk is a `usfm_ast::visit::Visit`
   implementation over private state (book code, chapter, open verse,
   `include_vid`, the document's stylesheet) — no shared `Context`, and no
   dependency on `usfm_parser` (ticket 13). The `XmlNode` writer escapes text and
@@ -242,6 +253,10 @@ usfm-tools/
 ├── usfm_style/            # Styling/output
 ├── usfm_usx/              # AST -> USX: the XML tree, its writer and reader
 ├── usfm_html/             # AST -> HTML: ToHtml, SerializeHtml, Context
+├── usfm_pipeline/         # Document -> Document/text: replacements, sections,
+│                          #   diglot, prompt, SILE, the format dispatch
+├── apps/
+│   └── usfm_cli/          # The `usfm` binary: clap, watch mode, diagnostics
 ├── tests/                 # Integration tests (usfm_tests crate)
 ├── tcdocs/                # Git submodule: official USFM test suite
 ├── wip/                   # Outside the workspace, parked until M6, does not build
