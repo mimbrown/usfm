@@ -1,6 +1,6 @@
 # 01. Move `usfm_language_server` and `data_layer` out of the workspace
 
-Status: ready-for-agent
+Status: claimed
 Milestone: M1
 
 `usfm_language_server` has 8 compile errors and shares nothing with the parser;
