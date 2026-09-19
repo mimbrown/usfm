@@ -10,26 +10,21 @@ license = "MIT"
 [[bin]]
 name = "usfm"
 path = "src/main.rs"
+# The binary is called `usfm` and so is the facade library (ticket 17), and
+# rustdoc writes both to `target/doc/usfm/` (rust-lang/cargo#6313). The library
+# is the one a caller reads; this binary's docs are its `--help`, so it is left
+# out of `cargo doc` rather than overwriting the facade's page.
+doc = false
 
 [dependencies]
 clap = { workspace = true }
 # Watch mode. The dependency moved here with the binary; `usfm_parser` no
 # longer has it.
 notify = { workspace = true }
-# `Document`, the type the driver hands to the pipeline.
-usfm_ast = { path = "../../usfm_ast" }
-# `Diagnostic::render` / `to_json_line` for `--diagnostics`, and
-# `ParseResult::strict_with` for `--strict` / `--deny-warnings`.
-usfm_diagnostics = { path = "../../usfm_diagnostics" }
-usfm_parser = { path = "../../usfm_parser" }
-usfm_pipeline = { path = "../../usfm_pipeline" }
-# `LineIndex`, which turns a diagnostic's byte span into a line and column.
-usfm_span = { path = "../../usfm_span" }
-# A `--stylesheet` file, and the sheet a document carries.
-usfm_style = { path = "../../usfm_style" }
-
-[dev-dependencies]
-# `tests/cli.rs` runs the binary and compares its USX against the same parse
-# made in process, so it needs both halves of that pipeline.
-usfm_parser = { path = "../../usfm_parser" }
-usfm_usx = { path = "../../usfm_usx" }
+# The facade, and the only usfm crate an application names (ticket 17): it
+# carries `usfm::ast::Document`, `usfm::diagnostics` for `--diagnostics` and
+# `--strict`, `usfm::parser`, `usfm::span::LineIndex`, `usfm::style` for a
+# `--stylesheet` file, `usfm::pipeline` for every transform, and
+# `usfm::usx` for what `tests/cli.rs` compares the binary's output against.
+# Default features: the CLI can write every format.
+usfm = { path = "../../crates/usfm" }

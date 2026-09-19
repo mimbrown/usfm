@@ -43,8 +43,8 @@ impl From<String> for Error {
     }
 }
 
-impl From<usfm_pipeline::RenderError> for Error {
-    fn from(value: usfm_pipeline::RenderError) -> Self {
+impl From<usfm::pipeline::RenderError> for Error {
+    fn from(value: usfm::pipeline::RenderError) -> Self {
         Self::Custom(value.to_string())
     }
 }

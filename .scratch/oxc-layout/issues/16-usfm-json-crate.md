@@ -28,7 +28,7 @@ Done when the gate is green and the CLI emits JSON.
 
 ## Answer
 
-Landed via PR #19 (2026-09-19). `usfm_json` (depends on `usfm_ast`,
+Landed in `fac3e9a` (PR #19, 2026-09-19). `usfm_json` (depends on `usfm_ast`,
 `usfm_style`, `serde_json`; the AST stays serde-free): `to_json_value`,
 `to_json_string`, `to_json_string_pretty`, `TYPES`. One object per node with
 `type`, `span`, `style` (marker name via the document's stylesheet),

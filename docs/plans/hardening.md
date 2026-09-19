@@ -8,7 +8,7 @@ source positions.
 ## Status as of 2026-09-12
 
 Re-measured from a clean build, then D3 implemented. **Note:** the `tcdocs` submodule
-must be checked out (`git submodule update --init tcdocs`); `tests/build.rs` generates
+must be checked out (`git submodule update --init tcdocs`); `tasks/conformance/build.rs` generates
 *zero* tests when it is absent and the runner then prints `TOTAL 0 0 0 0 100.0%`. Any
 CI added in Phase 0 must fail in that case, or it will report a false green.
 
@@ -166,7 +166,7 @@ container the next `\v` opened is handed outward to that container's parent, tag
 with its nesting depth so nothing else claims it; at block level it goes in the last
 verse-text paragraph or table cell before the block. The placement rules, including
 the whitespace move before `\v` and the note and table cases, are one test each in
-`usfm_parser/tests/verse_ends.rs`.
+`crates/usfm_parser/tests/verse_ends.rs`.
 
 ### D5. Borrowed by default, owned on demand
 
@@ -222,7 +222,7 @@ everything in 2 through 5 is written against the new shapes.
 
 Small, independent, do first. None of these are architectural.
 
-Done 2026-09-05: AST snapshot corpus (`usfm_parser/tests/snapshot.rs`, 84 fixtures);
+Done 2026-09-05: AST snapshot corpus (`crates/usfm_parser/tests/snapshot.rs`, 84 fixtures);
 lexer rewritten to emit marker tokens (`\name`, `\+name`, `\name*`, `\*`, escapes)
 with newline-aware whitespace and one-token peek/checkpoint; parser converted to
 always-recover with diagnostics (Phase 1 items below). tcdocs went from 146 to 163
@@ -235,7 +235,7 @@ paragraph-level attributes (`unexpected-pipe`).
 - [x] Replace the two `panic!` calls in `parser.rs` (paragraph and table closed by
       an unexpected closer) with recovery: drop the stray closer, emit an error
       diagnostic, continue. Malformed fixtures live under
-      `usfm_parser/tests/fixtures/malformed/`.
+      `crates/usfm_parser/tests/fixtures/malformed/`.
 - [x] Unknown milestones (`\zaln-s |...\*`) are consumed through `\*` instead of
       aborting on the `|`. Extended 2026-09-12: they are no longer dropped either.
       The style is registered on the document's stylesheet and the node is kept with
@@ -246,13 +246,13 @@ paragraph-level attributes (`unexpected-pipe`).
 - [x] Unknown markers: keep the text, emit an error (`unknown-marker`); `\z`
       custom markers are a warning (`unknown-custom-marker`).
 - [x] Delete `serialize_usx.rs`; route the CLI through `usx.rs` (since ticket 13,
-      `usfm_usx/src/usx.rs`). Done 2026-09-19:
+      `crates/usfm_usx/src/usx.rs`). Done 2026-09-19:
       the CLI calls `usx::to_usx_string` (SILE output is the same tree under a
       `<sile>` root), so word-level attributes reach the output. The `XmlNode`
       writer now escapes `&`, `<` and `>` in text (the old serializer wrote them
       raw, which was not well-formed XML) and writes an element with text among its
       children on one line instead of adding a newline and indent inside it.
-      `usfm_parser/tests/usx_text.rs` pins all three. `serialize.rs` is gone:
+      `crates/usfm_parser/tests/usx_text.rs` pins all three. `serialize.rs` is gone:
       ticket 15 found the generic `Serialize` trait had no implementor at all
       (the HTML writers use `ToHtml` / `SerializeHtml`) and deleted it.
 - [x] Fix the failing `serialize_html::tests::test_to_html_trait`. Verified passing
@@ -275,12 +275,12 @@ paragraph-level attributes (`unexpected-pipe`).
 - [x] Add CI running build, unit tests, and the tcdocs runner. Done 2026-09-12:
       `.github/workflows/ci.yml` builds (excluding the language server), runs the
       unit and integration suites, and runs the tcdocs runner with
-      `--baseline tests/tcdocs-baseline.txt`, which fails on a regression and on a
+      `--baseline tasks/conformance/tcdocs-baseline.txt`, which fails on a regression and on a
       stale entry.
 - [x] `cargo clippy --workspace --all-targets -D warnings` clean, then gate it in
       CI. Done 2026-09-19 (ticket 02): 0 warnings, and `scripts/gate.sh` runs
       clippy after the build, so CI gates it.
-- [x] Make a missing `tcdocs` submodule a hard error. Done 2026-09-12: `tests/build.rs`
+- [x] Make a missing `tcdocs` submodule a hard error. Done 2026-09-12: `tasks/conformance/build.rs`
       fails the build when the submodule is absent or yields no test cases, and the
       runner exits non-zero on a zero-test run instead of printing
       `TOTAL 0 0 0 0 100.0%`. CI checks the submodule out (`submodules: true`;
@@ -301,19 +301,19 @@ The breaking change. Do it in one branch so downstream code is updated once.
       source run it was read from and is deliberately *not* narrowed when the
       content is rewritten (whitespace normalisation, escapes, trailing trim), since
       the offsets of normalised text cannot be recovered from the content; the rule
-      is documented on `Text`. Spans are tested two ways: `tests/spans.rs` checks
+      is documented on `Text`. Spans are tested two ways: `crates/usfm_parser/tests/spans.rs` checks
       the invariants mechanically (in bounds, not inverted, slices source starting
       with the node's own marker), and the snapshot renderer prints them so the whole
       corpus pins them. Fixing the invariants turned up three real bugs: containers
       closed from outside ran over the closing marker, tables/rows/cells started
       after their own marker, and `\id`/`\c` ran a byte past the end of the line.
 - [x] `Diagnostic { span, severity, code, message }` and `ParseResult` (D1), in
-      `usfm_diagnostics/src/diagnostics.rs` since ticket 12 moved them out of
+      `crates/usfm_diagnostics/src/diagnostics.rs` since ticket 12 moved them out of
       `usfm_parser` (re-exported as `usfm_parser::diagnostics`). `ParseErr` is
       gone; the parser has no failure path. `ParseResult::strict()` /
       `strict_with(threshold)`.
 - [x] Recovery table: each `Code` variant documents trigger, recovery, severity.
-      `tests/recovery.rs` has one snapshot test per code and a coverage test that
+      `crates/usfm_parser/tests/recovery.rs` has one snapshot test per code and a coverage test that
       fails when a code has no snapshot. Structural checks (missing `\id`, verse
       before `\c`, verse in heading, sidebars, `\fig` unclosed, empty `\w`,
       newline in attributes) are included because the tcdocs `fail` inputs need
@@ -343,8 +343,8 @@ The breaking change. Do it in one branch so downstream code is updated once.
       `Caller::Custom` became `Cow<'a, str>`; a `&'a str` cannot become `'static`.
 - [x] Strict policy: `ParseResult::strict()` and `strict_with(threshold)`. (Landed
       with D1; this line duplicated it.)
-- [x] Update `usx.rs` (now `usfm_usx/src/usx.rs`), `serialize_html.rs` (now
-      `usfm_html/src/serialize_html.rs`),
+- [x] Update `usx.rs` (now `crates/usfm_usx/src/usx.rs`), `serialize_html.rs` (now
+      `crates/usfm_html/src/serialize_html.rs`),
       `main.rs`, the tests crate, and the cursor to the new shapes.
 - [x] tcdocs harness: `pass` inputs must match the USX *and* produce no error
       diagnostics (a false positive is a failure); `fail` inputs pass if an error is
@@ -356,11 +356,11 @@ Exit criteria: no code path in the parser returns early on bad input; every tcdo
 `fail` case produces an error diagnostic; pass rate does not drop.
 
 Conformance sources (2026-09-19): tcdocs is joined by a second harness root,
-`tests/fixtures/usfm-grammar/bugfixes` (category `usfm-grammar/bugfixes`, 16
+`tasks/conformance/fixtures/usfm-grammar/bugfixes` (category `usfm-grammar/bugfixes`, 16
 regression cases vendored from Bridgeconn/usfm-grammar, MIT), gated by the same
-`tests/tcdocs-baseline.txt`; its `autofix` inputs are recovery tests in
-`usfm_parser/tests/recovery.rs` and both sets are fuzz seeds.
-`tests/fixtures/machine-py` (sillsdev/machine.py, MIT) joins them as fixtures
+`tasks/conformance/tcdocs-baseline.txt`; its `autofix` inputs are recovery tests in
+`crates/usfm_parser/tests/recovery.rs` and both sets are fuzz seeds.
+`tasks/conformance/fixtures/machine-py` (sillsdev/machine.py, MIT) joins them as fixtures
 only, not as a harness root: those are hand-written Paratext projects with no
 reference USX to compare against, so their expectation is the parser's own tree
 and diagnostics, snapshotted by the `machine_py_*` tests in `recovery.rs`, and
@@ -379,7 +379,7 @@ ordering or naming mismatches, 4 missing children.
       Done 2026-09-12: the rules are the numbered list on `Text` in `usfm_ast`
       (ASCII-only whitespace, runs to one space, `~` to U+00A0, escapes, trailing
       whitespace dropped only at paragraph-level boundaries, leading whitespace
-      belongs to the marker); `usfm_parser/tests/whitespace.rs` pins each one on
+      belongs to the marker); `crates/usfm_parser/tests/whitespace.rs` pins each one on
       the tree. Derived from tcdocs: Paratext keeps `text ` before `\add*`, `\f*`
       and `\v`, trims before `\p`/`\c`/EOF, and keeps U+00A0/U+3000. The harness
       no longer regex-strips note/cell ends from the expected side only; it trims
@@ -398,7 +398,7 @@ ordering or naming mismatches, 4 missing children.
       `\xo` (`NestingInCrossReferencesInvalid`); `NoErrorsPartiallyEmptyBook` and `special-cases/empty-attributes2`
       are Paratext quirks (markers read as text after an empty `\rem`; attributes
       dropped after a space before `|`) that are not worth imitating.
-- [x] Reference patches (2026-09-12): `tests/tcdocs-patches/<name>.patch` is a
+- [x] Reference patches (2026-09-12): `tasks/conformance/tcdocs-patches/<name>.patch` is a
       unified diff applied to a test's `origin.xml` before comparison, with the
       rationale above the diff. Ten patches cover every remaining difference: eight
       reference quirks (raw newlines in hand-written `specExamples`, files whose
@@ -408,14 +408,14 @@ ordering or naming mismatches, 4 missing children.
       (`NestingInCrossReferencesInvalid`: `\em` nests under `\xo`; no stylesheet
       rule separates it from `\ft … \sc BC\sc*`, where the reference nests). The
       harness fails a patch that no longer applies and one the parser no longer
-      needs, so the directory cannot go stale. `tests/tcdocs-patches/README.md`
+      needs, so the directory cannot go stale. `tasks/conformance/tcdocs-patches/README.md`
       has the rules. Three parser gaps the exercise exposed were fixed, not
       patched: a verse starting in a non-verse-text paragraph ended itself before
       that paragraph when the previous verse started there too; `//` had no node;
       a quoted default attribute value lost its quotes.
 - [x] Target: every `validated=pass` test passes; every `validated=fail` test emits an
       error. Track the number in CLAUDE.md. CI fails on regression via
-      `tests/tcdocs-baseline.txt` (done 2026-09-12). Reached 2026-09-12 with the
+      `tasks/conformance/tcdocs-baseline.txt` (done 2026-09-12). Reached 2026-09-12 with the
       patches above: 215 passed, 0 failed, 44 expected failures, 0 unexpected
       passes; the baseline is empty.
 
@@ -457,6 +457,15 @@ consumer of a `Document` never needs the parser crate to walk it.
 *Superseded 2026-09-19 by `.scratch/oxc-layout/spec.md` (ADR 0001), which also takes
 over the Phase 0 leftovers and the cross-cutting fuzzing, Miri and benchmark items.*
 
+**Closed 2026-09-19** by that spec's M3 (tickets 11–17): every item below is
+done, and ticket 17 added what this phase did not name — the `usfm` facade
+(`usfm::parse`, `usfm::parse_with`, the layers as feature-gated modules) and the
+ADR's directory layout, so the crates are under `crates/`, the binary under
+`apps/usfm_cli`, and the conformance runner, benches and fuzz targets under
+`tasks/`. What follows Phase 4 is no longer Phase 5 directly: M4
+(`usfm_semantic`) and M5 (`usfm_codegen`) come first, and the language server
+below is M6.
+
 - [x] `usfm_usx`, `usfm_html`, `usfm_json` crates, each a `Fold` or `Visit` over the
       AST with no shared mutable `Context` (each carries only the state it needs).
       Done 2026-09-19 (tickets 13, 14, 16): `usfm_usx` and `usfm_html` walk with
@@ -492,7 +501,7 @@ over the Phase 0 leftovers and the cross-cutting fuzzing, Miri and benchmark ite
       Done 2026-09-19 by `.scratch/oxc-layout/issues/06-fuzz-target.md`:
       `tasks/fuzz` holds `parse_lossy` and `parse_utf8`, seeded from tcdocs and
       (since 2026-09-19) the vendored usfm-grammar and machine.py fixtures, and
-      sharing `usfm_parser::span_check` with `tests/spans.rs`; see
+      sharing `usfm_parser::span_check` with `crates/usfm_parser/tests/spans.rs`; see
       `tasks/fuzz/README.md` for the runs and the five findings they produced
       (two span-invariant wordings, control characters, duplicate attributes
       and attribute names that are not XML names). Run on demand, not in CI:
@@ -508,7 +517,7 @@ over the Phase 0 leftovers and the cross-cutting fuzzing, Miri and benchmark ite
       and the measurement that went with it showed 26 of the 27 `unsafe` uses
       did not earn their place, so they were replaced with safe code (`Source`
       now holds an offset, not three raw pointers, and lexes at the same speed).
-      The one that stayed is `ParserImpl::src` in `usfm_parser/src/cursor.rs`,
+      The one that stayed is `ParserImpl::src` in `crates/usfm_parser/src/cursor.rs`,
       worth 2.3–4.8% on `parse`; it carries a `debug_assert` of its invariant, which
       every test build and `scripts/miri.sh` then check. `scripts/miri.sh` runs
       the lexer, parser and `string_parser` suites and is part of

@@ -1,0 +1,39 @@
+[package]
+name = "usfm"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+# The facade of `docs/adr/0001-oxc-style-crate-layout.md`: one crate to depend
+# on. It re-exports the layers under short names and adds the two calls most
+# consumers want (`parse`, `parse_with`). The crates under `crates/` keep
+# depending on each other directly — the facade is for `apps/` and `tasks/`,
+# which is why nothing here depends on it in turn.
+[dependencies]
+usfm_ast = { path = "../usfm_ast" }
+usfm_diagnostics = { path = "../usfm_diagnostics" }
+usfm_parser = { path = "../usfm_parser" }
+usfm_span = { path = "../usfm_span" }
+usfm_style = { path = "../usfm_style" }
+
+# The output and pipeline crates, each behind the feature named after it. All
+# four are on by default, so `usfm = { path = "…" }` is the whole toolchain and
+# `default-features = false` is a parser-only build.
+usfm_html = { path = "../usfm_html", optional = true }
+usfm_json = { path = "../usfm_json", optional = true }
+usfm_pipeline = { path = "../usfm_pipeline", optional = true }
+usfm_usx = { path = "../usfm_usx", optional = true }
+
+[features]
+default = ["usx", "html", "json", "pipeline"]
+usx = ["dep:usfm_usx"]
+html = ["dep:usfm_html"]
+json = ["dep:usfm_json"]
+# The pipeline dispatches to all three writers, so it pulls them in.
+pipeline = ["dep:usfm_pipeline", "usx", "html", "json"]
+
+# Forwarded to `usfm_parser`, off by default like the features they forward to.
+# `tasks/benchmark` needs `UniquePromise` to build a `Lexer` for the `lex`
+# group; `tasks/fuzz` needs `span_check`.
+benchmarking = ["usfm_parser/benchmarking"]
+testing = ["usfm_parser/testing"]

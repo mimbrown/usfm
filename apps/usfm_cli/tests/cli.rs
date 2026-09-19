@@ -64,10 +64,10 @@ fn stderr(output: &Output) -> &str {
 /// parses it.
 fn usx_in_process(path: &Path) -> String {
     let source = std::fs::read_to_string(path).expect("reading the input");
-    let document = usfm_parser::parser::Parser::new(&source)
-        .parse(&usfm_parser::DEFAULT_STYLESHEET)
+    let document = usfm::parser::parser::Parser::new(&source)
+        .parse(&usfm::parser::DEFAULT_STYLESHEET)
         .document;
-    usfm_usx::to_usx_string(&document)
+    usfm::usx::to_usx_string(&document)
 }
 
 /// `parse --format usx` writes exactly what the library writes — byte for

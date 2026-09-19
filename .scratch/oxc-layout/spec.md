@@ -63,6 +63,41 @@ diagnostics), then `usfm_json`, then the `usfm` facade, then the move to `crates
 Exit: `usfm_parser` has no binary and depends only on span, style, ast and
 diagnostics; `main.rs` logic has tests; benchmarks within 3% of M2.
 
+Closed 2026-09-19 (tickets 11–17). Checked on `17-usfm-facade-and-layout`:
+- **`usfm_parser` has no binary and depends only on span, style, ast and
+  diagnostics.** Its targets are the lib, seven integration tests and the build
+  script — no `[[bin]]`, no `src/main.rs`. `cargo tree -p usfm_parser --edges
+  normal --depth 1` lists `usfm_ast`, `usfm_diagnostics`, `usfm_style` and
+  nothing else; `usfm_span` arrives through `usfm_ast`, as the ADR's order
+  intends. Yes.
+- **`main.rs` logic has tests.** Ticket 15 split it: the transforms are
+  `usfm_pipeline` with 15 unit tests (`text_replacements` 5, `diglot` 3,
+  `sections` 3, `render` 3, `sile` 1), and what is left in `apps/usfm_cli` is
+  covered by 4 `args` unit tests and 7 tests in `tests/cli.rs` that run the
+  built binary. Yes.
+- **Benchmarks within 3% of M2.** Table in `docs/benchmarks.md` under "M3
+  close". Interleaved against a `git worktree` build of `bfaa57f` (the commit
+  the "M2 close" table was taken on), both binaries built with
+  `CARGO_PROFILE_BENCH_CODEGEN_UNITS=1` as that document's `lex` warning
+  requires of a crate split, three rounds each on the whole-corpus id, median
+  of three. `lex` +2.8%, `parse` −1.3%, `parse_usx` −0.4%, `parse_html` +4.3%,
+  `reference_index` +1.3% (positive is faster). Nothing is more than 3%
+  slower. Yes.
+  Note on `parse_html`: `bfaa57f` escaped nothing, so ticket 14's 2–3% escaping
+  cost was expected to show here and did not — with codegen units pinned it is
+  inside the layout noise that ticket 14's default-16 measurement carried. The
+  cost is real and stays recorded under "After ticket 14"; this row is not a
+  claim that it went away.
+
+Also in M3 and not in the exit criteria: the `usfm` facade
+(`usfm::parse` / `parse_with`, the layers as feature-gated modules, `usx` /
+`html` / `json` / `pipeline` on by default) and the ADR's directory layout —
+`crates/`, `apps/usfm_cli`, `tasks/{conformance,benchmark,fuzz}`, `wip/`
+unmoved. `apps/` and `tasks/` depend on the facade; the crates under `crates/`
+depend on each other directly. Conformance after the move: 231 / 0 failed / 0
+panicked / 1 skipped / 44 expected failures, baseline empty — unchanged.
+The ADR's tree still lacks `usfm_semantic` (M4) and `usfm_codegen` (M5).
+
 ## M4. Semantic pass
 
 Move non-syntactic checks (`OccursUnder` placement, table columns, leading zeros,

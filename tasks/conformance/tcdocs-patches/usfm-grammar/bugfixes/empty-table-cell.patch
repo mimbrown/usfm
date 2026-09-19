@@ -1,0 +1,50 @@
+Accepted deviation: verse-end placement in a table with empty cells.
+
+usfm-grammar ends a verse at the end of the cell whose text the verse ran out
+in. This parser ends a verse at the last position before the next verse starts
+(hardening plan D4, `crates/usfm_parser/tests/verse_ends.rs`), which is where the
+tcdocs reference files put it in a paragraph and in a table
+(`usfmjsTests/usfmBodyTestD/origin.xml` writes `<verse eid="..." /></cell>` in
+the last cell of the last row, not after the cell the verse text ended in).
+The two rules agree except when empty cells sit between one verse's text and
+the next verse's start, which is exactly what this case is about: verse 9a's
+end moves to the empty cell before 9b begins, 9b's to the empty cell before
+verse 10 begins, and verse 10's to the last cell of the table.
+
+--- origin.xml
++++ origin.xml
+@@ -8,20 +8,20 @@
+   <para style="b"/>
+   <table>
+     <row style="tr">
+-      <cell style="tc1" align="start"><verse number="9a" style="v" sid="GEN 1:9a"/>test test test <verse eid="GEN 1:9a"/></cell>
++      <cell style="tc1" align="start"><verse number="9a" style="v" sid="GEN 1:9a"/>test test test </cell>
+       <cell style="tcr2" align="end"/>
+     </row>
+     <row style="tr">
+-      <cell style="tc1" align="start"/>
++      <cell style="tc1" align="start"><verse eid="GEN 1:9a"/></cell>
+       <cell style="tcr2" align="end"><verse number="9b" style="v" sid="GEN 1:9b"/>test again
+-<verse eid="GEN 1:9b"/></cell>
++</cell>
+     </row>
+     <row style="tr">
+       <cell style="tc1" align="start"/>
+-      <cell style="tcr2" align="end"/>
++      <cell style="tcr2" align="end"><verse eid="GEN 1:9b"/></cell>
+     </row>
+     <row style="tr">
+-      <cell style="tc1" align="start"><verse number="10" style="v" sid="GEN 1:10"/>guol boul 30, silva boul 410 an di res a tingz dem, 1,000, <verse eid="GEN 1:10"/></cell>
++      <cell style="tc1" align="start"><verse number="10" style="v" sid="GEN 1:10"/>guol boul 30, silva boul 410 an di res a tingz dem, 1,000, </cell>
+       <cell style="tcr2" align="end"/>
+     </row>
+     <row style="tr">
+@@ -30,7 +30,7 @@
+     </row>
+     <row style="tr">
+       <cell style="tc1" align="start"/>
+-      <cell style="tcr2" align="end"/>
++      <cell style="tcr2" align="end"><verse eid="GEN 1:10"/></cell>
+     </row>
+   </table>
+   <para style="b"/>

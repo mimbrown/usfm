@@ -1,6 +1,6 @@
 # 17. The `usfm` facade and the move to `crates/`, `apps/`, `tasks/`
 
-Status: ready-for-agent
+Status: resolved
 Milestone: M3
 Blocked by: 16
 
@@ -30,3 +30,21 @@ ADR.
 
 Done when the gate is green from the new paths, tcdocs 215 / 0 / 44, and the
 spec records M3 closed.
+
+## Answer
+
+Landed via PR #20 (2026-09-19). `crates/usfm` re-exports `span`, `style`,
+`ast`, `diagnostics`, `parser` unconditionally and `usx`, `html`, `json`,
+`pipeline` behind features (all on by default; `benchmarking`/`testing`
+forward to the parser), lifts the common types to its root, and adds
+`usfm::parse` / `parse_with`. `apps/` and `tasks/` depend on it; the crates
+under `crates/` depend on each other. Everything moved by `git mv`:
+`crates/usfm_*`, `tasks/conformance` (still the `usfm_tests` package, with its
+fixtures, patches and baseline). M3 exit recorded in the spec: parser has no
+binary and depends only on ast, diagnostics and style; `main.rs` logic has
+tests; benchmarks interleaved against `bfaa57f` with codegen-units pinned are
+within 3% on every group (lex +2.8%, parse −1.3%, parse_usx −0.4%,
+parse_html +4.3%, reference_index +1.3%). The orchestrator reran the gate,
+the fuzz crate's check and clippy, `seed.sh` (0 written) and the facade's
+`--no-default-features` build after a container restart interrupted the
+subagent's final run.

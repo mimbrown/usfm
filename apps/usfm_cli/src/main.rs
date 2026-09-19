@@ -1,4 +1,4 @@
-//! `usfm`: the command line over `usfm_parser` and `usfm_pipeline`.
+//! `usfm`: the command line over the `usfm` facade.
 //!
 //! Four modules and nothing else: [`args`] is the command line as a clap
 //! struct, [`driver`] reads the files and writes the output, [`watch`] is
