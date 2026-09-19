@@ -267,6 +267,210 @@ fn duplicate_attribute() {
     );
 }
 
+// ---------------------------------------------------------------------------
+// Structure, numbers and tables. Moved here from `recovery.rs` by ticket 21
+// with their inputs unchanged: none of these repairs anything, and the tree
+// holds what each rule reads — the block list, a `VerseStart` and what it sits
+// in, a cell's column, a `\w` with no children. The spans in the snapshots
+// widened from the marker to the node that starts at it, except `missing-id`
+// (offset 0) and `empty-book` (end of source), which are where they were.
+// ---------------------------------------------------------------------------
+
+/// `\w` with attributes and no word. `\jmp` below is the other half of the
+/// rule: only `\w` is checked.
+#[test]
+fn empty_word() {
+    let source = "\\id GEN\n\\c 1\n\\p \\v 1 a \\w |lemma=\"x\"\\w* b";
+    assert_eq!(
+        common::parser_codes(source),
+        Vec::<Code>::new(),
+        "the empty node is kept, so the parser says nothing"
+    );
+    check(Code::EmptyWord, source);
+}
+
+/// `\jmp` and other attributed styles may be empty; only `\w` is checked.
+#[test]
+fn empty_jmp_is_valid() {
+    let codes = common::codes("\\id GEN\n\\c 1\n\\p \\v 1 a \\jmp |link-href=\"#x\"\\jmp* b");
+    assert_eq!(codes, vec![]);
+}
+
+/// A verse inside `\wj`. The verse is kept where it is, so the `VerseStart` is
+/// in the tree inside a `Char` and the check reads it off that.
+#[test]
+fn verse_in_character_style() {
+    let source = "\\id GEN\n\\c 1\n\\p \\v 1 \\wj a \\v 2 b\\wj* c";
+    assert_eq!(
+        common::parser_codes(source),
+        Vec::<Code>::new(),
+        "the verse is kept, so the parser says nothing"
+    );
+    check(Code::VerseInCharacterStyle, source);
+}
+
+/// A verse in a section heading. The paragraph's own style is what decides it,
+/// which is why the check asks the nearest enclosing `Para` rather than the
+/// last paragraph marker the parser had passed.
+#[test]
+fn verse_in_heading() {
+    check(
+        Code::VerseInHeading,
+        "\\id GEN\n\\c 1\n\\s1 \\v 1 heading\n\\p a",
+    );
+}
+
+/// `s3_without_p.usfm`: `\v 2` on the line after `\s3 test`, with no `\p`
+/// between them, so the verse starts inside the heading.
+#[test]
+fn verse_in_heading_s3_without_p() {
+    check_variant(
+        Code::VerseInHeading,
+        "s3_without_p",
+        "\\id GEN genesis Some desc\n\\c 1\n\\p\n\\v 1 test verse\n\\s3 test\n\\v 2 more verse\n\\c 2\n\\p\n\\v 1 next chapter\n",
+    );
+}
+
+/// `\s5`, unfoldingWord's chunk marker, is an empty heading written directly
+/// before a verse: exempt, as it was in the parser.
+#[test]
+fn a_verse_after_the_s5_chunk_marker_is_silent() {
+    assert_eq!(
+        common::codes("\\id GEN\n\\c 1\n\\s5\n\\p \\v 1 a"),
+        Vec::<Code>::new()
+    );
+}
+
+/// A verse in a table cell is not in a heading, whatever paragraph came before
+/// the table. The parser read the text type of the last paragraph marker it
+/// had passed and reported this one; the tree says the verse is in a cell.
+#[test]
+fn a_verse_in_a_table_cell_after_a_heading_is_not_in_a_heading() {
+    assert_eq!(
+        common::codes("\\id GEN\n\\c 1\n\\s1 Head\n\\tr \\tc1 \\v 1 a"),
+        Vec::<Code>::new()
+    );
+}
+
+#[test]
+fn verse_outside_chapter() {
+    check(Code::VerseOutsideChapter, "\\id GEN\n\\p \\v 1 a");
+}
+
+/// A verse-text paragraph before the first `\c`, reported once per paragraph.
+/// `\ip` is introduction, not verse text, so only the `\p` is reported.
+#[test]
+fn verse_text_before_chapter() {
+    check(
+        Code::VerseTextBeforeChapter,
+        "\\id GEN\n\\ip intro\n\\p body\n\\c 1\n\\p \\v 1 a",
+    );
+}
+
+/// The rule is about scripture: a peripheral book has no chapters to come
+/// before, and a document with no `\id` at all has no book to judge.
+#[test]
+fn verse_text_before_chapter_needs_a_scripture_book() {
+    assert_eq!(
+        common::codes("\\id FRT\n\\p body\n"),
+        Vec::<Code>::new(),
+        "`\\id FRT` is not scripture"
+    );
+    assert_eq!(
+        common::codes("\\p body\n"),
+        vec![Code::MissingId],
+        "with no `\\id` there is no book to be before a chapter"
+    );
+}
+
+#[test]
+fn missing_id() {
+    check(Code::MissingId, "\\c 1\n\\p \\v 1 a");
+}
+
+#[test]
+fn id_not_first() {
+    check(
+        Code::IdNotFirst,
+        "\\id GEN\n\\c 1\n\\p \\v 1 a\n\\id EXO\n\\c 1\n\\p \\v 1 b",
+    );
+}
+
+#[test]
+fn empty_book() {
+    check(Code::EmptyBook, "\\id GEN Genesis\n");
+}
+
+/// An empty document reports neither: there is no first block to be wrong
+/// about. `Tes/44JHNTes.SFM`, a Paratext project's placeholder for a book
+/// nobody has started, is zero bytes.
+#[test]
+fn an_empty_document_reports_nothing() {
+    assert_eq!(common::codes(""), Vec::<Code>::new());
+}
+
+/// `\th3` right after `\th1`: the cell keeps column 3 and the gap is reported,
+/// from `TableCell::column` in row order.
+#[test]
+fn unexpected_table_column() {
+    let source = "\\id GEN\n\\c 1\n\\tr \\th1 a \\th3 c\n\\tr \\tcr2 b \\tcr3 c";
+    assert_eq!(
+        common::parser_codes(source),
+        Vec::<Code>::new(),
+        "the cell keeps the column it names, so the parser says nothing"
+    );
+    check(Code::UnexpectedTableColumn, source);
+}
+
+/// A cell spanning two columns (`\tcr1-2`) moves the expectation on by its
+/// colspan, so the cell after it is in column 3 and nothing is reported.
+#[test]
+fn a_column_span_is_counted() {
+    assert_eq!(
+        common::codes("\\id GEN\n\\c 1\n\\tr \\tcr1-2 a \\tcr3 b"),
+        Vec::<Code>::new()
+    );
+}
+
+/// The machine.py fixture ticket 09 vendored, whose eight mistakes
+/// `recovery.rs` lists. Four of them are this crate's, and the union a caller
+/// sees still has all eight.
+#[test]
+fn machine_py_41mat() {
+    const SOURCE: &str =
+        include_str!("../../../tasks/conformance/fixtures/machine-py/Tes/41MATTes.SFM");
+    assert_eq!(
+        common::codes(SOURCE),
+        vec![
+            // Three `\p` in the introduction, before `\c 1`.
+            Code::VerseTextBeforeChapter,
+            Code::VerseTextBeforeChapter,
+            Code::VerseTextBeforeChapter,
+            // `\weirdtaglookingthing`.
+            Code::UnknownMarker,
+            // `\v 1` on the line after `\s Chapter One`, with no `\p`.
+            Code::VerseInHeading,
+            // `\w*` with no `\w`.
+            Code::UnmatchedClosingMarker,
+            // `\v 3-4a` on the line after `\esbe`, and `\v 1` after `\c 4`.
+            Code::ContentOutsideParagraph,
+            Code::ContentOutsideParagraph,
+        ],
+    );
+}
+
+/// `Tes/03LEVTes.SFM`: `\id Leviticus` is a book name where the code belongs,
+/// so the parser drops the `\id` line and the document is left without one.
+/// The two halves report one code each, and the order a caller sees is the
+/// order of the offsets.
+#[test]
+fn machine_py_03lev() {
+    const SOURCE: &str =
+        include_str!("../../../tasks/conformance/fixtures/machine-py/Tes/03LEVTes.SFM");
+    assert_eq!(common::codes(SOURCE), vec![Code::MissingId, Code::UnknownBookCode]);
+    assert_eq!(common::parser_codes(SOURCE), vec![Code::UnknownBookCode]);
+}
+
 /// Every code [`Code::is_semantic`] names has a snapshot produced by a test in
 /// this file. The mirror of `recovery.rs`'s `recovery_table_is_covered`, which
 /// skips exactly these codes.

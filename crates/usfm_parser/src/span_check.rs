@@ -24,8 +24,14 @@ pub enum Prefix {
     /// Nothing to check beyond the span itself: the node is synthesized, or it
     /// is a `Text`, whose content is not its source range verbatim (plan D2).
     Anything,
-    /// The span must start with this text: the marker the node was read from.
+    /// The span must start with this text: the marker the node was read from,
+    /// or, for an attribute, the name or the bare value it was read from
+    /// (ticket 21).
     Marker(String),
+    /// The span must be exactly this text. Only the `|` that opens an
+    /// attribute list is checked this way: it is one byte wide and there is
+    /// nothing else it could be.
+    Exact(String),
     /// The span must start with this marker unless the parser opened the node
     /// itself to recover, which it reports as `code`. An implicit `\p` has no
     /// marker in the source: it must then start at or before the content it
@@ -57,6 +63,39 @@ fn push(out: &mut Vec<NodeSpan>, label: impl Into<String>, span: Span, prefix: P
 /// The marker a node was read from.
 fn read_from(marker: impl std::fmt::Display) -> Prefix {
     Prefix::Marker(marker.to_string())
+}
+
+/// The `|` that opens an attribute list, and every pair in it (ticket 20 gave
+/// them spans; ticket 21 checks them).
+///
+/// A pair's span is the name it was read from (`lemma` in `lemma="grace"`) or,
+/// for the default attribute, the run the value was read from — which the
+/// parser borrows verbatim, quotes and all. Neither is the *value* of a named
+/// attribute: that has its quotes stripped and its escapes resolved, and the
+/// span covers neither.
+fn attributes(out: &mut Vec<NodeSpan>, label: &str, attributes: Option<&Attributes<'_>>) {
+    let Some(attributes) = attributes else {
+        return;
+    };
+    push(
+        out,
+        format!("{label} attribute list `|`"),
+        attributes.pipe,
+        Prefix::Exact("|".into()),
+    );
+    for pair in &attributes.pairs {
+        let read_from = if pair.name.is_empty() {
+            pair.value.as_ref()
+        } else {
+            pair.name.as_ref()
+        };
+        push(
+            out,
+            format!("{label} attribute {:?}", pair.name),
+            pair.span,
+            Prefix::Marker(read_from.to_string()),
+        );
+    }
 }
 
 /// Where the first child that was read from the source begins, if any.
@@ -97,6 +136,7 @@ fn blocks<'a>(document: &'a Document<'a>, list: &'a [Block<'a>], out: &mut Vec<N
                     milestone.span,
                     read_from(format_args!("\\{name}")),
                 );
+                attributes(out, &format!("Milestone {name}"), milestone.attributes.as_ref());
             }
             Block::Para(para) => {
                 let name = document.marker(para.style);
@@ -136,6 +176,7 @@ fn blocks<'a>(document: &'a Document<'a>, list: &'a [Block<'a>], out: &mut Vec<N
                     periph.span,
                     read_from(format_args!("\\{name}")),
                 );
+                attributes(out, "Periph", periph.attributes.as_ref());
                 if let Some(title) = &periph.title {
                     // The title is a `Text`: its span is the source it was
                     // read from and its content is that source normalised —
@@ -191,6 +232,7 @@ fn inlines<'a>(document: &'a Document<'a>, children: &'a [Inline<'a>], out: &mut
                     char.span,
                     read_from(format_args!("\\{name}")),
                 );
+                attributes(out, &format!("Char {name}"), char.attributes.as_ref());
                 inlines(document, &char.children, out);
             }
             Inline::Note(note) => {
@@ -214,6 +256,7 @@ fn inlines<'a>(document: &'a Document<'a>, children: &'a [Inline<'a>], out: &mut
                     milestone.span,
                     read_from(format_args!("\\{name}")),
                 );
+                attributes(out, &format!("Milestone {name}"), milestone.attributes.as_ref());
             }
             Inline::OptBreak(opt_break) => push(out, "OptBreak", opt_break.span, read_from("//")),
         }
@@ -251,6 +294,13 @@ pub fn check_parse(source: &str, result: &ParseResult<'_>) {
         let slice = &source[span.start as usize..span.end as usize];
         let (marker, implicit) = match prefix {
             Prefix::Anything => continue,
+            Prefix::Exact(text) => {
+                assert_eq!(
+                    slice, text,
+                    "{label}: span {span:?} is {slice:?}, not {text:?}, in {source:?}"
+                );
+                continue;
+            }
             Prefix::Marker(marker) => (marker, None),
             Prefix::MarkerOrImplicit {
                 marker,

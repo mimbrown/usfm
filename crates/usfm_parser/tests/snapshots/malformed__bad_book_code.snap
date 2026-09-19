@@ -1,5 +1,5 @@
 ---
-source: usfm_parser/tests/snapshot.rs
+source: crates/usfm_parser/tests/snapshot.rs
 description: "\\id GENESIS bad code\n\\c 1\n\\p \\v 1 x\n"
 ---
 ChapterStart 1@21..25
@@ -9,5 +9,4 @@ Para p@26..36
   VerseEnd 1
 ChapterEnd 1
 --- diagnostics
-error[missing-id] @0..0: document must start with `\id`
 error[unknown-book-code] @4..11: `GENESIS` is not a book code

@@ -524,68 +524,6 @@ fn figure_not_closed() {
 }
 
 #[test]
-fn empty_word() {
-    check(
-        Code::EmptyWord,
-        "\\id GEN\n\\c 1\n\\p \\v 1 a \\w |lemma=\"x\"\\w* b",
-    );
-}
-
-/// `\jmp` and other attributed styles may be empty; only `\w` is checked.
-#[test]
-fn empty_jmp_is_valid() {
-    let codes = common::codes("\\id GEN\n\\c 1\n\\p \\v 1 a \\jmp |link-href=\"#x\"\\jmp* b");
-    assert_eq!(codes, vec![]);
-}
-
-#[test]
-fn verse_in_character_style() {
-    check(
-        Code::VerseInCharacterStyle,
-        "\\id GEN\n\\c 1\n\\p \\v 1 \\wj a \\v 2 b\\wj* c",
-    );
-}
-
-#[test]
-fn verse_in_heading() {
-    check(
-        Code::VerseInHeading,
-        "\\id GEN\n\\c 1\n\\s1 \\v 1 heading\n\\p a",
-    );
-}
-
-#[test]
-fn verse_outside_chapter() {
-    check(Code::VerseOutsideChapter, "\\id GEN\n\\p \\v 1 a");
-}
-
-#[test]
-fn verse_text_before_chapter() {
-    check(
-        Code::VerseTextBeforeChapter,
-        "\\id GEN\n\\ip intro\n\\p body\n\\c 1\n\\p \\v 1 a",
-    );
-}
-
-#[test]
-fn missing_id() {
-    check(Code::MissingId, "\\c 1\n\\p \\v 1 a");
-}
-
-#[test]
-fn id_not_first() {
-    check(
-        Code::IdNotFirst,
-        "\\id GEN\n\\c 1\n\\p \\v 1 a\n\\id EXO\n\\c 1\n\\p \\v 1 b",
-    );
-}
-
-#[test]
-fn empty_book() {
-    check(Code::EmptyBook, "\\id GEN Genesis\n");
-}
-
-#[test]
 fn sidebar_not_closed() {
     check(
         Code::SidebarNotClosed,
@@ -640,15 +578,6 @@ fn periph_divisions() {
     let source = "\\id FRT\n\\periph Title Page|id=\"title\"\n\\p one\n\\periph Preface|preface\n\\p two";
     assert_eq!(common::codes(source), Vec::<Code>::new());
     snapshot("periph_divisions", source);
-}
-
-/// `\th3` right after `\th1`: the cell keeps column 3 and the gap is reported.
-#[test]
-fn unexpected_table_column() {
-    check(
-        Code::UnexpectedTableColumn,
-        "\\id GEN\n\\c 1\n\\tr \\th1 a \\th3 c\n\\tr \\tcr2 b \\tcr3 c",
-    );
 }
 
 /// A verse starting inside a paragraph that is not verse text (`\lit`) ends
@@ -756,17 +685,6 @@ fn unknown_marker_no_space_before_versenumber() {
     );
 }
 
-/// `s3_without_p.usfm`: `\v 2` on the line after `\s3 test`, with no `\p`
-/// between them, so the verse starts inside the heading.
-#[test]
-fn verse_in_heading_s3_without_p() {
-    check_variant(
-        Code::VerseInHeading,
-        "s3_without_p",
-        "\\id GEN genesis Some desc\n\\c 1\n\\p\n\\v 1 test verse\n\\s3 test\n\\v 2 more verse\n\\c 2\n\\p\n\\v 1 next chapter\n",
-    );
-}
-
 /// `slash_in_text.usfm`: a lone `\` in running text, and `\slash` written
 /// without a space after the backslash, which is an unknown marker.
 #[test]
@@ -846,9 +764,11 @@ const MACHINE_PY_CUSTOM_STY: &str = include_str!("../../../tasks/conformance/fix
 /// an `\fe` endnote, `\rq`, `\fm`, `\pn` with a nested `\+pro`, `\fig`, an
 /// `\esb` sidebar, two tables, `\ts-s`/`\ts-e`, `\va`/`\vp`, `//`, verse
 /// segments (`\v 3-4a`, `\v 4b`), and a handful of deliberate mistakes. Every
-/// one of the standard markers parses without a diagnostic; the eight below
-/// are the mistakes, listed here so a change to any of them has to be accepted
-/// explicitly.
+/// one of the standard markers parses without a diagnostic; the four below are
+/// the mistakes the *parser* reports, listed here so a change to any of them
+/// has to be accepted explicitly. The other four are `usfm_semantic`'s since
+/// ticket 21 — three `verse-text-before-chapter` and a `verse-in-heading` —
+/// and `usfm_semantic/tests/checks.rs` asserts the union of the eight.
 ///
 /// Two of the file's oddities are deliberately *not* reported: `\v 6` occurs
 /// twice in chapter 2 and `\v 5` comes after `\v 7a`. Both are well-formed
@@ -862,14 +782,8 @@ fn machine_py_41mat() {
     assert_eq!(
         common::codes(MACHINE_PY_41MAT),
         vec![
-            // Three `\p` in the introduction, before `\c 1`.
-            Code::VerseTextBeforeChapter,
-            Code::VerseTextBeforeChapter,
-            Code::VerseTextBeforeChapter,
             // `\weirdtaglookingthing`.
             Code::UnknownMarker,
-            // `\v 1` on the line after `\s Chapter One`, with no `\p`.
-            Code::VerseInHeading,
             // `\w*` with no `\w`.
             Code::UnmatchedClosingMarker,
             // `\v 3-4a` on the line after `\esbe`, and `\v 1` after `\c 4`.
@@ -922,13 +836,12 @@ fn content_after_sidebar_end_marker() {
 
 /// `Tes/03LEVTes.SFM`: `\v 55b`, a verse segment continuing `\v 55` in the same
 /// paragraph, and `\id Leviticus` — a book name where the code belongs, which
-/// drops the `\id` line and so also leaves the document without one.
+/// drops the `\id` line and so also leaves the document without one. The
+/// `missing-id` that follows is `usfm_semantic`'s (ticket 21); the test there
+/// asserts a caller still sees both.
 #[test]
 fn machine_py_03lev() {
-    assert_eq!(
-        common::codes(MACHINE_PY_03LEV),
-        vec![Code::MissingId, Code::UnknownBookCode],
-    );
+    assert_eq!(common::codes(MACHINE_PY_03LEV), vec![Code::UnknownBookCode]);
     snapshot("machine_py_03lev", MACHINE_PY_03LEV);
 }
 
@@ -944,9 +857,10 @@ fn machine_py_42mrk() {
 
 /// `Tes/44JHNTes.SFM` is zero bytes, which a Paratext project uses for a book
 /// nobody has started. It parses to a document with no blocks and reports
-/// nothing: `check_document_structure` asks what the first block is, and there
-/// is no first block to be wrong about. The point of the test is that the
-/// parser neither panics nor loops on empty input.
+/// nothing: the `missing-id` rule (`usfm_semantic`'s since ticket 21) asks what
+/// the first block is, and there is no first block to be wrong about. The point
+/// of the test is that the parser neither panics nor loops on empty input;
+/// `an_empty_document_reports_nothing` in `checks.rs` is the other half.
 #[test]
 fn machine_py_44jhn_empty() {
     assert!(MACHINE_PY_44JHN.is_empty());
@@ -1011,6 +925,16 @@ fn machine_py_custom_stylesheet() {
     );
 }
 
+/// The snapshot for `code`, if this suite has one.
+fn recovery_snapshot(code: &Code) -> Option<std::path::PathBuf> {
+    let path = std::path::PathBuf::from(format!(
+        "{}/tests/snapshots/recovery__{}.snap",
+        env!("CARGO_MANIFEST_DIR"),
+        code.as_str().replace('-', "_")
+    ));
+    path.exists().then_some(path)
+}
+
 /// Every code in the recovery table has a snapshot produced by a test in
 /// this file. Codes that cannot be triggered from the default stylesheet
 /// are listed explicitly, and the codes the semantic pass owns
@@ -1028,18 +952,37 @@ fn recovery_table_is_covered() {
     let missing: Vec<&str> = Code::ALL
         .iter()
         .filter(|code| !exempt.contains(code) && !code.is_semantic())
+        .filter(|code| recovery_snapshot(code).is_none())
         .map(|code| code.as_str())
-        .filter(|name| {
-            let path = format!(
-                "{}/tests/snapshots/recovery__{}.snap",
-                env!("CARGO_MANIFEST_DIR"),
-                name.replace('-', "_")
-            );
-            !std::path::Path::new(&path).exists()
-        })
         .collect();
     assert!(
         missing.is_empty(),
         "codes without a recovery test: {missing:?}"
+    );
+}
+
+/// The other half of the rule, which a moved check is easy to leave half done:
+/// a code the semantic pass owns must have no snapshot *here*. A `recovery__`
+/// file left behind after a move would still be read by `cargo insta` as an
+/// unreferenced snapshot, and would say the parser reports something it does
+/// not (ticket 21).
+#[test]
+fn semantic_codes_have_no_recovery_snapshot() {
+    let stale: Vec<String> = Code::ALL
+        .iter()
+        .filter(|code| code.is_semantic())
+        .filter_map(|code| {
+            recovery_snapshot(code).map(|path| {
+                format!(
+                    "{}: {}",
+                    code.as_str(),
+                    path.file_name().unwrap().to_string_lossy()
+                )
+            })
+        })
+        .collect();
+    assert!(
+        stale.is_empty(),
+        "semantic codes with a recovery snapshot left behind: {stale:?}"
     );
 }

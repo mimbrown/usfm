@@ -1,5 +1,5 @@
 ---
-source: usfm_parser/tests/recovery.rs
+source: crates/usfm_parser/tests/recovery.rs
 description: "\\id Leviticus\r\n\\h Leviticus\r\n\\mt Leviticus\r\n\\c 14\r\n\\p\r\n\\v 55 Chapter fourteen, verse fifty-five.\r\n\\v 55b Segment b.\r\n\\v 56 Chapter fourteen, verse fifty-six.\r\n"
 ---
 Para h@15..29
@@ -21,5 +21,4 @@ Para p@51..159
   VerseEnd 56
 ChapterEnd 14
 --- diagnostics
-error[missing-id] @0..0: document must start with `\id`
 error[unknown-book-code] @4..13: `Leviticus` is not a book code

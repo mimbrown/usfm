@@ -36,10 +36,13 @@
 # * `usfm_pipeline` — its lib suite is the text replacements, which spend all
 #   their time inside the `regex` crate; that is not this repo's code, and it
 #   cost 66 s of the parser's 86 s while it lived there (ticket 15 moved it).
-# * 81 of the 92 `recovery` tests — the 11 kept are the ones whose input drives
+# * 72 of the 82 `recovery` tests — the 10 kept are the ones whose input drives
 #   the lexer somewhere unusual (a lone `\`, an unterminated quote, an escaped
 #   one, a marker name with `-` or `_`, a newline inside an attribute list, EOF
-#   inside a character style, a malformed number through `string_parser`). The
+#   inside a character style, a malformed number through `string_parser`).
+#   `empty_word` was an eleventh until ticket 21 moved it to `usfm_semantic`;
+#   its `\w |lemma="x"\w*` is attribute lexing, which the whole `attributes`
+#   suite above covers. The
 #   rest re-lex ordinary text and cost about 6 s each, nearly all of it insta
 #   reading its snapshot file under Miri.
 set -euo pipefail
@@ -102,7 +105,6 @@ run -p usfm_parser --test spans        # ~57 s
     nested_marker_not_nested \
     unknown_custom_milestone \
     unknown_custom_marker \
-    empty_word \
     escaped_quote_in_attribute_value \
     unterminated_attribute_value \
     newline_in_attributes \

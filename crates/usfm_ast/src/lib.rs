@@ -88,6 +88,15 @@ impl fmt::Display for StyleId {
 /// the index.
 pub struct Document<'a> {
     pub blocks: Vec<Block<'a>>,
+    /// The source this document was parsed from, as a range: `0..len`, or
+    /// [`SPAN`] for a tree built by hand.
+    ///
+    /// Every other node's span is the run it was read from; a document was
+    /// read from the whole input, and nothing else in the tree records where
+    /// that ended. A check about the document rather than about any one node —
+    /// `empty-book`, which says the file holds nothing but its `\id` line —
+    /// has the end of the file to point at because of this field.
+    pub span: Span,
     style_sheet: Arc<StyleSheet>,
 }
 
@@ -95,8 +104,16 @@ impl<'a> Document<'a> {
     pub fn new(blocks: Vec<Block<'a>>, style_sheet: Arc<StyleSheet>) -> Self {
         Self {
             blocks,
+            span: SPAN,
             style_sheet,
         }
+    }
+
+    /// The same document, knowing what source it was parsed from. The parser
+    /// calls this; a tree built by hand keeps [`SPAN`].
+    pub fn with_span(mut self, span: Span) -> Self {
+        self.span = span;
+        self
     }
 
     /// A document with an empty stylesheet, for trees built by hand where no
@@ -105,6 +122,7 @@ impl<'a> Document<'a> {
     pub fn without_styles(blocks: Vec<Block<'a>>) -> Self {
         Self {
             blocks,
+            span: SPAN,
             style_sheet: Arc::new(StyleSheet::new(Vec::new())),
         }
     }

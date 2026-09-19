@@ -157,14 +157,9 @@ pub struct ParserImpl<'a> {
     note_depth: usize,
     /// Inside a table cell (cell markers close it from any depth).
     in_cell: bool,
-    /// Text type of the paragraph being parsed.
+    /// Text type of the paragraph being parsed: where a verse end goes
+    /// depends on it (see `place_verse_end`).
     para_text_type: TextType,
-    /// Whether the paragraph being parsed is the `\s5` chunk marker.
-    para_is_s5: bool,
-    /// Book code from `\id`, if any.
-    book: Option<BookCode>,
-    /// Whether a `\c` has been seen.
-    chapter_seen: bool,
     /// Parsing the `\periph Title|attrs` line, where the attribute list ends
     /// at the line break rather than at a closing marker.
     in_periph_title: bool,
@@ -339,9 +334,6 @@ impl<'a> ParserImpl<'a> {
             note_depth: 0,
             in_cell: false,
             para_text_type: TextType::Other,
-            para_is_s5: false,
-            book: None,
-            chapter_seen: false,
             in_periph_title: false,
             open_verse: None,
             open_chapter: None,
@@ -364,13 +356,9 @@ impl<'a> ParserImpl<'a> {
     }
 
     /// The marker name, owned so it can be held across an `emit` call.
-    /// Only diagnostic paths need this; use `marker_is` to test a name.
+    /// Only diagnostic paths need this.
     fn marker_name(&self, marker: usize) -> String {
         self.rule(marker).marker.clone()
-    }
-
-    fn marker_is(&self, marker: usize, name: &str) -> bool {
-        self.rule(marker).marker == name
     }
 
     fn resolve_marker(&self, marker_word: &str) -> Option<usize> {
@@ -396,11 +384,6 @@ impl<'a> ParserImpl<'a> {
         }
     }
 
-    /// Whether any character style (not a note) is open in the current scope.
-    fn in_char_style(&self) -> bool {
-        self.open.iter().rev().take_while(|o| !o.is_note).count() > 0
-    }
-
     /// Whether `style` is open in the current scope. Notes are their own
     /// scope: a closing marker inside a note cannot close something outside
     /// it, but can close the note itself.
@@ -422,14 +405,14 @@ impl<'a> ParserImpl<'a> {
         let mut blocks = vec![];
         let closer = self.parse_blocks(&mut blocks, None, |_| false);
         debug_assert!(closer.is_none(), "nothing stops the top-level block loop");
-        self.check_document_structure(&blocks);
         // End of input closes the open verse and chapter.
         self.end_verse_before_block(&mut blocks);
         if let Some(number) = self.open_chapter.take() {
             blocks.push(Block::ChapterEnd(ChapterEnd { number, span: SPAN }));
         }
         let style_sheet = Arc::clone(&self.style_sheet);
-        let document = Document::new(blocks, style_sheet);
+        let source = Span::new(0, self.source_text.len() as u32);
+        let document = Document::new(blocks, style_sheet).with_span(source);
         self.diagnostics.sort_by_key(|d| d.span.start);
         ParseResult {
             document,
@@ -703,24 +686,6 @@ impl<'a> ParserImpl<'a> {
         Some(Text::new(content, char.span))
     }
 
-    /// Whole-document checks run after the block loop.
-    fn check_document_structure(&mut self, blocks: &[Block<'a>]) {
-        let end = Span::empty(self.source_text.len() as u32);
-        match blocks.first() {
-            Some(Block::Book(_)) => {
-                if blocks.len() == 1 {
-                    self.emit(Code::EmptyBook, end, "book contains only an `\\id` line");
-                }
-            }
-            Some(_) => self.emit(
-                Code::MissingId,
-                Span::empty(0),
-                "document must start with `\\id`",
-            ),
-            None => {}
-        }
-    }
-
     /// Find the next block marker, reporting and skipping anything that
     /// cannot start a block. Stops without consuming at inline content.
     fn parse_block_start(&mut self) -> BlockStart<'a> {
@@ -835,22 +800,16 @@ impl<'a> ParserImpl<'a> {
         } else {
             Cow::Borrowed("")
         };
-        if !blocks.is_empty() {
-            self.emit(
-                Code::IdNotFirst,
-                marker_span,
-                "`\\id` must be the first marker in the file",
-            );
-        }
         match BookCode::from_str(word) {
             Ok(code) => {
-                // A well-formed code USX accepts but this parser does not name
-                // is kept as written, so there is no repair to report and
-                // nothing is emitted here: `unlisted-book-code` is a judgement
-                // about the finished document and belongs to `usfm_semantic`
-                // (ticket 19). `unknown-book-code` below stays, because that
-                // one drops the `\id` line.
-                self.book = Some(code);
+                // Nothing is reported about a `\id` that parses: a code USX
+                // accepts but this parser does not name (`unlisted-book-code`,
+                // ticket 19), a `\id` after other content (`id-not-first`) and
+                // a file with nothing else in it (`empty-book`, ticket 21) are
+                // all judgements about the finished document, which the tree
+                // carries — the `Book` block and where it sits in the block
+                // list — so `usfm_semantic` makes them. `unknown-book-code`
+                // below stays, because that one drops the `\id` line.
                 blocks.push(Block::Book(Book {
                     code,
                     description,
@@ -890,7 +849,6 @@ impl<'a> ParserImpl<'a> {
                 format!("chapter number `{word}` has a leading zero"),
             );
         }
-        self.chapter_seen = true;
         let mut chapter_start = ChapterStart {
             number,
             alt_number: None,
@@ -956,28 +914,13 @@ impl<'a> ParserImpl<'a> {
         marker: usize,
         span: Span,
     ) -> Option<(usize, Span)> {
-        let (text_type, is_s5, is_verse_text) = {
-            let rule = self.rule(marker);
-            (
-                rule.text_type.clone(),
-                rule.marker == "s5",
-                rule.is_verse_text(),
-            )
-        };
-        self.para_text_type = text_type;
-        self.para_is_s5 = is_s5;
+        // The text type decides where a verse end goes (see `place_verse_end`),
+        // which is the one thing the paragraph's style changes about the tree.
+        // Whether a verse-text paragraph may stand here at all
+        // (`verse-text-before-chapter`) is `usfm_semantic`'s: the tree holds
+        // the paragraph, its style and the chapter it does or does not follow.
+        self.para_text_type = self.rule(marker).text_type.clone();
         self.start_block();
-        if !self.chapter_seen
-            && is_verse_text
-            && self.book.is_some_and(|book| !book.is_non_scripture())
-        {
-            let name = self.marker_name(marker);
-            self.emit(
-                Code::VerseTextBeforeChapter,
-                span,
-                format!("`\\{name}` (verse text) before the first `\\c`"),
-            );
-        }
         let mut context = ParserInlineContext::Para(Para {
             style: StyleId::new(marker as u32),
             children: vec![],
@@ -1094,17 +1037,10 @@ impl<'a> ParserImpl<'a> {
             );
             TableCellInfo::first_column()
         };
-        let mut expected_column = 1;
+        // Every cell keeps the column its marker names, gap or not, so a row's
+        // columns are in the tree as written and `unexpected-table-column` is
+        // `usfm_semantic`'s to report (ticket 21).
         loop {
-            if info.column != expected_column {
-                let name = &self.source_text[cell_span.start as usize..cell_span.end as usize];
-                self.emit(
-                    Code::UnexpectedTableColumn,
-                    cell_span,
-                    format!("`{name}` where column {expected_column} was expected"),
-                );
-            }
-            expected_column = info.column.saturating_add(info.colspan);
             let (cell, closer) = self.parse_table_cell(info, cell_span);
             // A verse starting at the beginning of this cell ends the
             // previous one at the end of the previous cell.
@@ -1447,6 +1383,12 @@ impl<'a> ParserImpl<'a> {
         context: &mut ParserInlineContext<'a>,
         marker_span: Span,
     ) -> Option<InnerListCloser> {
+        // The one placement rule that changes the tree, and so the one the
+        // parser keeps: a verse inside a note is dropped, marker and number
+        // both, and what is not in the tree cannot be reported from it. Where
+        // the verse *is* kept — before any `\c`, in a heading, inside a
+        // character style — `usfm_semantic` reports it off the `VerseStart`
+        // and the node it sits in (ticket 21).
         if self.note_depth > 0 {
             self.emit(
                 Code::VerseInNote,
@@ -1456,27 +1398,6 @@ impl<'a> ParserImpl<'a> {
             self.eat_word();
             self.eat_whitespace();
             return None;
-        }
-        if !self.chapter_seen {
-            self.emit(
-                Code::VerseOutsideChapter,
-                marker_span,
-                "`\\v` before any `\\c`",
-            );
-        }
-        if matches!(self.para_text_type, TextType::Title | TextType::Section) && !self.para_is_s5 {
-            self.emit(
-                Code::VerseInHeading,
-                marker_span,
-                "`\\v` inside a title or section heading",
-            );
-        }
-        if self.in_char_style() {
-            self.emit(
-                Code::VerseInCharacterStyle,
-                marker_span,
-                "`\\v` inside an open character style",
-            );
         }
         let number_span = self.cur_span();
         let Some(word) = self.eat_word() else {
@@ -1754,9 +1675,8 @@ impl<'a> ParserImpl<'a> {
             unreachable!("context variant does not change");
         };
         char.span.end = self.container_end(&closer);
-        if self.marker_is(marker, "w") && char.attributes.is_some() && char.children.is_empty() {
-            self.emit(Code::EmptyWord, span, "`\\w` has attributes but no text");
-        }
+        // A `\w` with attributes and no text (`empty-word`) is the node as
+        // written, so `usfm_semantic` reads it off the tree (ticket 21).
         self.add_char(context, char);
 
         let name = self.marker_name(marker);

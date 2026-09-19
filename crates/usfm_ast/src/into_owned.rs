@@ -42,7 +42,8 @@ impl<'a> Document<'a> {
     /// The stylesheet is shared, not copied: it is already an `Arc`.
     pub fn into_owned(self) -> Document<'static> {
         let style_sheet = self.style_sheet;
-        Document::new(own_all(self.blocks), style_sheet)
+        let span = self.span;
+        Document::new(own_all(self.blocks), style_sheet).with_span(span)
     }
 }
 

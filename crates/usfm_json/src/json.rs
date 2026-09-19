@@ -209,8 +209,11 @@ impl JsonWriter<'_> {
     }
 
     fn document(&self, document: &Document<'_>) -> Value {
-        // A document has no span; it covers its source from the start to
-        // wherever its last block ended.
+        // The span reported here is the range the blocks cover, from the start
+        // to wherever the last one ended. `Document::span` (ticket 21) is the
+        // whole source instead, trailing whitespace and all, which is what
+        // `empty-book` needs and not what a reader of this tree would expect
+        // the document node to cover.
         let end = document
             .blocks
             .iter()

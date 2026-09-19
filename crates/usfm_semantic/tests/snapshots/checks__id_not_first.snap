@@ -1,5 +1,5 @@
 ---
-source: usfm_parser/tests/recovery.rs
+source: crates/usfm_semantic/tests/checks.rs
 description: "\\id GEN\n\\c 1\n\\p \\v 1 a\n\\id EXO\n\\c 1\n\\p \\v 1 b"
 ---
 Book GEN "" @0..7
@@ -17,4 +17,4 @@ Para p@36..45
   VerseEnd 1
 ChapterEnd 1
 --- diagnostics
-error[id-not-first] @23..26: `\id` must be the first marker in the file
+error[id-not-first] @23..30: `\id` must be the first marker in the file

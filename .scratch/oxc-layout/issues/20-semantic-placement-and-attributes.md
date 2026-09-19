@@ -36,7 +36,7 @@ the seven codes.
 
 ## Answer
 
-Landed via PR #24 (2026-09-19). `Analyzer` keeps a scope stack (para, char,
+Landed in `dea9548` (PR #24, 2026-09-19). `Analyzer` keeps a scope stack (para, char,
 note, cell) and reproduces `check_placement` off the tree; sidebars and
 periphs need no case since their content sits in its own `Para`. The `\+`
 nesting skip falls out of "char inside char: no check", verified by diffing

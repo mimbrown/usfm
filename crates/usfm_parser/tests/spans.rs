@@ -67,6 +67,30 @@ fn normalized_whitespace_and_escapes() {
     check("\\id GEN\n\\c 1\n\\p \\v 1 a\\\\b   c\nd \\em e\\em*\n");
 }
 
+/// The three nodes that can carry an attribute list — a character style, a
+/// milestone (inline and between blocks) and a `\periph` line — each with one,
+/// so the checker sees the `|` and every pair in every position it can appear
+/// in. `Attributes::pipe` and `Attribute::span` arrived with ticket 20 and are
+/// checked from ticket 21 on: the `|` is one byte of `|`, and a pair's span is
+/// the name it was read from, or the value run for a bare one.
+#[test]
+fn attribute_lists_on_every_node_that_can_carry_one() {
+    check(
+        "\\id FRT\n\\periph Title Page|id=\"title\"\n\\p a\n\
+         \\id GEN\n\\c 1\n\\ts-s |x-a=\"1\" x-b=\"2\"\\*\n\
+         \\p \\v 1 \\w grace|lemma=\"grace\" strong=\"H1\"\\w* \
+         \\w plain|grace\\w* \\qt-s |Jesus\\* b \\qt-e\\*\n",
+    );
+    // A bare value the parser borrows verbatim, quotes included, and an
+    // unquoted one it reads as a single word: both spans are the run read.
+    check("\\id GEN\n\\c 1\n\\p \\v 1 \\rb b|\"h=c\"\\rb* \\w x|lemma=y\\w*\n");
+    // Lists the parser had to recover in: no attribute at all, a name that is
+    // not an identifier, a value with no closing quote, a line break inside
+    // the list.
+    check("\\id GEN\n\\c 1\n\\p \\v 1 \\w a| \\w* \\w b|c<d=\"1\"\\w* \\w e|f=\"g\n\\w* h\n");
+    check("\\id GEN\n\\c 1\n\\p \\v 1 \\w a|lemma=\"b\"\n   strong=\"c\"\\w*\n");
+}
+
 /// `into_owned` must detach the document from the source (plan D5): the
 /// document has to still be usable, and unchanged, once the input is gone.
 #[test]
