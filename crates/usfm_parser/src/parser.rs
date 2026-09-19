@@ -2135,11 +2135,16 @@ impl<'a> ParserImpl<'a> {
     /// The list is kept as parsed whatever is reported.
     fn check_attributes(&mut self, marker: usize, attributes: &Attributes<'a>, span: Span) {
         if attributes.pairs.is_empty() {
-            self.emit(
-                Code::EmptyAttributeList,
-                span,
-                "`|` is not followed by any attribute",
-            );
+            // A milestone is nothing but its attributes, so `\ts-s |\*` says
+            // the same as `\ts-s\*` and nothing was lost; unfoldingWord's
+            // aligned texts write their translation sections that way. On a
+            // character style the `|` announces a value that is missing.
+            let code = if self.rule(marker).is_milestone() {
+                Code::EmptyMilestoneAttributeList
+            } else {
+                Code::EmptyAttributeList
+            };
+            self.emit(code, span, "`|` is not followed by any attribute");
             return;
         }
         let unnamed = attributes.pairs.iter().filter(|a| a.name.is_empty()).count();

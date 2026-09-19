@@ -197,7 +197,11 @@ Recent progress:
 - Attribute validation: `empty-attribute-list`, `no-default-attribute`,
   `default-attribute-with-others`, `attribute-value-not-quoted`,
   `missing-attribute-value`; and `number-has-leading-zero` for `\c 091`/`\v 01`.
-  Seven `validated=fail` inputs now report an error instead of passing silently
+  Seven `validated=fail` inputs now report an error instead of passing silently.
+  `empty-attribute-list` (Error) is the character-style case only; on a
+  milestone (`\ts-s |\*`, how unfoldingWord's aligned texts write a
+  translation section) the same shape is `empty-milestone-attribute-list`
+  (Warning, nothing dropped, same USX) — ticket 18
 - `Block::Periph` (`\periph Title|id="x"` up to the next `\periph` or `\id`):
   a block container like `Sidebar`, with `title` and `attributes`; the
   attribute list on that line ends at the line break
