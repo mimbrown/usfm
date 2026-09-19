@@ -62,7 +62,7 @@ impl<'a> IterSections<'a> {
         ) {
             return false;
         }
-        let last_char = self.text[..cursor].chars().rev().next();
+        let last_char = self.text[..cursor].chars().next_back();
         match last_char {
             Some(ch) => ch.is_whitespace(),
             None => true,
@@ -131,8 +131,8 @@ static MATCH_PUNCTUATION: LazyLock<regex::Regex> =
 
 fn drain(
     f: &mut Formatter<'_>,
-    opening: &Vec<String>,
-    closing: &Vec<String>,
+    opening: &[String],
+    closing: &[String],
     accumulator: &mut String,
 ) -> std::fmt::Result {
     if !accumulator.is_empty() && !accumulator.chars().all(char::is_whitespace) {
@@ -268,41 +268,32 @@ fn document_sections<'a>(document: &'a Document<'a>, styles: &StyleSheet) -> Vec
     };
     let mut last_text: Option<Cow<'a, str>> = None;
     for block in document.blocks.iter() {
-        match block {
-            Block::Para(para) => {
-                if styles.get_rule(para.style.index()).is_nonvernacular() {
-                    continue;
-                }
-                for inline in para.children.iter() {
-                    match inline {
-                        Inline::Text(text) => {
-                            let mut iter = sections(text);
-                            if let Some(first_text) = iter.next() {
-                                if let Some(last_text) = last_text.as_mut() {
-                                    last_text.to_mut().push_str(first_text);
-                                } else {
-                                    last_text = Some(Cow::Borrowed(first_text));
-                                }
-                            }
-                            for section in iter {
-                                if let Some(last_text) = last_text.as_mut() {
-                                    add_if_non_empty(std::mem::replace(
-                                        last_text,
-                                        Cow::Borrowed(section),
-                                    ));
-                                } else {
-                                    last_text = Some(Cow::Borrowed(section));
-                                }
-                            }
+        if let Block::Para(para) = block {
+            if styles.get_rule(para.style.index()).is_nonvernacular() {
+                continue;
+            }
+            for inline in para.children.iter() {
+                if let Inline::Text(text) = inline {
+                    let mut iter = sections(text);
+                    if let Some(first_text) = iter.next() {
+                        if let Some(last_text) = last_text.as_mut() {
+                            last_text.to_mut().push_str(first_text);
+                        } else {
+                            last_text = Some(Cow::Borrowed(first_text));
                         }
-                        _ => {}
+                    }
+                    for section in iter {
+                        if let Some(last_text) = last_text.as_mut() {
+                            add_if_non_empty(std::mem::replace(last_text, Cow::Borrowed(section)));
+                        } else {
+                            last_text = Some(Cow::Borrowed(section));
+                        }
                     }
                 }
-                if let Some(last_text) = last_text.as_mut() {
-                    add_if_non_empty(std::mem::take(last_text));
-                }
             }
-            _ => {}
+            if let Some(last_text) = last_text.as_mut() {
+                add_if_non_empty(std::mem::take(last_text));
+            }
         }
     }
     result
@@ -373,6 +364,9 @@ fn report_diagnostics(
 }
 
 impl ParseAndTransform {
+    // Each argument is one CLI flag's worth of input; grouping them into a
+    // struct is the job of the clap rewrite in M3, not of this ticket.
+    #[allow(clippy::too_many_arguments)]
     fn new(
         replacement_paths: Vec<PathBuf>,
         style_sheet_path: Option<PathBuf>,
@@ -382,7 +376,7 @@ impl ParseAndTransform {
         diglot_replacement_paths: Vec<PathBuf>,
         format: OutputFormat,
         strict: bool,
-    ) -> Result<Self, (Self, Vec<Error>)> {
+    ) -> Result<Self, Box<(Self, Vec<Error>)>> {
         let mut errors: Vec<Error> = Vec::new();
         let replacements = replacement_paths
             .iter()
@@ -469,7 +463,9 @@ impl ParseAndTransform {
         if errors.is_empty() {
             Ok(instance)
         } else {
-            Err((instance, errors))
+            // Boxed: the pair is larger than clippy's `result_large_err`
+            // threshold and this is a once-per-run path.
+            Err(Box::new((instance, errors)))
         }
     }
 
@@ -498,16 +494,16 @@ impl ParseAndTransform {
             .collect::<Vec<_>>();
 
         // Check if style sheet was updated
-        if let Some(ref style_path) = self.style_sheet_path {
-            if updated_paths.contains(style_path) {
-                self.style_sheet = match StyleSheet::from_file(style_path) {
-                    Ok(sheet) => Some(Arc::new(sheet)),
-                    Err(e) => {
-                        errors.push(Error::from(e));
-                        None
-                    }
-                };
-            }
+        if let Some(ref style_path) = self.style_sheet_path
+            && updated_paths.contains(style_path)
+        {
+            self.style_sheet = match StyleSheet::from_file(style_path) {
+                Ok(sheet) => Some(Arc::new(sheet)),
+                Err(e) => {
+                    errors.push(Error::from(e));
+                    None
+                }
+            };
         }
 
         // Check if any inputs were updated
@@ -551,16 +547,16 @@ impl ParseAndTransform {
             })
             .collect::<Vec<_>>();
 
-        if let Some(ref style_path) = self.diglot_style_sheet_path {
-            if updated_paths.contains(style_path) {
-                self.diglot_style_sheet = match StyleSheet::from_file(style_path) {
-                    Ok(sheet) => Some(Arc::new(sheet)),
-                    Err(e) => {
-                        errors.push(Error::from(e));
-                        None
-                    }
-                };
-            }
+        if let Some(ref style_path) = self.diglot_style_sheet_path
+            && updated_paths.contains(style_path)
+        {
+            self.diglot_style_sheet = match StyleSheet::from_file(style_path) {
+                Ok(sheet) => Some(Arc::new(sheet)),
+                Err(e) => {
+                    errors.push(Error::from(e));
+                    None
+                }
+            };
         }
 
         let diglot_replacements = std::mem::take(&mut self.diglot_replacements);
@@ -621,7 +617,7 @@ impl ParseAndTransform {
         for replacement in self.replacements.iter_mut() {
             replacement.apply_to(&mut document);
         }
-        if self.diglots.len() > 0 {
+        if !self.diglots.is_empty() {
             Ok(match self.format {
                 OutputFormat::Usx => todo!(),
                 OutputFormat::Sile => todo!(),
@@ -826,7 +822,8 @@ fn run() -> Result<(), Error> {
     if watch {
         let mut parse_and_transform = match parse_and_transform_result {
             Ok(parse_and_transform) => parse_and_transform,
-            Err((parse_and_transform, errors)) => {
+            Err(failed) => {
+                let (parse_and_transform, errors) = *failed;
                 for error in errors {
                     error.print();
                 }
@@ -834,15 +831,14 @@ fn run() -> Result<(), Error> {
             }
         };
         let (tx, rx) = mpsc::channel::<notify::Result<Event>>();
-        let mut watcher = notify::recommended_watcher(tx)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        let mut watcher = notify::recommended_watcher(tx).map_err(std::io::Error::other)?;
 
         // Watch all relevant files
         for path_str in parse_and_transform.get_all_paths() {
             if let Ok(path) = Path::new(&path_str).canonicalize() {
                 watcher
                     .watch(&path, RecursiveMode::NonRecursive)
-                    .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+                    .map_err(std::io::Error::other)?;
             }
         }
 
@@ -882,7 +878,8 @@ fn run() -> Result<(), Error> {
     } else {
         let mut parse_and_transform = match parse_and_transform_result {
             Ok(parse_and_transform) => parse_and_transform,
-            Err((_, errors)) => {
+            Err(failed) => {
+                let (_, errors) = *failed;
                 for error in errors {
                     error.print();
                 }

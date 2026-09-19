@@ -9,23 +9,23 @@ pub trait InlineContainer<'a> {
     fn add_child(&mut self, child: Inline<'a>) {
         // If the last child is a text node, and the new child is also a text node, merge them
         let children = self.children_mut();
-        if let Some(Inline::Text(prev_text)) = children.last_mut() {
-            if let Inline::Text(child_text) = child {
-                let mut string = String::with_capacity(prev_text.len() + child_text.len());
-                string.push_str(prev_text);
-                string.push_str(&child_text);
-                prev_text.content = Cow::Owned(string);
-                // The merged run covers both sources. A synthesized run has no
-                // position, so it must not drag the span back to 0.
-                prev_text.span = if prev_text.span == SPAN {
-                    child_text.span
-                } else if child_text.span == SPAN {
-                    prev_text.span
-                } else {
-                    Span::new(prev_text.span.start, child_text.span.end)
-                };
-                return;
-            }
+        if let Some(Inline::Text(prev_text)) = children.last_mut()
+            && let Inline::Text(child_text) = child
+        {
+            let mut string = String::with_capacity(prev_text.len() + child_text.len());
+            string.push_str(prev_text);
+            string.push_str(&child_text);
+            prev_text.content = Cow::Owned(string);
+            // The merged run covers both sources. A synthesized run has no
+            // position, so it must not drag the span back to 0.
+            prev_text.span = if prev_text.span == SPAN {
+                child_text.span
+            } else if child_text.span == SPAN {
+                prev_text.span
+            } else {
+                Span::new(prev_text.span.start, child_text.span.end)
+            };
+            return;
         }
         children.push(child);
     }

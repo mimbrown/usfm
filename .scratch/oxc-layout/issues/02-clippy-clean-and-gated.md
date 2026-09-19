@@ -1,6 +1,6 @@
 # 02. Clippy clean, gated in CI
 
-Status: ready-for-agent
+Status: claimed
 Milestone: M1
 Blocked by: 01
 

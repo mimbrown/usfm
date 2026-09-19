@@ -1,8 +1,4 @@
-use std::{
-    collections::HashMap,
-    fmt::{Display, Formatter, Result},
-    iter::Map,
-};
+use std::fmt::{Display, Formatter, Result};
 
 use usfm_style::StyleSheet;
 
@@ -214,7 +210,7 @@ where
 {
     fn serialize(&self, serializer: &S, f: &mut Formatter<'_>, context: &mut Context) -> Result {
         match self {
-            Inline::Text(text) => serializer.serialize_text(f, context, &text),
+            Inline::Text(text) => serializer.serialize_text(f, context, text),
             Inline::VerseStart(verse) => {
                 context.verse_number = Some(verse.number.clone());
                 serializer.serialize_verse_start(f, context, verse)

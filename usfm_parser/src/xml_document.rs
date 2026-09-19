@@ -138,10 +138,8 @@ impl XmlElement {
                 XmlEvent::EndElement { name: _end_name } => {
                     return Ok((event_reader, element));
                 }
-                XmlEvent::Whitespace(s) => {
-                    if s == " " {
-                        element.append_text(s);
-                    }
+                XmlEvent::Whitespace(s) if s == " " => {
+                    element.append_text(s);
                 }
                 _ => {}
             }
@@ -158,16 +156,14 @@ impl XmlDocument {
     pub fn from<R: Read>(s: R) -> Result<Self, Error> {
         let mut parser = EventReader::new(s);
         loop {
-            match parser.next()? {
-                XmlEvent::StartElement {
-                    name,
-                    attributes,
-                    namespace,
-                } => {
-                    let (_, root) = XmlElement::read(parser, name, attributes, namespace)?;
-                    return Ok(XmlDocument { root });
-                }
-                _ => {}
+            if let XmlEvent::StartElement {
+                name,
+                attributes,
+                namespace,
+            } = parser.next()?
+            {
+                let (_, root) = XmlElement::read(parser, name, attributes, namespace)?;
+                return Ok(XmlDocument { root });
             }
         }
     }

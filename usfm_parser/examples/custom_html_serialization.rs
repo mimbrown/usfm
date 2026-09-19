@@ -107,6 +107,12 @@ pub struct CustomHtmlSerializer {
     add_custom_classes: bool,
 }
 
+impl Default for CustomHtmlSerializer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CustomHtmlSerializer {
     pub fn new() -> Self {
         Self {

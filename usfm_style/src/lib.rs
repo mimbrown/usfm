@@ -1,7 +1,7 @@
 use bitflags::bitflags;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufReader, Error, ErrorKind, Read};
+use std::io::{BufReader, Error, Read};
 use std::mem::take;
 use std::path::Path;
 use std::str::FromStr;
@@ -181,7 +181,7 @@ impl StyleRule {
                 .style_type
                 .take()
                 .ok_or(StyleParseError::StyleTypeRequired)?,
-            text_type: builder.text_type.take().unwrap_or_else(|| TextType::Other),
+            text_type: builder.text_type.take().unwrap_or(TextType::Other),
             text_properties: builder.text_properties.take().unwrap_or_default(),
             nest: builder.nest,
             occurs_under: std::mem::take(&mut builder.occurs_under),
@@ -254,6 +254,12 @@ pub struct StyleSheetBuilder {
     rule_by_marker_map: HashMap<String, usize>,
     current_marker: String,
     current_marker_builder: StyleRuleBuilder,
+}
+
+impl Default for StyleSheetBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl StyleSheetBuilder {
@@ -370,12 +376,8 @@ impl StyleSheet {
         let mut lines = String::new();
         BufReader::new(file).read_to_string(&mut lines)?;
 
-        StyleSheet::from_str(&lines).map_err(|e| {
-            Error::new(
-                ErrorKind::Other,
-                format!("failed to parse usfm.sty: {:?}", e),
-            )
-        })
+        StyleSheet::from_str(&lines)
+            .map_err(|e| Error::other(format!("failed to parse usfm.sty: {:?}", e)))
     }
 
     pub fn from_builder(builder: StyleSheetBuilder) -> Self {

@@ -32,6 +32,12 @@ impl std::fmt::Debug for TextReplacement {
     }
 }
 
+impl Default for TextReplacement {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TextReplacement {
     pub fn new() -> Self {
         Self {
@@ -52,7 +58,7 @@ impl TextReplacement {
             .get_rule(style.index())
     }
 
-    fn parse_quote_delimited<'a>(text: &'a str) -> Option<(String, &'a str)> {
+    fn parse_quote_delimited(text: &str) -> Option<(String, &str)> {
         let delimiter = match text.as_bytes().first() {
             Some(b'"') => '"',
             Some(b'\'') => '\'',
@@ -100,7 +106,7 @@ impl TextReplacement {
         let replacement = MATCH_UNICODE
             .replace_all(&replacement, |cap: &regex::Captures<'_>| {
                 let code = cap.get(1).unwrap();
-                let code = u32::from_str_radix(&code.as_str(), 16).unwrap();
+                let code = u32::from_str_radix(code.as_str(), 16).unwrap();
                 char::from_u32(code).unwrap().to_string()
             })
             .to_string();

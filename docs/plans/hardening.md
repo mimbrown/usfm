@@ -22,7 +22,9 @@ expected failures, 0 unexpected passes** (100%). Unit tests:
 **Phase 1 is complete** as of 2026-09-12: D1, D2, D3, D5 and D6 are all in, and the
 AST shape is frozen; Phase 2 (conformance) and Phase 3 (traversal) are done. The
 32 remaining failures are all Phase 2 work; none is an AST-shape question.
-`cargo clippy --workspace --all-targets`: 118 warnings.
+`cargo clippy --workspace --all-targets -- -D warnings`: clean and gated as of
+2026-09-19 (`.scratch/oxc-layout/issues/02-clippy-clean-and-gated.md`); it runs in
+`scripts/gate.sh`, which CI calls.
 The workspace builds since 2026-09-19: `usfm_language_server` and `data_layer`
 moved to `wip/`, outside the workspace (`.scratch/oxc-layout/issues/01-move-wip-crates-out-of-workspace.md`).
 
@@ -272,9 +274,10 @@ paragraph-level attributes (`unexpected-pipe`).
       `.github/workflows/ci.yml` builds (excluding the language server), runs the
       unit and integration suites, and runs the tcdocs runner with
       `--baseline tests/tcdocs-baseline.txt`, which fails on a regression and on a
-      stale entry. Clippy is not gated yet.
-- [ ] `cargo clippy --workspace --all-targets -D warnings` clean, then gate it in
-      CI. *2026-09-12:* 118 warnings (excluding the language server).
+      stale entry.
+- [x] `cargo clippy --workspace --all-targets -D warnings` clean, then gate it in
+      CI. Done 2026-09-19 (ticket 02): 0 warnings, and `scripts/gate.sh` runs
+      clippy after the build, so CI gates it.
 - [x] Make a missing `tcdocs` submodule a hard error. Done 2026-09-12: `tests/build.rs`
       fails the build when the submodule is absent or yields no test cases, and the
       runner exits non-zero on a zero-test run instead of printing

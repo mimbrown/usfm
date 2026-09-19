@@ -386,8 +386,10 @@ impl std::fmt::Display for Caller<'_> {
     }
 }
 
-impl<'a> Caller<'a> {
-    pub fn from_str(s: &'a str) -> Caller<'a> {
+/// A caller is read straight from the source and never fails, so this is
+/// `From`, not `FromStr`: the borrow ties the caller to the source text.
+impl<'a> From<&'a str> for Caller<'a> {
+    fn from(s: &'a str) -> Caller<'a> {
         match s {
             "+" => Caller::Plus,
             "-" => Caller::Minus,
