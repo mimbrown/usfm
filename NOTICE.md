@@ -10,6 +10,17 @@ derives from the following, which keep their own terms.
   named `tcdocs__*` and the diffs in `tests/tcdocs-patches/` quote its test inputs
   and are derived from it under CC BY 4.0. Scripture excerpts inside those inputs
   belong to their respective publishers.
+- **World English Bible** (`tasks/benchmark/corpus/web/`), the benchmark
+  corpus. The WEB is in the **public domain**: no copyright, no attribution
+  requirement, no restriction on redistribution. It is eBible.org's edition,
+  converted from the USFX file `eng-web.usfx.xml` in
+  https://github.com/seven1m/open-bibles (commit `f257a35`, fetched
+  2026-09-19) by `tasks/benchmark/corpus/tools/usfx_to_usfm.py`. The files
+  under `tasks/benchmark/corpus/synthetic/` are derived from it by
+  `tasks/benchmark/corpus/tools/synthesize.py`: the scripture text is the
+  same public-domain WEB, while the word attributes, alignment milestones,
+  lemmas, Strong's numbers and morphology in them are machine-generated
+  filler for benchmarking and carry no linguistic claim.
 - **`usfm_parser/usfm.sty`**: the default USFM stylesheet distributed with
   Paratext, by United Bible Societies and SIL International, unmodified apart
   from what its own header records. Documentation: https://ubsicap.github.io/usfm/

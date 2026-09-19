@@ -17,6 +17,13 @@ Remove what blocks `cargo build --workspace` and gate lint.
 Exit: `cargo build --workspace` and `cargo clippy --workspace --all-targets -- -D
 warnings` pass locally and in CI, with no `--exclude usfm_language_server`.
 
+Closed 2026-09-19 (tickets 01, 02; `fac106b`, `6c68d6e`). Checked on `main`:
+`cargo build --workspace` passes; `cargo clippy --workspace --all-targets -- -D
+warnings` passes locally on the pinned 1.98.0 toolchain and in CI through
+`scripts/gate.sh`; no `--exclude` remains in the gate, CI or CLAUDE.md. tcdocs
+215 / 0 / 44 expected failures, baseline empty. Found on the way: the tree is
+not rustfmt-clean (58 hunks), left as a follow-up before M3.
+
 ## M2. Measured
 
 Benchmarks and safety checks exist before anything moves.
