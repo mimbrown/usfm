@@ -12,8 +12,6 @@ pub struct Context<'a> {
     pub custom_note_counter: usize,
     pub metadata: HashMap<String, String>,
     pub custom_counters: HashMap<&'a str, usize>,
-    /// Whether to include vid attributes on para/table elements
-    pub include_vid: bool,
 }
 
 impl<'a> Context<'a> {
@@ -27,7 +25,6 @@ impl<'a> Context<'a> {
             custom_note_counter: 0,
             metadata: HashMap::new(),
             custom_counters: HashMap::new(),
-            include_vid: true,
         }
     }
 
@@ -41,7 +38,6 @@ impl<'a> Context<'a> {
             custom_note_counter: 0,
             metadata: HashMap::new(),
             custom_counters: HashMap::new(),
-            include_vid: true,
         }
     }
 

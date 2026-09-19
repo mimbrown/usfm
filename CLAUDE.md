@@ -119,8 +119,12 @@ Recent progress:
   and the serializers drop an attribute they cannot write — a name that is not
   an XML name (`malformed-attribute-name`) or a repeat of one already written
   (`duplicate-attribute`), both new `Code`s
-- The CLI writes USX through `usx.rs` (`usx::to_usx_string`; `serialize_usx.rs` is
-  gone), so it keeps word-level attributes. The `XmlNode` writer escapes text and
+- The CLI writes USX through the `usfm_usx` crate (`usfm_usx::to_usx_string`,
+  re-exported as `usfm_parser::usx` until ticket 17; `serialize_usx.rs` is
+  gone), so it keeps word-level attributes. The walk is a `usfm_ast::visit::Visit`
+  implementation over private state (book code, chapter, open verse,
+  `include_vid`, the document's stylesheet) — no shared `Context`, and no
+  dependency on `usfm_parser` (ticket 13). The `XmlNode` writer escapes text and
   adds no whitespace inside mixed content; `usfm_parser/tests/usx_text.rs`
 - Phase 3 traversal API (above); the old `usfm_parser::visit_mut::Context`
   is gone, `TextReplacement::apply_to(&mut document)` replaces
@@ -222,6 +226,7 @@ usfm-tools/
 ├── usfm_parser/           # Parser implementation
 ├── usfm_span/             # Span and LineIndex (leaf crate, no dependencies)
 ├── usfm_style/            # Styling/output
+├── usfm_usx/              # AST -> USX: the XML tree, its writer and reader
 ├── tests/                 # Integration tests (usfm_tests crate)
 ├── tcdocs/                # Git submodule: official USFM test suite
 ├── wip/                   # Outside the workspace, parked until M6, does not build

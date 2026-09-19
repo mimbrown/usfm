@@ -6,6 +6,9 @@ license = "MIT"
 
 [dependencies]
 usfm_parser = { path = "../usfm_parser" }
+# The USX tree, its reader and the serializer the harness compares against the
+# reference files (ticket 13).
+usfm_usx = { path = "../usfm_usx" }
 xml-rs = { workspace = true }
 regex = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

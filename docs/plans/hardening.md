@@ -245,7 +245,8 @@ paragraph-level attributes (`unexpected-pipe`).
       `Inline::Unknown`.
 - [x] Unknown markers: keep the text, emit an error (`unknown-marker`); `\z`
       custom markers are a warning (`unknown-custom-marker`).
-- [x] Delete `serialize_usx.rs`; route the CLI through `usx.rs`. Done 2026-09-19:
+- [x] Delete `serialize_usx.rs`; route the CLI through `usx.rs` (since ticket 13,
+      `usfm_usx/src/usx.rs`). Done 2026-09-19:
       the CLI calls `usx::to_usx_string` (SILE output is the same tree under a
       `<sile>` root), so word-level attributes reach the output. The `XmlNode`
       writer now escapes `&`, `<` and `>` in text (the old serializer wrote them
@@ -341,8 +342,8 @@ The breaking change. Do it in one branch so downstream code is updated once.
       `Caller::Custom` became `Cow<'a, str>`; a `&'a str` cannot become `'static`.
 - [x] Strict policy: `ParseResult::strict()` and `strict_with(threshold)`. (Landed
       with D1; this line duplicated it.)
-- [x] Update `usx.rs`, `serialize_html.rs`, `main.rs`, the tests crate, and the
-      cursor to the new shapes.
+- [x] Update `usx.rs` (now `usfm_usx/src/usx.rs`), `serialize_html.rs`,
+      `main.rs`, the tests crate, and the cursor to the new shapes.
 - [x] tcdocs harness: `pass` inputs must match the USX *and* produce no error
       diagnostics (a false positive is a failure); `fail` inputs pass if an error is
       reported or the USX matches. Note tcdocs uses `validated=fail` both for

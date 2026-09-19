@@ -257,41 +257,153 @@ impl XmlDocument {
     }
 }
 
-#[macro_export]
-macro_rules! xml {
-    ($tag:expr) => {
-        XmlElement {
-            name: xml::name::OwnedName::local($tag),
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn element(name: &str, attributes: Vec<(&str, &str)>, children: Vec<XmlNode>) -> XmlNode {
+        XmlNode::Element(XmlElement {
+            name: OwnedName::local(name),
+            attributes: attributes
+                .into_iter()
+                .map(|(name, value)| OwnedAttribute::new(OwnedName::local(name), value))
+                .collect(),
+            namespace: Namespace::empty(),
+            children,
+        })
+    }
+
+    fn text(content: &str) -> XmlNode {
+        XmlNode::Text(content.to_string())
+    }
+
+    /// Drop the namespace map the reader fills in, so a read tree can be
+    /// compared with the built one.
+    fn forget_namespaces(node: &mut XmlNode) {
+        if let XmlNode::Element(element) = node {
+            element.namespace = Namespace::empty();
+            for child in &mut element.children {
+                forget_namespaces(child);
+            }
+        }
+    }
+
+    /// The three characters XML reserves in character data, and nothing else:
+    /// a quote or an apostrophe in text needs no escape.
+    #[test]
+    fn reserved_characters_are_escaped_in_text() {
+        let node = element("char", vec![], vec![text(r#"Tom & <Jerry> "said" it's"#)]);
+        assert_eq!(
+            node.to_string(),
+            r#"<char>Tom &amp; &lt;Jerry&gt; "said" it's</char>"#
+        );
+    }
+
+    /// `xml-rs` escapes an attribute value, so the writer only has to hand it
+    /// one it can escape.
+    #[test]
+    fn reserved_characters_are_escaped_in_attribute_values() {
+        let node = element("char", vec![("lemma", r#"x&y<z">"#)], vec![]);
+        assert_eq!(
+            node.to_string(),
+            r#"<char lemma="x&amp;y&lt;z&quot;&gt;" />"#
+        );
+    }
+
+    /// XML 1.0 has no way to write a C0 control other than tab, newline and
+    /// carriage return — not even as `&#0;` — nor U+FFFE/U+FFFF, so the writer
+    /// replaces them, in text and in attribute values alike.
+    #[test]
+    fn characters_xml_forbids_are_replaced() {
+        let node = element(
+            "char",
+            vec![("lemma", "d\u{c}e")],
+            vec![text("a\u{0}b\u{1f}c\u{fffe}d\u{ffff}e")],
+        );
+        assert_eq!(
+            node.to_string(),
+            "<char lemma=\"d\u{fffd}e\">a\u{fffd}b\u{fffd}c\u{fffd}d\u{fffd}e</char>"
+        );
+    }
+
+    /// The bytes either side of a replacement are copied through untouched,
+    /// including the many characters that also begin with `0xEF`.
+    #[test]
+    fn allowed_characters_survive_the_scan() {
+        let allowed = "tab\there\nline\rreturn \u{feff}\u{fffd}\u{ffef} é 漢";
+        let node = element("char", vec![("lemma", allowed)], vec![text(allowed)]);
+        let XmlNode::Element(element) = &node else {
+            panic!("built an element");
+        };
+        assert_eq!(element.attributes[0].value, allowed);
+        assert!(node.to_string().contains(allowed), "{node}");
+    }
+
+    /// An element whose children are all elements is indented one per line; an
+    /// element with text among them is written on one line, because whitespace
+    /// there is content.
+    #[test]
+    fn mixed_content_gets_no_added_whitespace() {
+        let node = element(
+            "usx",
+            vec![("version", "3.0")],
+            vec![element(
+                "para",
+                vec![("style", "p")],
+                vec![text("Word"), element("char", vec![], vec![text("note")])],
+            )],
+        );
+        assert_eq!(
+            node.to_string(),
+            "<usx version=\"3.0\">\n  <para style=\"p\">Word<char>note</char></para>\n</usx>"
+        );
+    }
+
+    /// Text arriving in several pieces — which is how `xml-rs` reports a run
+    /// broken by an entity — is one text node.
+    #[test]
+    fn adjacent_text_is_merged() {
+        let mut element = XmlElement {
+            name: OwnedName::local("para"),
             attributes: vec![],
             namespace: Namespace::empty(),
             children: vec![],
-        }
-    };
+        };
+        element.append_text("Tom ".to_string());
+        element.append_text("& Jerry".to_string());
+        assert_eq!(element.children, vec![XmlNode::Text("Tom & Jerry".into())]);
+    }
 
-    ($tag:expr, $($key:expr => $value:expr)*) => {
-        XmlElement {
-            name: xml::name::OwnedName::local($tag),
-            attributes: vec![ $(xml::attribute::OwnedAttribute::new(xml::name::OwnedName::local($key), $value)),* ],
-            namespace: Namespace::empty(),
-            children: vec![],
-        }
-    };
-
-    ($tag:expr, $children:expr) => {
-        XmlElement {
-            name: xml::name::OwnedName::local($tag),
-            attributes: vec![],
-            namespace: Namespace::empty(),
-            children: $children,
-        }
-    };
-
-    ($tag:expr, $($key:expr => $value:expr)*, $children:expr) => {
-        XmlElement {
-            name: xml::name::OwnedName::local($tag),
-            attributes: vec![ $(xml::attribute::OwnedAttribute::new(xml::name::OwnedName::local($key), $value)),* ],
-            namespace: Namespace::empty(),
-            children: $children,
-        }
-    };
+    /// What the writer writes, the reader reads back into the same tree: the
+    /// conformance harness compares the two sides with this reader, so a
+    /// writer that escaped something wrongly would show up here.
+    #[test]
+    fn writing_and_reading_round_trips() {
+        let node = element(
+            "usx",
+            vec![("version", "3.0")],
+            vec![
+                element("book", vec![("code", "GEN"), ("style", "id")], vec![]),
+                element(
+                    "para",
+                    vec![("style", "p")],
+                    vec![
+                        text("Tom & <Jerry> "),
+                        element(
+                            "char",
+                            vec![("style", "w"), ("lemma", "x&y")],
+                            vec![text("a")],
+                        ),
+                    ],
+                ),
+            ],
+        );
+        let written = node.to_string();
+        let read = XmlDocument::from(written.as_bytes()).expect("well-formed XML");
+        // The reader records the namespaces in scope, which the writer does
+        // not write and the conformance harness does not compare.
+        let mut read = XmlNode::Element(read.root);
+        forget_namespaces(&mut read);
+        assert_eq!(read, node);
+    }
 }

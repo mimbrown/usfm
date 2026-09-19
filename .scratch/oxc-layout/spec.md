@@ -90,6 +90,12 @@ Rebuilt in `apps/` on `ParseResult`, `usfm_semantic` and `usfm_codegen`
   ebible.org is blocked from the cloud environment; see
   `tasks/benchmark/corpus/README.md`.
 - M3: whether `Context` (note numbering, counters) survives as HTML-only state.
+  Half settled in ticket 13: `usfm_usx` needs none of it. Its walk is a
+  `usfm_ast::visit::Visit` implementation over private state (book code,
+  chapter, open verse, `include_vid`, the document's stylesheet), and the note
+  counters and `metadata`/`custom_counters` maps were dead weight for USX.
+  `usfm_parser::context::Context` stays where it is for the HTML writer, which
+  ticket 14 decides on.
 - M4: `usfm_semantic` should own verse-number uniqueness and order (a
   duplicated `\v 6` or a `\v 5` after `\v 7a` is reported nowhere today; found
   by ticket 09 in machine.py's `41MATTes.SFM`), which needs versification.

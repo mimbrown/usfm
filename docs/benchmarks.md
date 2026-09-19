@@ -292,6 +292,59 @@ code changed; placement again). The M3 exit test is the median of three runs
 per group against **this** table, interleaved with a build of `bfaa57f` as
 "Reading a regression" says, and `reference_index` is judged only past ~15%.
 
+## After ticket 13
+
+`usfm_usx` (2026-09-19): `usx.rs` and `xml_document.rs` moved out of
+`usfm_parser` into their own crate, and the walk became a
+`usfm_ast::visit::Visit` implementation over private state instead of the
+`ToUsx` trait with a shared `Context`. Only `parse_usx` can move, so only
+`parse_usx` was rerun.
+
+Same VM, toolchain and profile as the baseline. Two binaries built first — one
+from `fe63ec3` in a worktree, one from this tree — then run turn about, three
+rounds each, `--bench corpus -- parse_usx`, as "Reading a regression" says.
+MiB/s, criterion's point estimate per round; median of three.
+
+| Id | base R1 | base R2 | base R3 | **base** | new R1 | new R2 | new R3 | **new** | Δ |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `parse_usx/plain` | 26.99 | 27.65 | 28.32 | **27.65** | 26.62 | 27.49 | 26.91 | **26.91** | −2.7% |
+| `parse_usx/attributes-heavy` | 11.63 | 12.14 | 12.30 | **12.14** | 11.79 | 11.83 | 11.96 | **11.83** | −2.6% |
+| `parse_usx/alignment-heavy` | 21.67 | 22.28 | 22.93 | **22.28** | 21.74 | 22.41 | 22.72 | **22.41** | +0.5% |
+| `parse_usx/note-heavy` | 18.64 | 19.34 | 19.18 | **19.18** | 19.10 | 18.82 | 19.20 | **19.10** | −0.4% |
+| **`parse_usx/whole-corpus`** | 18.92 | 19.27 | 19.93 | **19.27** | 19.02 | 19.44 | 19.24 | **19.24** | **−0.1%** |
+
+Every class is inside the 3% the spec asks for. Against the "M2 close" absolutes
+the new numbers are +1.1% to +1.8% on every class except `plain`, which reads
+−4.9% — but the `fe63ec3` build measured 27.65 on `plain` in the same sitting
+(−2.3% from its own recorded 28.3), so most of that is the machine, which is why
+the comparison that counts is the interleaved one above.
+
+### What it took to get there, and the two traps
+
+The first two versions of the visitor were **5 to 7% slower on
+`whole-corpus`**, and finding out why took two more interleaved runs. Both
+causes are worth knowing before the next output crate moves:
+
+1. **An allocation that the old code did not make.** `visit_char` works out
+   each attribute's name as a `String` (the marker's default name, `file` for
+   `\fig`'s `src`, or the name as written). The helper took `&str`, so
+   `OwnedName::local` copied that `String` into a second one — two extra
+   allocations per `\w`. Taking `impl Into<String>` lets the `String` move in.
+   That alone was most of `attributes-heavy`'s −4.4%, and it is the only *real*
+   regression the rewrite introduced.
+2. **Codegen placement across the new crate boundary**, the effect ticket 05
+   documented under "What the `lex` row does *not* mean". Building both
+   binaries with `CARGO_PROFILE_BENCH_CODEGEN_UNITS=1` moved the same code from
+   −7.1% to −4.4% on `whole-corpus` with nothing else changed. Splitting a
+   crate re-partitions what is left behind as well, so **a few per cent of any
+   M3 split's apparent regression is placement, not code**; measure a suspect
+   split at `codegen-units=1` before optimising for it.
+
+A third thing that turned out *not* to matter: how the visitor holds the
+children of the element it is building. A `Vec<Vec<XmlNode>>` frame stack and a
+single `Vec<XmlNode>` swapped in and out by `UsxWriter::element` measured the
+same. The committed version is the swap, because it writes each node once.
+
 ## Reading a regression
 
 The VM is a shared 4-vCPU cloud instance, so the numbers move on their own.

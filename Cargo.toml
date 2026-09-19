@@ -8,6 +8,7 @@ members = [
   "usfm_parser",
   "usfm_span",
   "usfm_style",
+  "usfm_usx",
 ]
 # `wip/` is parked outside the workspace (ticket 01); M6 rebuilds the language
 # server in `apps/`. `tasks/fuzz` is a cargo-fuzz crate: it needs nightly and
