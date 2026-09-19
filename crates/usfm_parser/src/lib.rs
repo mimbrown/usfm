@@ -149,24 +149,19 @@ mod tests {
         Span::new(start, start + needle.len() as u32)
     }
 
-    /// Parse a fragment, allowing only the structural diagnostics a
-    /// fragment without `\id`/`\c` necessarily produces.
+    /// Parse a fragment and assert the parser had nothing to say about it.
+    ///
+    /// The three codes this used to have to allow for — `missing-id`,
+    /// `verse-outside-chapter`, `verse-text-before-chapter`, which a fragment
+    /// without `\id`/`\c` necessarily produces — are `usfm_semantic`'s since
+    /// ticket 21, so the parser is silent on a well-formed fragment and this
+    /// filters nothing.
     fn parse_clean(input: &str) -> Document<'_> {
-        use crate::diagnostics::Code;
         let result = Parser::new(input).parse(&DEFAULT_STYLESHEET);
-        let unexpected: Vec<_> = result
-            .diagnostics
-            .iter()
-            .filter(|d| {
-                !matches!(
-                    d.code,
-                    Code::MissingId | Code::VerseOutsideChapter | Code::VerseTextBeforeChapter
-                )
-            })
-            .collect();
         assert!(
-            unexpected.is_empty(),
-            "unexpected diagnostics: {unexpected:?}"
+            result.diagnostics.is_empty(),
+            "unexpected diagnostics: {:?}",
+            result.diagnostics
         );
         result.document
     }
@@ -289,12 +284,11 @@ mod tests {
             ]
         );
         let codes: Vec<_> = result.diagnostics.iter().map(|d| d.code).collect();
+        // The fragment has no `\id`, which `usfm_semantic` reports and the
+        // parser no longer does (ticket 21).
         assert_eq!(
             codes,
-            vec![
-                crate::diagnostics::Code::MissingId,
-                crate::diagnostics::Code::CharacterStyleNotClosed
-            ]
+            vec![crate::diagnostics::Code::CharacterStyleNotClosed]
         );
     }
 

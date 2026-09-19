@@ -16,6 +16,87 @@
 //! `usfm_semantic/tests/checks.rs`. Every code has a test in one file or the
 //! other, and each file's coverage test uses `is_semantic` to know which are
 //! its own.
+//!
+//! # Which side a code is on
+//!
+//! **A parser code repairs; a semantic code reports.** Ticket 21 audited every
+//! variant against two questions, and the answer to either one puts a code in
+//! the parser:
+//!
+//! 1. would deleting the check change the tree? Then the check *is* how the
+//!    tree got its shape — a dropped marker, an invented caller, an implicit
+//!    paragraph — and it belongs where the shape is decided;
+//! 2. is what the *author wrote* still visible in the finished tree? A token
+//!    that was dropped, a leading zero that parsed to a number, a `+` that is
+//!    not recorded, a `\ca*` that was never written: a pass over the tree
+//!    cannot see any of them. Nor can it read a repair as if it were the
+//!    input — a stray `\esbe` stands in the tree as an empty paragraph, which
+//!    is what the parser made of it, not what was written.
+//!
+//! Everything else moves: the input parsed exactly as written, deleting the
+//! check would only make the diagnostics shorter, and the tree holds what the
+//! rule reads.
+//!
+//! | Code | Sev | What the parser does with it | Side, and why |
+//! |---|---|---|---|
+//! | `unknown-marker` | E | drops the marker | parser: the marker is gone |
+//! | `unknown-custom-marker` | W | drops the marker | parser: the marker is gone |
+//! | `unknown-milestone` | W | registers the style, keeps the node | parser: the tree does not say which styles the sheet lacked, and this is reported once per name, not per use |
+//! | `unknown-custom-milestone` | I | registers the style, keeps the node | parser: as above |
+//! | `unmatched-closing-marker` | E | drops the marker | parser: the marker is gone |
+//! | `paragraph-marker-closed` | E | drops the marker | parser: the marker is gone |
+//! | `unmatched-milestone-end` | E | drops the `\*` | parser: the token is gone |
+//! | `milestone-not-closed` | E | closes the milestone early | parser: it decides where the node ends |
+//! | `stray-backslash` | E | keeps the `\` as text | parser: in the tree it is a backslash like any other, escaped or not |
+//! | `marker-not-allowed-here` | E | nothing | **semantic** (20): the style, its parent and the sheet are all in the tree |
+//! | `marker-not-listed-here` | I | nothing | **semantic** (20): as above |
+//! | `nested-marker-not-nested` | W | reads `\+x` as `\x` | parser: whether the `+` was written is not in the tree |
+//! | `character-style-not-closed` | W | closes the style there | parser: it decides where the node ends |
+//! | `character-style-implicitly-closed` | I | closes one style, opens a sibling | parser: it is the sibling-or-child decision |
+//! | `character-style-nested-without-plus` | I | nests the style | parser: it is the nesting decision, and the `+` is not in the tree |
+//! | `figure-not-closed` | E | closes the figure there | parser: it decides where the node ends |
+//! | `empty-word` | E | nothing | **semantic** (21): a `\w` with attributes and no children is what the rule asks for |
+//! | `note-not-closed` | E | closes the note there | parser: it decides where the node ends |
+//! | `missing-note-caller` | E | assumes `+` | parser: it invents the caller |
+//! | `missing-verse-number` | E | drops `\v` | parser: the marker is gone |
+//! | `malformed-verse-number` | E | drops `\v` and the number | parser: the marker is gone |
+//! | `verse-in-note` | E | drops `\v` and the number | parser: the verse is not in the tree to report on |
+//! | `verse-in-character-style` | W | nothing | **semantic** (21): a `VerseStart` inside a `Char` |
+//! | `verse-in-heading` | E | nothing | **semantic** (21): a `VerseStart` in a `Title`/`Section` paragraph |
+//! | `verse-outside-chapter` | E | nothing | **semantic** (21): a `VerseStart` before any `ChapterStart` |
+//! | `verse-text-before-chapter` | E | nothing | **semantic** (21): a verse-text `Para` before any `ChapterStart` |
+//! | `missing-chapter-number` | E | drops `\c` | parser: the marker is gone |
+//! | `malformed-chapter-number` | E | drops `\c` and the number | parser: the marker is gone |
+//! | `number-has-leading-zero` | E | reads the number without the zero | parser: `01` is the number 1 in the tree, and nothing remembers the zero |
+//! | `alternate-chapter-not-closed` | E | keeps the number, carries on | parser: a closed and an unclosed `\ca` give the same `alt_number` |
+//! | `alternate-verse-not-closed` | E | keeps the number, carries on | parser: as above |
+//! | `missing-book-code` | E | drops the `\id` line | parser: there is no `Book` in the tree |
+//! | `unknown-book-code` | E | drops the `\id` line | parser: there is no `Book` in the tree |
+//! | `unlisted-book-code` | W | nothing | **semantic** (19): the `Book` is kept as written |
+//! | `missing-id` | E | nothing | **semantic** (21): the document's first block is not a `Book` |
+//! | `id-not-first` | E | nothing | **semantic** (21): a `Book` that is not the first block of its list |
+//! | `empty-book` | E | nothing | **semantic** (21): the document's only block is a `Book` |
+//! | `sidebar-not-closed` | E | closes the sidebar at `\c`, the next `\esb` or EOF | parser: it decides where the node ends |
+//! | `unmatched-sidebar-end` | E | keeps the `\esbe` as an empty paragraph | parser: that paragraph is the repair, not anything the author wrote |
+//! | `content-outside-paragraph` | E | opens an implicit `\p` | parser: it invents the node |
+//! | `content-dropped` | E | drops the content | parser: the content is gone |
+//! | `expected-table-cell` | E | opens an implicit `\tc1` | parser: it invents the node |
+//! | `unexpected-table-column` | E | keeps the column the marker named | **semantic** (21): `TableCell::column` in row order |
+//! | `unexpected-pipe` | E | keeps the `|` as text | parser: an escaped `\|` reaches the tree as the same character |
+//! | `unterminated-attribute-value` | E | ends the value at the marker | parser: it decides what the value is |
+//! | `newline-in-attributes` | E | reads the break as a space | parser: the break is not in the tree |
+//! | `empty-attribute-list` | E | keeps an empty list | **semantic** (20): `Attributes` with no pairs, and its `|` |
+//! | `empty-milestone-attribute-list` | W | keeps an empty list | **semantic** (20): as above |
+//! | `no-default-attribute` | E | keeps the bare value | **semantic** (20): a pair with an empty name |
+//! | `default-attribute-with-others` | E | keeps the bare value | **semantic** (20): as above |
+//! | `attribute-value-not-quoted` | E | takes the one word after `=` | parser: it decides what the value is; the quotes are not in the tree |
+//! | `missing-attribute-value` | E | keeps an empty value | parser: `name=` and `name=""` are the same pair in the tree |
+//! | `malformed-attribute-name` | E | keeps the name as written | **semantic** (20): the pair is in the tree, name and span |
+//! | `duplicate-attribute` | E | keeps every occurrence | **semantic** (20): as above |
+//! | `internal` | E | stops parsing | parser: it is the parser's own invariant |
+//!
+//! The executable form of the last column is [`Code::is_semantic`], which both
+//! crates' coverage tests read; the table is the reasoning behind it.
 
 use std::fmt;
 use std::str::FromStr;
@@ -165,6 +246,9 @@ pub enum Code {
     /// Other attributed styles such as `\jmp` may legitimately be empty.
     /// **Recovery:** none; the empty node is kept.
     /// **Severity:** Error.
+    /// **Reported by:** `usfm_semantic` (ticket 21), from the `Char` itself:
+    /// style `w`, an attribute list, no children. The span is the node, which
+    /// starts at the marker the parser reported.
     EmptyWord,
     /// **Trigger:** a note (`\f`, `\x`, …) still open when a paragraph marker
     /// or end of input is reached.
@@ -193,21 +277,31 @@ pub enum Code {
     /// **Recovery:** none; the verse is kept where it is.
     /// **Severity:** Warning. Paratext reports this as an error; texts in the
     /// wild commonly let `\wj` span verses.
+    /// **Reported by:** `usfm_semantic` (ticket 21), at the `VerseStart`,
+    /// which is inside a `Char` in the tree.
     VerseInCharacterStyle,
     /// **Trigger:** `\v` in a title or section heading paragraph. The
     /// unfoldingWord chunk marker `\s5` is exempt: by convention it is an
     /// empty heading placed directly before a verse.
     /// **Recovery:** none; the verse is kept where it is.
     /// **Severity:** Error.
+    /// **Reported by:** `usfm_semantic` (ticket 21), at the `VerseStart`,
+    /// against the paragraph it is in — where the parser read the style of the
+    /// last paragraph marker it had passed, so a verse in a table cell after a
+    /// heading is no longer reported.
     VerseInHeading,
     /// **Trigger:** `\v` before any `\c`.
     /// **Recovery:** none; the verse is kept where it is.
     /// **Severity:** Error.
+    /// **Reported by:** `usfm_semantic` (ticket 21), at the `VerseStart` the
+    /// walk reaches before any `ChapterStart`.
     VerseOutsideChapter,
     /// **Trigger:** in a scripture book, a verse-text paragraph (`\p`,
     /// `\q1`, …) before the first `\c`.
     /// **Recovery:** none.
     /// **Severity:** Error.
+    /// **Reported by:** `usfm_semantic` (ticket 21). The span is the
+    /// paragraph node, which starts at the marker the parser reported.
     VerseTextBeforeChapter,
     /// **Trigger:** `\c` not followed by a chapter number.
     /// **Recovery:** the chapter marker is dropped.
@@ -222,7 +316,9 @@ pub enum Code {
     /// **Trigger:** a chapter or verse number written with a leading zero
     /// (`\c 091`, `\v 01`), which USFM 3.1 rejects.
     /// **Recovery:** the number is read without the zero.
-    /// **Severity:** Error.
+    /// **Severity:** Error. The parser's, although it repairs nothing worth
+    /// the name: `\v 01` parses to the number 1, so the zero is gone from the
+    /// tree and a pass over the tree could not tell it had ever been there.
     NumberHasLeadingZero,
     /// **Trigger:** `\ca` not terminated by `\ca*`.
     /// **Recovery:** the alternate number is kept; parsing continues.
@@ -259,22 +355,33 @@ pub enum Code {
     /// **Trigger:** the document does not start with `\id`.
     /// **Recovery:** none.
     /// **Severity:** Error.
+    /// **Reported by:** `usfm_semantic` (ticket 21), at offset 0 — where the
+    /// `\id` should have been.
     MissingId,
     /// **Trigger:** `\id` after other content.
     /// **Recovery:** the book is kept.
     /// **Severity:** Error.
+    /// **Reported by:** `usfm_semantic` (ticket 21): a `Book` that is not the
+    /// first block of the list it is in. The span is the whole `\id` line.
     IdNotFirst,
     /// **Trigger:** a document containing only an `\id` line.
     /// **Recovery:** none.
     /// **Severity:** Error.
+    /// **Reported by:** `usfm_semantic` (ticket 21), at the end of the source,
+    /// which is what `Document::span` is for.
     EmptyBook,
     /// **Trigger:** `\esb` while a sidebar is already open, or still open
     /// at end of input.
-    /// **Recovery:** none.
+    /// **Recovery:** the sidebar is closed where its content ran out — at the
+    /// `\c`, the second `\esb`, or end of input. A closed and an unclosed
+    /// sidebar are the same node afterwards, which is why this stays with the
+    /// parser.
     /// **Severity:** Error.
     SidebarNotClosed,
     /// **Trigger:** `\esbe` with no open sidebar.
-    /// **Recovery:** none.
+    /// **Recovery:** the marker is kept as an empty paragraph of its own
+    /// style, which is a repair rather than anything the author wrote, so the
+    /// parser is the one to report it.
     /// **Severity:** Error.
     UnmatchedSidebarEnd,
     /// **Trigger:** text, a verse, a character style, a note, or a milestone
@@ -292,6 +399,10 @@ pub enum Code {
     /// (`\th1 … \th3`, or `\tc2` first in a row).
     /// **Recovery:** the cell keeps the column it names.
     /// **Severity:** Error.
+    /// **Reported by:** `usfm_semantic` (ticket 21), from `TableCell::column`
+    /// in row order. The span is the cell, which starts at its marker; the
+    /// message names the column rather than the marker, whose text is in the
+    /// source and not in the tree.
     UnexpectedTableColumn,
     /// **Trigger:** `\tr` not followed by a table cell marker (`\tc1`,
     /// `\th1`, `\tcr2`, …).
@@ -548,6 +659,15 @@ impl Code {
                 | Code::DefaultAttributeWithOthers
                 | Code::MalformedAttributeName
                 | Code::DuplicateAttribute
+                | Code::MissingId
+                | Code::IdNotFirst
+                | Code::EmptyBook
+                | Code::VerseTextBeforeChapter
+                | Code::VerseOutsideChapter
+                | Code::VerseInHeading
+                | Code::VerseInCharacterStyle
+                | Code::UnexpectedTableColumn
+                | Code::EmptyWord
         )
     }
 

@@ -103,7 +103,7 @@ Conformance status (276 tests across two roots, 2026-09-19):
   `usfm_diagnostics` libs, `usfm_usx`'s lib, `usfm_html`'s `escape` tests, the
   parser lib
   and the `whitespace`, `attributes`, `usx_text`, `verse_ends`, `spans` and
-  (11 of 92) `recovery` suites, about 3 min 50 s. It needs a nightly toolchain
+  (10 of 82) `recovery` suites, about 3 min 50 s. It needs a nightly toolchain
   with `miri` and `rust-src`, which CI installs in its own step and
   `scripts/session-start.sh` installs on a fresh VM; `rust-toolchain.toml`
   stays pinned at 1.98.0 for everything else.
@@ -127,6 +127,26 @@ milestone paths, `verse(c, v)`, `VerseRef::nodes()` / `text()`), and
 read-only.
 
 Recent progress:
+- **Every `Code` audited, structure and tables moved (ticket 21, M4).** The
+  rule is in `usfm_diagnostics`'s module doc as a table over all 55 codes: a
+  code stays with the parser if deleting the check would change the tree, or
+  if what the author wrote is no longer visible in it (a dropped token, a
+  normalised number, a repair standing in for the input); everything else
+  moves. Nine more codes are `usfm_semantic`'s — `missing-id`, `id-not-first`,
+  `empty-book`, `verse-text-before-chapter`, `verse-outside-chapter`,
+  `verse-in-heading`, `verse-in-character-style`, `unexpected-table-column`
+  and `empty-word` — for 18 in all. `verse-in-note` stays (the verse is
+  dropped, so it is not in the tree), `number-has-leading-zero` stays (`01` is
+  the number 1), and `character-style-nested-without-plus` stays (it is the
+  nesting decision). `ParserImpl::check_document_structure` is gone with
+  `book`, `chapter_seen`, `para_is_s5` and `in_char_style`. `Document` gained
+  a `span` (the source it was parsed from, `SPAN` for a hand-built tree) so
+  `empty-book` can still point at the end of the file. Two rules changed where
+  the tree is the better witness: a verse in a table cell is no longer "in a
+  heading" because a heading came before the table, and `unexpected-table-column`
+  names the column instead of the marker. Every diagnostic over the 385 inputs
+  in the repo is otherwise unchanged; 27 of them have a wider span end, the
+  node's rather than the marker's
 - **The `usfm` facade and the ADR's layout (ticket 17, M3 closed).** One crate
   to depend on: `usfm` re-exports `span`, `style`, `ast`, `diagnostics` and
   `parser` unconditionally and `usx`, `html`, `json`, `pipeline` behind the
@@ -201,11 +221,15 @@ Recent progress:
   `\cl`, which Paratext accepts) is `marker-not-listed-here` (Info). Both are
   reported in `usfm_semantic` since ticket 20, over the style's whole node
 - `TableCell::column` keeps the source column (`\th3` stays 3); a gap or
-  out-of-order cell is `unexpected-table-column`. A verse that starts inside a
+  out-of-order cell is `unexpected-table-column`, reported in `usfm_semantic`
+  since ticket 21 (from the cells' columns in row order, so the message names
+  the column rather than the marker). A verse that starts inside a
   non-verse-text paragraph (`\lit`) ends the previous verse before it
 - Attribute validation: `empty-attribute-list`, `no-default-attribute`,
   `default-attribute-with-others`, `attribute-value-not-quoted`,
-  `missing-attribute-value`; and `number-has-leading-zero` for `\c 091`/`\v 01`.
+  `missing-attribute-value`; and `number-has-leading-zero` for `\c 091`/`\v 01`,
+  which stays with the parser because `01` parses to the number 1 and the tree
+  no longer has a zero to report.
   Seven `validated=fail` inputs now report an error instead of passing silently.
   `empty-attribute-list` (Error) is the character-style case only; on a
   milestone (`\ts-s |\*`, how unfoldingWord's aligned texts write a
@@ -278,10 +302,11 @@ Priority areas, next: the route is `.scratch/oxc-layout/spec.md` (decision in
 Milestones in order: M1 workspace builds clean, M2 benchmarks + Miri + fuzz, M3
 crate split, M4 `usfm_semantic`, M5 `usfm_codegen`, M6 language server. M1, M2
 and M3 all closed 2026-09-19 (exit criteria recorded in the spec); **M4
-(`usfm_semantic`) is next**: move the non-syntactic checks (`OccursUnder`
-placement, table columns, leading zeros, the attribute validation that needs
-the stylesheet) and `ReferenceIndex` out of the parser, with `usfm::parse()`
-still returning the union so tcdocs is unchanged. M4 is ticketed (18–23). Tickets are in
+(`usfm_semantic`) is under way**: the checks that read a finished tree rather
+than a token stream leave the parser for `usfm_semantic`, with `usfm::parse()`
+returning the union so tcdocs is unchanged. Tickets 18–21 are done (the crate,
+placement and attributes, and the audit of every `Code`); 22 (`ReferenceIndex`)
+and 23 (verse order) are what is left. M4 is ticketed (18–23). Tickets are in
 `.scratch/oxc-layout/issues/`, written one milestone ahead. Unattended
 sessions follow `docs/agents/loop.md`; `scripts/gate.sh` is the gate before every push.
 

@@ -1,5 +1,5 @@
 ---
-source: usfm_parser/tests/recovery.rs
+source: crates/usfm_semantic/tests/checks.rs
 description: "\\id GEN\n\\ip intro\n\\p body\n\\c 1\n\\p \\v 1 a"
 ---
 Book GEN "" @0..7
@@ -14,4 +14,4 @@ Para p@31..40
   VerseEnd 1
 ChapterEnd 1
 --- diagnostics
-error[verse-text-before-chapter] @18..20: `\p` (verse text) before the first `\c`
+error[verse-text-before-chapter] @18..26: `\p` (verse text) before the first `\c`

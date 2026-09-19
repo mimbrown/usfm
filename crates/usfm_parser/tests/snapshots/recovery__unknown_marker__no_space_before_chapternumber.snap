@@ -1,5 +1,5 @@
 ---
-source: usfm_parser/tests/recovery.rs
+source: crates/usfm_parser/tests/recovery.rs
 description: "\\id GEN genesis Some desc\n\\c 1\n\\p\n\\v1 test verse\n\\s3 test\n\\v 2 more verse\n\\c2\n\\p\n\\v 1 next chapter\n\\v2 error text"
 ---
 Book GEN "genesis Some desc" @0..25
@@ -18,6 +18,5 @@ Para p@78..113
 ChapterEnd 1
 --- diagnostics
 error[unknown-marker] @34..37: unknown marker `\v1`
-error[verse-in-heading] @58..60: `\v` inside a title or section heading
 error[unknown-marker] @74..77: unknown marker `\c2`
 error[unknown-marker] @99..102: unknown marker `\v2`

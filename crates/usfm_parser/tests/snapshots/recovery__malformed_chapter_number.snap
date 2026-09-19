@@ -1,5 +1,5 @@
 ---
-source: usfm_parser/tests/recovery.rs
+source: crates/usfm_parser/tests/recovery.rs
 description: "\\id GEN\n\\c one\n\\p \\v 1 a"
 ---
 Book GEN "" @0..7
@@ -9,5 +9,3 @@ Para p@15..24
   VerseEnd 1
 --- diagnostics
 error[malformed-chapter-number] @11..14: `one` is not a valid chapter number
-error[verse-text-before-chapter] @15..17: `\p` (verse text) before the first `\c`
-error[verse-outside-chapter] @18..20: `\v` before any `\c`
