@@ -56,6 +56,10 @@ run -p usfm_diagnostics --lib
 # `text`.                                                              ~9 s
 run -p usfm_ast --lib
 
+# `write_escaped`: a byte-table scan over a `&str` that slices at the indices
+# it stops on, plus the reader round trip (ticket 13).                  ~3 s
+run -p usfm_usx --lib
+
 # The lexer's own unit tests, including `lexer::source`, plus the parser,
 # style and HTML unit tests.                                          ~20 s
 run -p usfm_parser --lib -- --skip text_replacements

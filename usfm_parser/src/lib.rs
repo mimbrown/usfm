@@ -33,9 +33,27 @@ pub mod span_check;
 
 pub mod style;
 pub mod text_replacements;
-pub mod usx;
+
+/// USX output, which lives in [`usfm_usx`].
+///
+/// Re-exported under the name the module had when it was
+/// `usfm_parser/src/usx.rs`, so `usfm_parser::usx::to_usx_string` and the
+/// CLI's own paths keep resolving (ticket 13). Ticket 17 deletes this
+/// re-export along with the parser's binary; new code should name
+/// [`usfm_usx`] directly.
+pub mod usx {
+    pub use usfm_usx::usx::*;
+}
+
 pub use usfm_ast::{fold, visit, visit_mut};
-pub mod xml_document;
+
+/// The XML tree and its writer, which live in [`usfm_usx`].
+///
+/// Re-exported under the name the module had when it was
+/// `usfm_parser/src/xml_document.rs`; ticket 17 deletes it, as for [`usx`].
+pub mod xml_document {
+    pub use usfm_usx::xml_document::*;
+}
 
 mod parser_parse {
     use std::sync::Arc;

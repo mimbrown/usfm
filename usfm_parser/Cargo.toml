@@ -13,7 +13,12 @@ usfm_ast = { path = "../usfm_ast" }
 # `usfm_parser::diagnostics` (ticket 12).
 usfm_diagnostics = { path = "../usfm_diagnostics" }
 usfm_style = { path = "../usfm_style" }
-xml-rs = { workspace = true }
+# USX output, re-exported as `usfm_parser::usx` and
+# `usfm_parser::xml_document` (ticket 13). The dependency is the CLI's — the
+# binary in `main.rs` writes USX — and goes with it in ticket 17, which leaves
+# `usfm_parser` a library that depends only on span, style, ast and
+# diagnostics, as the ADR's order has it.
+usfm_usx = { path = "../usfm_usx" }
 
 [features]
 # Exposes UniquePromise::new_for_tests_and_benchmarks.

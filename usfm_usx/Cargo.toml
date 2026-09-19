@@ -1,0 +1,18 @@
+[package]
+name = "usfm_usx"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+# An output crate in `docs/adr/0001-oxc-style-crate-layout.md`: it owns the XML
+# tree and its writer, and turns a `Document` into USX. "No output crate
+# depends on another output crate", and no output crate depends on the parser
+# either — this one reads the AST and the stylesheet the document carries, so
+# `usfm_parser` is deliberately absent from the list below.
+[dependencies]
+# The tree it walks, and `default_attribute_name` / `is_valid_attribute_name`.
+usfm_ast = { path = "../usfm_ast" }
+# `StyleSheet` and `StyleRule`, to resolve a node's `StyleId` to its marker.
+usfm_style = { path = "../usfm_style" }
+# `OwnedName`, `OwnedAttribute` and the `EventReader` the reader is built on.
+xml-rs = { workspace = true }

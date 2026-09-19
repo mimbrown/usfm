@@ -269,7 +269,7 @@ dependencies = [
  "usfm_ast",
  "usfm_diagnostics",
  "usfm_style",
- "xml-rs",
+ "usfm_usx",
 ]
 
 [[package]]
@@ -281,6 +281,15 @@ name = "usfm_style"
 version = "0.1.0"
 dependencies = [
  "bitflags",
+]
+
+[[package]]
+name = "usfm_usx"
+version = "0.1.0"
+dependencies = [
+ "usfm_ast",
+ "usfm_style",
+ "xml-rs",
 ]
 
 [[package]]
