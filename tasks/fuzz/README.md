@@ -20,7 +20,7 @@ which asserts what holds for *any* input, since the parser never fails:
 2. every span satisfies the invariants in `usfm_parser::span_check` — in
    bounds, not inverted, on character boundaries, and starting at the marker
    the node was read from (or, for a node the parser opened to recover, at or
-   before the content it holds). `usfm_parser/tests/spans.rs` asserts the same
+   before the content it holds). `crates/usfm_parser/tests/spans.rs` asserts the same
    invariants over hand-written inputs, so the two cannot drift apart;
 3. `to_usx_string` does not panic and produces well-formed XML, checked by
    reading it back with `xml-rs` to the end of the document.
@@ -66,7 +66,7 @@ cargo +nightly fuzz run  --fuzz-dir tasks/fuzz <target> tasks/fuzz/artifacts/<ta
 cargo +nightly fuzz tmin --fuzz-dir tasks/fuzz <target> tasks/fuzz/artifacts/<target>/crash-<hash>
 ```
 
-Then write the minimised input as a test — `usfm_parser/tests/recovery.rs` for a
+Then write the minimised input as a test — `crates/usfm_parser/tests/recovery.rs` for a
 parser rule, `tests/spans.rs` for a span invariant, `tests/usx_text.rs` for the
 USX writer, `usfm_html`'s own tests for the HTML writer — and fix it. A finding
 is a bug: it is not worked around by widening an invariant or catching the
@@ -81,10 +81,10 @@ in the script's `targets` array — named after the test they came from:
 
 - the tcdocs inputs (`tcdocs/tests/*/*/origin.usfm`), as `<category>__<case>.usfm`;
 - the vendored usfm-grammar fixtures
-  (`tests/fixtures/usfm-grammar/{autofix/*,bugfixes/*/origin.usfm}`), as
+  (`tasks/conformance/fixtures/usfm-grammar/{autofix/*,bugfixes/*/origin.usfm}`), as
   `usfm-grammar__<dir>__<name>.usfm`. The `autofix` inputs are deliberately
   malformed, which is what makes them worth seeding.
-- the vendored machine.py fixtures (`tests/fixtures/machine-py/*/*.SFM`), as
+- the vendored machine.py fixtures (`tasks/conformance/fixtures/machine-py/*/*.SFM`), as
   `machine-py__<project>__<book>.usfm`. Among them are a zero-byte book and
   two whose `\id` disagrees with their filename.
 

@@ -7,4 +7,4 @@ compile errors.
 
 They are kept for reference until M6 rebuilds the language server in `apps/` on
 `ParseResult`, `usfm_semantic` and `usfm_codegen`. Nothing in the repo builds
-them; the VS Code extension's `server:build:*` scripts build `usfm_parser`.
+them; the VS Code extension's `server:build:*` scripts build `usfm_cli` (`apps/usfm_cli`).

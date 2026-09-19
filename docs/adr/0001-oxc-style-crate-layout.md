@@ -2,6 +2,9 @@
 
 Date: 2026-09-19
 Status: accepted
+Status: implemented (M3, 2026-09-19) — the tree below exists apart from
+`usfm_semantic` (M4), `usfm_codegen` (M5) and the language server (M6);
+see `.scratch/oxc-layout/spec.md` for the M3 exit record.
 
 ## Context
 
@@ -36,7 +39,7 @@ apps/
   usfm_cli           clap, watch mode, diagnostics printing
   usfm_language_server   (rebuilt in Phase 5)
 tasks/
-  conformance        tcdocs runner (today's `tests/`)
+  conformance        tcdocs runner (was `tests/`, moved by ticket 17)
   benchmark          criterion benches over a fixed corpus
   fuzz               cargo-fuzz targets
 wip/                 outside the workspace: old language server, data_layer

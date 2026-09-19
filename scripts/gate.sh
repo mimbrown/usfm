@@ -14,7 +14,7 @@ export INSTA_UPDATE=no
 cargo build --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace --exclude usfm_tests --no-fail-fast
-cargo run --package usfm_tests -- --baseline tests/tcdocs-baseline.txt
+cargo run --package usfm_tests -- --baseline tasks/conformance/tcdocs-baseline.txt
 # Ticket 05: Miri over the lexer, the parser's byte handling and
 # `string_parser`. Needs nightly + miri; `scripts/session-start.sh` installs it.
 scripts/miri.sh

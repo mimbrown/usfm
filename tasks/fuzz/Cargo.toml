@@ -16,11 +16,15 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
-# The two writers the targets check. Both are named directly: ticket 15
-# removed `usfm_parser`'s re-exports of them.
-usfm_html = { path = "../../usfm_html" }
-usfm_parser = { path = "../../usfm_parser", features = ["testing"] }
-usfm_usx = { path = "../../usfm_usx" }
+# The facade (ticket 17). `usfm::usx` and `usfm::html` are the two writers the
+# targets check; `testing` forwards to `usfm_parser` for `span_check`, the span
+# invariants the targets assert. JSON and pipeline stay off: no target uses
+# them, and every dependency here is also a dependency of the sanitizer build.
+usfm = { path = "../../crates/usfm", default-features = false, features = [
+  "usx",
+  "html",
+  "testing",
+] }
 xml-rs = "0.8.26"
 
 [[bin]]

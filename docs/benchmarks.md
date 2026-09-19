@@ -154,10 +154,10 @@ numbers M3 compares against are the ones under "M2 close" below, not these.
 
 | File | Before | After |
 | --- | ---: | ---: |
-| `usfm_parser/src/lexer/source.rs` | 21 (15 blocks, 6 `unsafe fn`) | 0 |
-| `usfm_parser/src/lexer/mod.rs` | 3 | 0 |
-| `usfm_ast/src/string_parser.rs` | 2 | 0 |
-| `usfm_parser/src/cursor.rs` | 1 | **1** |
+| `crates/usfm_parser/src/lexer/source.rs` | 21 (15 blocks, 6 `unsafe fn`) | 0 |
+| `crates/usfm_parser/src/lexer/mod.rs` | 3 | 0 |
+| `crates/usfm_ast/src/string_parser.rs` | 2 | 0 |
+| `crates/usfm_parser/src/cursor.rs` | 1 | **1** |
 | **Total** | **27** | **1** |
 
 `Source` now holds `&'a str` plus a `usize` offset instead of three raw
@@ -459,6 +459,61 @@ verse number, once per marker), and the remaining cost is the shape of the
 output, not the walk. A caller that needs this class faster wants a streaming
 writer to a `String` rather than a `Value` tree — which `to_json_value`, the
 API the language server asked for, rules out for now.
+
+## M3 close: the split, measured against `bfaa57f`
+
+The M3 exit criterion ("benchmarks within 3% of M2") for ticket 17, which moved
+every crate under `crates/`, the runner under `tasks/conformance` and put the
+`usfm` facade between the applications and the libraries.
+
+Method, as "Reading a regression" below prescribes, plus one thing it asks for
+by name: **both binaries were built with `CARGO_PROFILE_BENCH_CODEGEN_UNITS=1`**,
+because a split that moves every function into a new crate is exactly the change
+the "What the `lex` row does *not* mean" section warns would otherwise read as a
+regression. The baseline is a `git worktree` of `bfaa57f` — the commit the "M2
+close" table above was taken on, and the one that predates the split — built in
+place with `cargo bench -p usfm_benchmark --no-run`. The two bench executables
+were then run turn about, three rounds each, on the whole-corpus id of the five
+original groups (`parse_json` did not exist at `bfaa57f` and is not comparable).
+Cells are criterion's point estimate in MiB/s; Δ is new median over base median,
+so **positive is faster**.
+
+| Id | `bfaa57f` R1 | R2 | R3 | median | ticket 17 R1 | R2 | R3 | median | Δ |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `lex/whole-corpus` | 142.2 | 142.4 | 141.0 | **142.2** | 146.3 | 146.3 | 145.6 | **146.3** | **+2.8%** |
+| `parse/whole-corpus` | 49.6 | 49.5 | 49.0 | **49.5** | 48.3 | 49.9 | 48.9 | **48.9** | **−1.3%** |
+| `parse_usx/whole-corpus` | 18.8 | 18.9 | 18.7 | **18.8** | 18.7 | 18.7 | 19.0 | **18.7** | **−0.4%** |
+| `parse_html/whole-corpus` | 38.0 | 38.6 | 39.4 | **38.6** | 39.6 | 40.4 | 40.2 | **40.2** | **+4.3%** |
+| `reference_index/whole-corpus` | 254.4 | 258.3 | 269.4 | **258.3** | 254.5 | 261.7 | 272.9 | **261.7** | **+1.3%** |
+
+**Verdict: the criterion is met.** Nothing is more than 3% slower; the two
+groups outside ±3% are both faster, and `reference_index`, which is judged only
+past ~15%, moved 1.3%.
+
+Two things worth reading off this table:
+
+- **`parse_html` is 4.3% faster than `bfaa57f` even though `bfaa57f` escaped
+  nothing.** Ticket 14 measured the escaping it added at 2–3% on text-heavy
+  classes, and that cost is real — it is in the per-byte scan, and the "After
+  ticket 14" table above still records it. It does not show here because that
+  measurement was taken with the default 16 codegen units, where this crate's
+  own placement noise is ±5–8%; with codegen units pinned to 1 both binaries
+  are laid out deterministically and the escaping is inside the noise of the
+  layout change that came with the split. Do not read this row as "the
+  escaping is free" — read it as "the split did not cost anything that the
+  escaping had not already been charged for."
+- **The `lex` and `parse_html` gains are not an optimisation.** Nothing in the
+  lexer or the HTML writer changed in ticket 17; the crates they live in did.
+  Pinning codegen units to 1 is itself worth a few percent on both binaries,
+  and what this table shows is that the change is symmetric — which is the
+  whole point of building both sides the same way.
+
+Spread — (max − min) / median over the three rounds — is 0.5–1.0% for `lex`,
+1.1–1.6% for `parse_usx`, 1.2–3.3% for `parse`, 2.0–3.6% for `parse_html` and
+5.8–7.0% for `reference_index`: the same ordering the M2 table shows, which is
+why the 3% threshold applies to the first four and `reference_index` is judged
+only past ~15%. Raw criterion output is not committed; rerun with the recipe
+above.
 
 ## Reading a regression
 

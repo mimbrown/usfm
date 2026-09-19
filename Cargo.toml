@@ -2,17 +2,18 @@
 
 members = [
   "apps/usfm_cli",
+  "crates/usfm",
+  "crates/usfm_ast",
+  "crates/usfm_diagnostics",
+  "crates/usfm_html",
+  "crates/usfm_json",
+  "crates/usfm_parser",
+  "crates/usfm_pipeline",
+  "crates/usfm_span",
+  "crates/usfm_style",
+  "crates/usfm_usx",
   "tasks/benchmark",
-  "tests",
-  "usfm_ast",
-  "usfm_diagnostics",
-  "usfm_html",
-  "usfm_json",
-  "usfm_parser",
-  "usfm_pipeline",
-  "usfm_span",
-  "usfm_style",
-  "usfm_usx",
+  "tasks/conformance",
 ]
 # `wip/` is parked outside the workspace (ticket 01); M6 rebuilds the language
 # server in `apps/`. `tasks/fuzz` is a cargo-fuzz crate: it needs nightly and

@@ -10,23 +10,22 @@
 //!
 //! The `lex` group reaches `Lexer::new`, which takes a `UniquePromise`,
 //! through the parser's `benchmarking` feature: it is what re-exports the type
-//! and its `new_for_tests_and_benchmarks` constructor. This crate enables that
-//! feature in its `Cargo.toml`.
+//! and its `new_for_tests_and_benchmarks` constructor. This crate turns it on
+//! through the facade's feature of the same name, in its `Cargo.toml`.
 
+use std::hint::black_box;
 use std::sync::Arc;
 
 use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
-use std::hint::black_box;
-use usfm_ast::Document;
+use usfm::ast::Document;
+use usfm::html::to_html_string;
+use usfm::json::to_json_string;
+use usfm::parser::lexer::Lexer;
+use usfm::parser::parser::Parser;
+use usfm::parser::{DEFAULT_STYLESHEET, UniquePromise};
+use usfm::style::StyleSheet;
+use usfm::usx::to_usx_string;
 use usfm_benchmark::{CorpusFile, FileClass, total_bytes};
-use usfm_html::to_html_string;
-use usfm_json::to_json_string;
-use usfm_parser::DEFAULT_STYLESHEET;
-use usfm_parser::UniquePromise;
-use usfm_parser::lexer::Lexer;
-use usfm_parser::parser::Parser;
-use usfm_style::StyleSheet;
-use usfm_usx::to_usx_string;
 
 /// Criterion settings chosen so a full `cargo bench -p usfm_benchmark`
 /// finishes in a few minutes on a 4-vCPU VM: the whole-corpus input is 12.8 MB

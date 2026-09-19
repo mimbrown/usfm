@@ -6,7 +6,7 @@
 //!
 //! 1. parsing does not panic;
 //! 2. every span points at the source it was read from
-//!    (`usfm_parser::span_check`, the same invariants `usfm_parser/tests/spans.rs`
+//!    (`usfm::parser::span_check`, the same invariants `crates/usfm_parser/tests/spans.rs`
 //!    asserts over hand-written inputs);
 //! 3. serializing the recovered tree to USX does not panic and produces
 //!    well-formed XML;
@@ -16,10 +16,10 @@
 //! Nothing here catches a panic: a panic *is* the finding, and libFuzzer wants
 //! to see it.
 
-use usfm_html::to_html_string;
-use usfm_parser::parser::Parser;
-use usfm_parser::{DEFAULT_STYLESHEET, span_check};
-use usfm_usx::to_usx_string;
+use usfm::html::to_html_string;
+use usfm::parser::parser::Parser;
+use usfm::parser::{DEFAULT_STYLESHEET, span_check};
+use usfm::usx::to_usx_string;
 
 /// Run every check over one input.
 pub fn check_source(source: &str) {
@@ -69,7 +69,7 @@ fn assert_html_well_formed(html: &str, source: &str) {
 }
 
 /// A character no HTML document can carry, not even as a numeric character
-/// reference. The same set `usfm_html::write_escaped` replaces, so an escape
+/// reference. The same set `usfm::html::write_escaped` replaces, so an escape
 /// this misses is one the writer let through.
 fn is_forbidden_in_html(c: char) -> bool {
     matches!(

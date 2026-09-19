@@ -1,6 +1,6 @@
 //! `--watch`: rebuild whenever one of the run's files changes.
 //!
-//! Moved here from `usfm_parser/src/main.rs` with the `notify` dependency
+//! Moved here from the old `usfm_parser/src/main.rs` with the `notify` dependency
 //! (ticket 15); the parser is a library again and watches nothing.
 
 use std::path::Path;
