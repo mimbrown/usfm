@@ -14,7 +14,7 @@ Done when Miri is clean and is a CI job.
 
 ## Answer
 
-Landed via PR #8 (2026-09-19). Miri was clean from the first run: none of the
+Landed in `84ee98e` (PR #8, 2026-09-19). Miri was clean from the first run: none of the
 27 unsafe uses (21 in `lexer/source.rs`, not 41; 3 in `lexer/mod.rs`, 2 in
 `string_parser.rs`, 1 in `cursor.rs`) hid a bug. 26 of them are now safe code:
 `Source` holds `&str` + byte offset instead of three raw pointers, at no

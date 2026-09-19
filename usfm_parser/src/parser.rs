@@ -587,13 +587,16 @@ impl<'a> ParserImpl<'a> {
         let ParserInlineContext::Char(head) = head else {
             unreachable!("context variant does not change");
         };
-        // The title's span is its text run, up to the `|`.
+        // The title's span is its text run, up to the `|`. Only text read from
+        // the source counts: a `\v` on the title line leaves a verse end and a
+        // synthesized space behind it, and a synthesized node carries `SPAN`,
+        // which would put the end of the title at offset 0.
         let title_end = head
             .children
             .iter()
             .rev()
             .find_map(|inline| match inline {
-                Inline::Text(text) => Some(text.span.end),
+                Inline::Text(text) if text.span != SPAN => Some(text.span.end),
                 _ => None,
             })
             .unwrap_or(marker_span.end);
@@ -613,7 +616,7 @@ impl<'a> ParserImpl<'a> {
                     .children
                     .iter()
                     .find_map(|inline| match inline {
-                        Inline::Text(text) => Some(text.span.start),
+                        Inline::Text(text) if text.span != SPAN => Some(text.span.start),
                         _ => None,
                     })
                     .unwrap_or(marker_span.end);
@@ -2170,6 +2173,25 @@ impl<'a> ParserImpl<'a> {
                 Kind::Word if self.lexer.peek().kind == Kind::Equal => {
                     // Named attribute: name="value"
                     let word = self.cur_src();
+                    if !usfm_ast::is_valid_attribute_name(word) {
+                        let span = self.cur_span();
+                        self.emit(
+                            Code::MalformedAttributeName,
+                            span,
+                            format!(
+                                "`{word}` is not an attribute name; it is kept in the \
+                                 tree but cannot be written to USX"
+                            ),
+                        );
+                    }
+                    if pairs.iter().any(|pair: &Attribute| pair.name == word) {
+                        let span = self.cur_span();
+                        self.emit(
+                            Code::DuplicateAttribute,
+                            span,
+                            format!("`{word}` is given more than once"),
+                        );
+                    }
                     self.bump_any();
                     self.bump_any();
                     let value = self.parse_attribute_value();
@@ -2198,11 +2220,17 @@ impl<'a> ParserImpl<'a> {
                         }
                         self.bump_any();
                     }
+                    let end = self.cur_span().start;
+                    if pairs.iter().any(|pair: &Attribute| pair.name.is_empty()) {
+                        self.emit(
+                            Code::DuplicateAttribute,
+                            Span::new(start, end),
+                            "the default attribute is given more than once",
+                        );
+                    }
                     pairs.push(Attribute {
                         name: Cow::Borrowed(""),
-                        value: Cow::Borrowed(
-                            &self.source_text[start as usize..self.cur_span().start as usize],
-                        ),
+                        value: Cow::Borrowed(&self.source_text[start as usize..end as usize]),
                     });
                 }
                 _ => break,

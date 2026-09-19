@@ -4,163 +4,18 @@
 //! good as the eye that accepted it. These tests check the invariants
 //! mechanically, so a span cannot be silently wrong in a way that still looks
 //! plausible in a snapshot.
+//!
+//! The walk and the invariants themselves live in `usfm_parser::span_check`
+//! (behind the `testing` feature), because `tasks/fuzz` asserts the same ones
+//! over inputs nobody wrote by hand.
 
 mod common;
 
 use usfm_parser::DEFAULT_STYLESHEET;
 use usfm_parser::ast::*;
+use usfm_parser::diagnostics::Code;
 use usfm_parser::parser::Parser;
-
-/// Every node in `source`, as (label, span, expected source prefix).
-/// A prefix of `None` means the node is synthesized and must carry `SPAN`.
-fn nodes<'a>(document: &'a Document<'a>) -> Vec<(String, Span, Option<String>)> {
-    let mut out = Vec::new();
-    blocks(document, &document.blocks, &mut out);
-    out
-}
-
-fn blocks<'a>(
-    document: &'a Document<'a>,
-    list: &'a [Block<'a>],
-    out: &mut Vec<(String, Span, Option<String>)>,
-) {
-    for block in list {
-        match block {
-            Block::Book(book) => out.push(("Book".into(), book.span, Some("\\id".into()))),
-            Block::ChapterStart(c) => out.push(("ChapterStart".into(), c.span, Some("\\c".into()))),
-            Block::ChapterEnd(c) => out.push(("ChapterEnd".into(), c.span, None)),
-            Block::Milestone(m) => {
-                let marker = document.marker(m.style).to_string();
-                out.push((
-                    format!("Milestone {marker}"),
-                    m.span,
-                    Some(format!("\\{marker}")),
-                ));
-            }
-            Block::Para(para) => {
-                let marker = document.marker(para.style).to_string();
-                out.push((
-                    format!("Para {marker}"),
-                    para.span,
-                    Some(format!("\\{marker}")),
-                ));
-                inlines(document, &para.children, out);
-            }
-            Block::Table(table) => {
-                out.push(("Table".into(), table.span, Some("\\tr".into())));
-                for row in &table.rows {
-                    out.push(("TableRow".into(), row.span, Some("\\tr".into())));
-                    for cell in &row.cells {
-                        out.push(("TableCell".into(), cell.span, Some("\\t".into())));
-                        inlines(document, &cell.children, out);
-                    }
-                }
-            }
-            Block::Periph(periph) => {
-                let marker = document.marker(periph.style).to_string();
-                out.push((
-                    format!("Periph {marker}"),
-                    periph.span,
-                    Some(format!("\\{marker}")),
-                ));
-                if let Some(title) = &periph.title {
-                    out.push(("Periph title".into(), title.span, Some(title.content.chars().next().unwrap().to_string())));
-                }
-                blocks(document, &periph.blocks, out);
-            }
-            Block::Sidebar(sidebar) => {
-                let marker = document.marker(sidebar.style).to_string();
-                out.push((
-                    format!("Sidebar {marker}"),
-                    sidebar.span,
-                    Some(format!("\\{marker}")),
-                ));
-                if let Some(category) = &sidebar.category {
-                    out.push(("Sidebar category".into(), category.span, Some("\\cat".into())));
-                }
-                blocks(document, &sidebar.blocks, out);
-            }
-        }
-    }
-}
-
-fn inlines<'a>(
-    document: &'a Document<'a>,
-    children: &'a [Inline<'a>],
-    out: &mut Vec<(String, Span, Option<String>)>,
-) {
-    for child in children {
-        match child {
-            // Text is the one node whose span is a source range but whose
-            // content is not that range verbatim, so there is no prefix to
-            // check beyond the span being in bounds.
-            Inline::Text(text) => out.push((format!("Text {:?}", text.content), text.span, None)),
-            Inline::VerseStart(v) => out.push(("VerseStart".into(), v.span, Some("\\v".into()))),
-            Inline::VerseEnd(v) => {
-                assert_eq!(v.span, SPAN, "verse ends are synthesized");
-                out.push(("VerseEnd".into(), v.span, None));
-            }
-            Inline::Char(char) => {
-                let marker = document.marker(char.style).to_string();
-                out.push((
-                    format!("Char {marker}"),
-                    char.span,
-                    Some(format!("\\{marker}")),
-                ));
-                inlines(document, &char.children, out);
-            }
-            Inline::Note(note) => {
-                let marker = document.marker(note.style).to_string();
-                out.push((
-                    format!("Note {marker}"),
-                    note.span,
-                    Some(format!("\\{marker}")),
-                ));
-                if let Some(category) = &note.category {
-                    out.push(("Note category".into(), category.span, Some("\\cat".into())));
-                }
-                inlines(document, &note.children, out);
-            }
-            Inline::Milestone(m) => {
-                let marker = document.marker(m.style).to_string();
-                out.push((
-                    format!("Milestone {marker}"),
-                    m.span,
-                    Some(format!("\\{marker}")),
-                ));
-            }
-            Inline::OptBreak(b) => out.push(("OptBreak".into(), b.span, Some("//".into()))),
-        }
-    }
-}
-
-fn check(source: &str) {
-    let result = Parser::new(source).parse(&DEFAULT_STYLESHEET);
-    let document = &result.document;
-    for (label, span, prefix) in nodes(document) {
-        assert!(
-            span.start <= span.end,
-            "{label}: span {span:?} is inverted in {source:?}"
-        );
-        assert!(
-            span.end as usize <= source.len(),
-            "{label}: span {span:?} runs past the end of {source:?}"
-        );
-        if span == SPAN {
-            continue;
-        }
-        let slice = &source[span.start as usize..span.end as usize];
-        if let Some(prefix) = prefix {
-            // A nested character style is written `\+add`, so accept the `+`.
-            let nested = prefix.replacen('\\', "\\+", 1);
-            assert!(
-                slice.starts_with(&prefix) || slice.starts_with(&nested),
-                "{label}: span {span:?} is {slice:?}, which does not start with \
-                 {prefix:?} or {nested:?}"
-            );
-        }
-    }
-}
+use usfm_parser::span_check::check;
 
 #[test]
 fn simple_paragraph() {
@@ -242,4 +97,55 @@ fn into_owned_outlives_the_source() {
         panic!("expected a paragraph, got {:?}", owned.blocks[2]);
     };
     assert_eq!(owned.marker(para.style), "p");
+}
+
+/// Content with no paragraph marker of its own is kept in an implicit `\p`
+/// (`content-outside-paragraph`), and `\tr` with no cell marker opens an
+/// implicit `\tc1` (`expected-table-cell`). Neither has a marker in the
+/// source, so the node's span starts at the content it holds.
+///
+/// The fuzzer found this on a source of one byte, `\`: a stray backslash is
+/// text, and text outside a paragraph opens an implicit one.
+#[test]
+fn implicit_nodes_span_the_content_they_hold() {
+    for source in [
+        "\\",
+        "\\id GEN\n\\c 1\nloose text\n",
+        // `\c in` is not a chapter number, so `x` is left outside a paragraph.
+        "\\id GEN\n\\c in x\n",
+    ] {
+        assert!(
+            common::codes(source).contains(&Code::ContentOutsideParagraph),
+            "{source:?} was expected to open an implicit paragraph"
+        );
+        check(source);
+    }
+
+    // The paragraph is opened at the `\v`, which is then dropped for want of
+    // a number: it starts before the content that is left. Also the fuzzer's.
+    check("\\v\\");
+
+    let table = "\\id GEN\n\\c 1\n\\tr cell without a marker\n";
+    assert!(common::codes(table).contains(&Code::ExpectedTableCell));
+    check(table);
+}
+
+/// A `\v` on a `\periph` title line leaves a verse end and a synthesized
+/// space among the title's children. A synthesized node carries `SPAN`, so
+/// taking the title's end from the last text child put the end at offset 0 and
+/// inverted the span. The fuzzer found it; only text read from the source
+/// counts now.
+#[test]
+fn periph_title_span_ignores_synthesized_text() {
+    check("\\id GEN\n\\c 1\n\\periph T \\v 2 b \\v 3\n");
+}
+
+/// A `\periph` title is a `Text`, so its span is the source it was read from
+/// and its content is that source normalised: `\periph\* n` has the title
+/// "n" and the span of " n". The fuzzer found this input; the checker used to
+/// expect the span to start at the title's first character.
+#[test]
+fn periph_title_span_is_the_source_it_was_read_from() {
+    check("\\periph\\* n");
+    check("\\id GEN\n\\periph \\nd Lord\\nd* of hosts|id=\"x\"\nbody\n");
 }

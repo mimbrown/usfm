@@ -1,0 +1,16 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 \\rb b|\"h=c\"\\rb*"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..36
+  VerseStart 1@16..20
+  Char rb@21..36 "\"" h="c" "\""
+    Text "b"@25..26
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[default-attribute-with-others] @26..27: a bare value must be the only attribute; give it a name
+error[attribute-value-not-quoted] @30..31: attribute value must be in double quotes
+error[duplicate-attribute] @31..32: the default attribute is given more than once
