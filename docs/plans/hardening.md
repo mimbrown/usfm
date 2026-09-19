@@ -355,6 +355,13 @@ Conformance sources (2026-09-19): tcdocs is joined by a second harness root,
 regression cases vendored from Bridgeconn/usfm-grammar, MIT), gated by the same
 `tests/tcdocs-baseline.txt`; its `autofix` inputs are recovery tests in
 `usfm_parser/tests/recovery.rs` and both sets are fuzz seeds.
+`tests/fixtures/machine-py` (sillsdev/machine.py, MIT) joins them as fixtures
+only, not as a harness root: those are hand-written Paratext projects with no
+reference USX to compare against, so their expectation is the parser's own tree
+and diagnostics, snapshotted by the `machine_py_*` tests in `recovery.rs`, and
+their seven books are fuzz seeds. They are what brought `\fe`, `\rq`, `\fm` and
+`\pn`/`\+pro` under test, and the empty and filename-mismatched book files with
+them.
 
 ### Phase 2. Parser correctness on the conformance suite
 
@@ -469,7 +476,7 @@ over the Phase 0 leftovers and the cross-cutting fuzzing, Miri and benchmark ite
       panic, the span invariants and that the USX output is well-formed XML.
       Done 2026-09-19 by `.scratch/oxc-layout/issues/06-fuzz-target.md`:
       `tasks/fuzz` holds `parse_lossy` and `parse_utf8`, seeded from tcdocs and
-      (since 2026-09-19) the vendored usfm-grammar fixtures, and
+      (since 2026-09-19) the vendored usfm-grammar and machine.py fixtures, and
       sharing `usfm_parser::span_check` with `tests/spans.rs`; see
       `tasks/fuzz/README.md` for the runs and the five findings they produced
       (two span-invariant wordings, control characters, duplicate attributes
