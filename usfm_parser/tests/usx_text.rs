@@ -42,6 +42,18 @@ fn text_content_gets_no_added_whitespace() {
     );
 }
 
+/// A `*` caller (`\f * \ft ...\f*`, which occurs in published texts) reaches
+/// the output as `caller="*"`, and the `*` is not left in the note's text.
+#[test]
+fn star_note_caller_is_written() {
+    let output = usx("\\id GEN\n\\c 1\n\\p \\v 1 Word\\f * \\ft note\\f*");
+    assert!(
+        output.contains(r#"<note caller="*" style="f"><char style="ft">note</char></note>"#),
+        "{output}"
+    );
+    XmlDocument::from(output.as_bytes()).expect("well-formed XML");
+}
+
 /// USX is XML, so `to_usx_string` has to write something an XML reader
 /// accepts even when the source does not. XML 1.0 has no way to write a C0
 /// control character — not even as `&#0;` — so the writer replaces it with

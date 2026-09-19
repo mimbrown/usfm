@@ -1,0 +1,15 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 text\\f *abc \\ft note\\f* more"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..49
+  VerseStart 1@16..20
+  Text "text"@21..25
+  Note f caller=*abc@25..44
+    Char ft@33..44
+      Text "note"@37..41
+  Text " more"@44..49
+  VerseEnd 1
+ChapterEnd 1

@@ -121,6 +121,32 @@ impl<'a> ParserImpl<'a> {
         }
     }
 
+    /// The caller after a note marker (`\f`, `\x`, ...).
+    ///
+    /// USFM 3 allows any custom caller character, so most callers arrive as a
+    /// `Word`: `+`, `-`, `a`, `?`, `†`. A `*` is the exception — the lexer
+    /// reads a bare `*` as [`Kind::Star`], because everywhere else in the
+    /// grammar a `*` closes a marker — so it is accepted here instead of in
+    /// the lexer, where widening it would break closing-marker detection and
+    /// the `\*` milestone end.
+    ///
+    /// A word written straight after the `*` belongs to the caller too, so
+    /// that `*abc` reads as one caller the way `+abc` already does: the caller
+    /// runs to the next space.
+    pub(crate) fn eat_note_caller(&mut self) -> Option<&'a str> {
+        if !self.at(Kind::Star) {
+            return self.eat_word();
+        }
+        let start = self.cur_span().start;
+        let mut end = self.cur_span().end;
+        self.advance();
+        if self.at(Kind::Word) && self.cur_span().start == end {
+            end = self.cur_span().end;
+            self.advance();
+        }
+        Some(self.src(Span::new(start, end)))
+    }
+
     /// Advance past any token.
     #[inline]
     pub(crate) fn bump_any(&mut self) {
