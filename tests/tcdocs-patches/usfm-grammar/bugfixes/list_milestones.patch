@@ -1,0 +1,41 @@
+Reference quirk: `<list>` is not an element of the schema this parser targets.
+
+usfm-grammar renders the USFM 3.2 `\list-s\*` … `\list-e\*` pair as a `<list>`
+element wrapping the list paragraphs, and drops the milestones themselves.
+tcdocs' `grammar/usx.rnc` has no `<list>` element: its `List` production (line
+752) is a plain `element para` with a list style, and `\list-s` is not among
+the `Para.para.style.enum` values either. An unrecognised milestone is written
+as `<ms>` — tcdocs' own reference files do that for `zaln-s`, `zaln-e`, `ts-s`
+and `zms`, none of which is in `Milestone.style.enum` — so this moves the two
+milestones back into the paragraphs they were written in and flattens the
+wrapper away. The list paragraphs themselves are unchanged.
+
+--- origin.xml
++++ origin.xml
+@@ -24,19 +24,17 @@
+   <chapter eid="GEN 2"/>
+   <chapter number="3" style="c" sid="GEN 3"/>
+   <para style="p"><verse number="1" style="v" sid="GEN 3:1"/>Now the newly introduced list markers
++<ms style="list-s"/></para>
++  <para style="lh">optional list header
+ </para>
+-  <list>
+-    <para style="lh">optional list header
++  <para style="li1">list entry 1
+ </para>
+-    <para style="li1">list entry 1
++  <para style="li1">list entry 2
+ </para>
+-    <para style="li1">list entry 2
++  <para style="li3">list entry 3
+ </para>
+-    <para style="li3">list entry 3
+-</para>
+-    <para style="lf">optional list footer
+-<verse eid="GEN 3:1"/></para>
+-  </list>
++  <para style="lf">optional list footer
++<ms style="list-e"/><verse eid="GEN 3:1"/></para>
+   <para style="p"><verse number="2" style="v" sid="GEN 3:2"/>This was introduced in 3.2 version of usfm spec.<verse eid="GEN 3:2"/></para>
+   <chapter eid="GEN 3"/>
+ </usx>

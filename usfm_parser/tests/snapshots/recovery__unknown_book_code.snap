@@ -1,13 +1,13 @@
 ---
 source: usfm_parser/tests/recovery.rs
-description: "\\id ZZZ Some book\n\\c 1\n\\p \\v 1 a"
+description: "\\id GENESIS Some book\n\\c 1\n\\p \\v 1 a"
 ---
-ChapterStart 1@18..22
-Para p@23..32
-  VerseStart 1@26..30
-  Text "a"@31..32
+ChapterStart 1@22..26
+Para p@27..36
+  VerseStart 1@30..34
+  Text "a"@35..36
   VerseEnd 1
 ChapterEnd 1
 --- diagnostics
 error[missing-id] @0..0: document must start with `\id`
-error[unknown-book-code] @4..7: `ZZZ` is not a known book code
+error[unknown-book-code] @4..11: `GENESIS` is not a book code

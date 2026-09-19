@@ -87,3 +87,51 @@ fn attributes_that_are_not_xml_names_are_dropped() {
     XmlDocument::from(output.as_bytes()).expect("well-formed XML");
 }
 
+/// `cell@style` keeps the marker's alignment letter, not just the `align`
+/// attribute: USX gives it the pattern `t[hc][rc]?\d+(-\d+)?` and tcdocs
+/// writes `<cell style="tcr3" align="end">` for `\tcr3`. The centred forms
+/// `\tcc`/`\thc` (USFM 3.1) follow the same rule.
+#[test]
+fn table_cell_style_keeps_its_alignment_letter() {
+    let output =
+        usx("\\id GEN\n\\c 1\n\\tr \\thc1 a \\th2 b \\thr3 c\n\\tr \\tcc1 d \\tc2 e \\tcr3 f");
+    for cell in [
+        r#"<cell style="thc1" align="center">"#,
+        r#"<cell style="th2" align="start">"#,
+        r#"<cell style="thr3" align="end">"#,
+        r#"<cell style="tcc1" align="center">"#,
+        r#"<cell style="tc2" align="start">"#,
+        r#"<cell style="tcr3" align="end">"#,
+    ] {
+        assert!(output.contains(cell), "missing {cell} in {output}");
+    }
+}
+
+/// The default (unnamed) attribute is named after its marker by the
+/// `usfm:propval` annotations in tcdocs' `grammar/usx.rnc`: `lang` for the
+/// transliteration and foreign-word styles USFM 3.1.2 defined it for, and
+/// `ref` for the `\vid` milestone.
+#[test]
+fn default_attribute_names_follow_the_schema() {
+    let output = usx("\\id MAT\n\\c 1\n\\p \\v 1 \\tl Eli\\tl* and \\tl Eli|Aramic\\tl*");
+    assert!(
+        output.contains(r#"<char style="tl">Eli</char>"#),
+        "{output}"
+    );
+    assert!(
+        output.contains(r#"<char style="tl" lang="Aramic">Eli</char>"#),
+        "{output}"
+    );
+
+    let output = usx("\\id MAT\n\\c 1\n\\p \\v 1 \\wl ro|ro\\wl*");
+    assert!(
+        output.contains(r#"<char style="wl" lang="ro">ro</char>"#),
+        "{output}"
+    );
+
+    let output = usx("\\id MRK\n\\c 4\n\\vid|MRK 4:26\\*\n\\p \\v 26 a");
+    assert!(
+        output.contains(r#"<ms style="vid" ref="MRK 4:26" />"#),
+        "{output}"
+    );
+}

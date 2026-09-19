@@ -1,4 +1,5 @@
-//! Build script to generate individual test functions from tcdocs test suite
+//! Build script to generate individual test functions from the conformance
+//! roots: the tcdocs submodule and the vendored usfm-grammar fixtures.
 
 use std::env;
 use std::fs::{self, File};
@@ -11,35 +12,68 @@ fn main() {
 
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     let tcdocs_root = Path::new(&manifest_dir).join("../tcdocs/tests");
+    // Kept in step with `ROOTS` in src/lib.rs: the prefix here only names the
+    // generated functions, while lib.rs derives the test names from it.
+    let usfm_grammar_root = Path::new(&manifest_dir).join("fixtures/usfm-grammar");
 
     let mut file = File::create(&dest_path).unwrap();
 
     // Write module header
-    writeln!(file, "// Auto-generated test functions from tcdocs suite").unwrap();
-    writeln!(file, "// Do not edit manually - regenerate with `cargo build`").unwrap();
+    writeln!(
+        file,
+        "// Auto-generated test functions from the conformance roots"
+    )
+    .unwrap();
+    writeln!(
+        file,
+        "// Do not edit manually - regenerate with `cargo build`"
+    )
+    .unwrap();
     writeln!(file).unwrap();
 
     // A missing submodule is a hard error, not a warning: generating zero
     // tests would let the runner report a 100% pass rate having run nothing.
+    // The vendored fixtures are in-tree and cannot stand in for it, so this
+    // stays a check on tcdocs alone.
     assert!(
         tcdocs_root.exists(),
         "tcdocs submodule not found at {tcdocs_root:?}; run `git submodule update --init tcdocs`"
     );
 
-    let mut test_count = 0;
-    generate_tests_recursive(&tcdocs_root, &tcdocs_root, &mut file, &mut test_count);
+    let mut tcdocs_count = 0;
+    generate_tests_recursive(&tcdocs_root, &tcdocs_root, "", &mut file, &mut tcdocs_count);
 
     assert!(
-        test_count > 0,
+        tcdocs_count > 0,
         "no test cases found under {tcdocs_root:?}; is the tcdocs submodule checked out?"
     );
-    println!("cargo:warning=Generated {} test functions", test_count);
 
-    // Tell Cargo to re-run if tcdocs changes
+    let mut vendored_count = 0;
+    generate_tests_recursive(
+        &usfm_grammar_root,
+        &usfm_grammar_root,
+        "usfm_grammar_",
+        &mut file,
+        &mut vendored_count,
+    );
+
+    println!(
+        "cargo:warning=Generated {} test functions ({tcdocs_count} tcdocs, {vendored_count} usfm-grammar)",
+        tcdocs_count + vendored_count
+    );
+
+    // Tell Cargo to re-run if either root changes
     println!("cargo:rerun-if-changed=../tcdocs/tests");
+    println!("cargo:rerun-if-changed=fixtures/usfm-grammar");
 }
 
-fn generate_tests_recursive(root: &Path, dir: &Path, file: &mut File, count: &mut usize) {
+fn generate_tests_recursive(
+    root: &Path,
+    dir: &Path,
+    prefix: &str,
+    file: &mut File,
+    count: &mut usize,
+) {
     let Ok(entries) = fs::read_dir(dir) else {
         return;
     };
@@ -55,7 +89,7 @@ fn generate_tests_recursive(root: &Path, dir: &Path, file: &mut File, count: &mu
             .replace(['/', '\\', '-', '.'], "_")
             .to_lowercase();
 
-        let test_name = format!("test_{}", test_name);
+        let test_name = format!("test_{}{}", prefix, test_name);
         let path_str = dir.to_string_lossy();
 
         writeln!(file, "#[test]").unwrap();
@@ -75,7 +109,7 @@ fn generate_tests_recursive(root: &Path, dir: &Path, file: &mut File, count: &mu
     for entry in entries {
         let path = entry.path();
         if path.is_dir() {
-            generate_tests_recursive(root, &path, file, count);
+            generate_tests_recursive(root, &path, prefix, file, count);
         }
     }
 }

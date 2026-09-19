@@ -1,7 +1,8 @@
 use std::env;
-use std::fs::File;
+use std::fs::{File, read_to_string};
 use std::io::{BufWriter, Write};
 use std::path::Path;
+use std::str::FromStr;
 use usfm_style::{StyleRule, StyleSheet, TextProperties};
 
 const REF_STYLE: &str = r#"        StyleRule {
@@ -17,8 +18,18 @@ fn main() -> std::io::Result<()> {
     // Only re-run when an actual input changes.
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=usfm.sty");
+    println!("cargo:rerun-if-changed=usfm-extra.sty");
 
-    let mut style_sheet = StyleSheet::from_file("./usfm.sty")?;
+    // `usfm.sty` is Paratext's file, unmodified (NOTICE.md); the markers it
+    // predates and the entries it gets wrong are corrected by appending
+    // `usfm-extra.sty`, which the same parser reads. A repeated `\Marker`
+    // amends the earlier entry field by field, so an entry there can add a
+    // marker or change one line of an existing one.
+    let mut sty = read_to_string("./usfm.sty")?;
+    sty.push('\n');
+    sty.push_str(&read_to_string("./usfm-extra.sty")?);
+    let mut style_sheet = StyleSheet::from_str(&sty)
+        .map_err(|e| std::io::Error::other(format!("failed to parse the stylesheet: {e:?}")))?;
 
     style_sheet.rules.push(StyleRule {
         marker: "flag".into(),

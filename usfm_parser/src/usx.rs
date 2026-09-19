@@ -403,12 +403,16 @@ impl<'a> ToUsx for TableRow<'a> {
 
 fn table_cell_to_usx(cell: &TableCell, context: &mut Context) -> XmlNode {
     let column = cell.column;
-    // Build style: t + (h if header else c) + (r if right-aligned) + column number(s)
+    // Build style: t + (h if header else c) + the alignment letter + column
+    // number(s), which is the `t[hc][rc]?\d+(-\d+)?` pattern USX gives
+    // `cell@style`. The letter is part of the style, not only of `align`:
+    // tcdocs writes `<cell style="tcr3" align="end">`, so `\tcc3` is
+    // `<cell style="tcc3" align="center">`.
     let header_char = if cell.header { 'h' } else { 'c' };
-    let align_char = if cell.alignment == Alignment::End {
-        "r"
-    } else {
-        ""
+    let align_char = match cell.alignment {
+        Alignment::Start => "",
+        Alignment::Center => "c",
+        Alignment::End => "r",
     };
     let column_str = if cell.colspan > 1 {
         format!("{}-{}", column, column + cell.colspan - 1)

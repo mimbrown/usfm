@@ -1,0 +1,14 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN genesis Some desc\n\\c 1\n\\p\n\\v 1 test verse\n\\s5\n\\p\nsome more text"
+---
+Book GEN "genesis Some desc" @0..25
+ChapterStart 1@26..30
+Para p@31..50
+  VerseStart 1@34..38
+  Text "test verse"@39..50
+Para s5@50..54
+Para p@54..71
+  Text "some more text"@57..71
+  VerseEnd 1
+ChapterEnd 1

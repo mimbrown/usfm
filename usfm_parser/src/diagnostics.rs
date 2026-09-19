@@ -226,10 +226,21 @@ pub enum Code {
     /// **Recovery:** the `\id` line is dropped.
     /// **Severity:** Error.
     MissingBookCode,
-    /// **Trigger:** `\id` followed by a code that is not a known book code.
+    /// **Trigger:** `\id` followed by a code that is not a book code at all:
+    /// one that matches neither a known book nor `book@code`'s catch-all
+    /// pattern `[A-Z][A-Z0-9]{2}|[0-9][A-Z][0-9]|[0-9]{2}[A-Z]` in `usx.rnc`
+    /// (`\id zzz`, `\id GENESIS`).
     /// **Recovery:** the `\id` line is dropped.
     /// **Severity:** Error.
     UnknownBookCode,
+    /// **Trigger:** `\id` followed by a well-formed code that is not one of
+    /// the books `BookCode` lists (`\id TST`, `\id ZZZ`). USX allows a project
+    /// its own code, so the document is valid; it is reported because a typo
+    /// in a real code looks exactly like this.
+    /// **Recovery:** none. The book is kept as `BookCode::Other` and written
+    /// out verbatim (`<book code="TST">`).
+    /// **Severity:** Warning.
+    UnlistedBookCode,
     /// **Trigger:** the document does not start with `\id`.
     /// **Recovery:** none.
     /// **Severity:** Error.
@@ -367,6 +378,7 @@ impl Code {
         Code::AlternateVerseNotClosed,
         Code::MissingBookCode,
         Code::UnknownBookCode,
+        Code::UnlistedBookCode,
         Code::MissingId,
         Code::IdNotFirst,
         Code::EmptyBook,
@@ -425,6 +437,7 @@ impl Code {
             Code::AlternateVerseNotClosed => "alternate-verse-not-closed",
             Code::MissingBookCode => "missing-book-code",
             Code::UnknownBookCode => "unknown-book-code",
+            Code::UnlistedBookCode => "unlisted-book-code",
             Code::MissingId => "missing-id",
             Code::IdNotFirst => "id-not-first",
             Code::EmptyBook => "empty-book",
@@ -456,7 +469,8 @@ impl Code {
             | Code::UnknownMilestone
             | Code::NestedMarkerNotNested
             | Code::CharacterStyleNotClosed
-            | Code::VerseInCharacterStyle => Severity::Warning,
+            | Code::VerseInCharacterStyle
+            | Code::UnlistedBookCode => Severity::Warning,
             Code::CharacterStyleImplicitlyClosed
             | Code::CharacterStyleNestedWithoutPlus
             | Code::MarkerNotListedHere

@@ -1,8 +1,11 @@
 # Reference patches
 
-One unified diff per tcdocs test, at `<test name>.patch`, applied to that
+One unified diff per conformance test, at `<test name>.patch`, applied to that
 test's `origin.xml` before the harness compares it with the parser's output.
-`tests/src/lib.rs` (`TestCase::read_expected_usx`) applies them.
+`tests/src/lib.rs` (`TestCase::read_expected_usx`) applies them. The directory
+is named after tcdocs because tcdocs was the only root when it was created; it
+covers every root the harness discovers, so a usfm-grammar case's patch is at
+`usfm-grammar/bugfixes/<case>.patch`.
 
 A patch exists only for a difference that is settled, and says which kind it
 is in the text above the `---` line (the harness ignores that preamble):
@@ -15,8 +18,8 @@ is in the text above the `---` line (the harness ignores that preamble):
   and the rationale says why and points at the rule it follows instead.
 
 A parser gap is fixed in the parser, never patched. Cite evidence in the
-rationale: another tcdocs case, the stylesheet entry, the whitespace rules on
-`Text`, the plan.
+rationale: another tcdocs case, the stylesheet entry, `tcdocs/grammar/usx.rnc`,
+the whitespace rules on `Text`, the plan.
 
 The harness keeps the directory honest:
 

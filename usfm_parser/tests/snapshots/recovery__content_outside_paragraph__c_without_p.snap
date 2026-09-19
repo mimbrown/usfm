@@ -1,0 +1,32 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN genesis Some desc\n\\c 1\n\\v 1 test verse\n\\s5\nsome more text\n\\v 2 more verse\n\\c 2\n\\v 1 next chapter\t\n\\c 3 \\ca 4 \\ca*\n\\cp Three\n\\v 1 text"
+---
+Book GEN "genesis Some desc" @0..25
+ChapterStart 1@26..30
+Para p@31..47
+  VerseStart 1@31..35
+  Text "test verse"@36..47
+  VerseEnd 1
+Para s5@47..82
+  Text "some more text "@51..66
+  VerseStart 2@66..70
+  Text "more verse"@71..82
+  VerseEnd 2
+ChapterEnd 1
+ChapterStart 2@82..86
+Para p@87..106
+  VerseStart 1@87..91
+  Text "next chapter"@92..106
+  VerseEnd 1
+ChapterEnd 2
+ChapterStart 3@106..131 alt=4 pub="Three"
+Para p@132..141
+  VerseStart 1@132..136
+  Text "text"@137..141
+  VerseEnd 1
+ChapterEnd 3
+--- diagnostics
+error[content-outside-paragraph] @31..33: content outside a paragraph; an implicit `\p` was opened
+error[content-outside-paragraph] @87..89: content outside a paragraph; an implicit `\p` was opened
+error[content-outside-paragraph] @132..134: content outside a paragraph; an implicit `\p` was opened

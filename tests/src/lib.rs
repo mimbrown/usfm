@@ -1,14 +1,32 @@
 //! USFM Parser Test Suite
 //!
 //! This crate provides a test harness for validating the USFM parser against
-//! the official tcdocs test suite from usfm-bible/tcdocs.
+//! the official tcdocs test suite from usfm-bible/tcdocs, and against the
+//! usfm-grammar regression fixtures vendored under `tests/fixtures/`. Both are
+//! discovered as [`ROOTS`] and gated by the one baseline file.
 //!
 //! # Test Structure
 //!
-//! Each test case in tcdocs consists of:
+//! Each test case consists of:
 //! - `origin.usfm` - The input USFM file
 //! - `origin.xml` - The expected USX output
 //! - `metadata.xml` - Test metadata (description, pass/fail expectation, tags)
+//!
+//! # Semantics
+//!
+//! What a case asserts depends on its `<validated>` verdict and on whether it
+//! ships a reference USX ([`TestCase::run`] implements this):
+//!
+//! - `pass` (or unmarked) with an `origin.xml`: the output must match it and
+//!   no error diagnostic may be reported.
+//! - `fail` with an `origin.xml`: reporting an error is an expected failure,
+//!   and so is matching the reference with no error; reporting nothing *and*
+//!   not matching is an unexpected pass, which fails the run.
+//! - `pass` with no `origin.xml` (three of the usfm-grammar `bugfixes` cases):
+//!   the input must parse with no error diagnostics. There is nothing to
+//!   compare, so that is the whole assertion.
+//! - `fail` with no `origin.xml`: undecidable once no error was reported, and
+//!   the only shape the harness skips.
 //!
 //! # Running Tests
 //!
@@ -44,6 +62,17 @@ use xml::reader::{EventReader, XmlEvent};
 /// Root path to the tcdocs test suite
 pub const TCDOCS_ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../tcdocs/tests");
 
+/// Root path to the vendored usfm-grammar fixtures. Its cases live one
+/// directory deeper (`bugfixes/<case>`) so that the directory under this root
+/// names the category, as the top-level directories do under `TCDOCS_ROOT`.
+pub const USFM_GRAMMAR_ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/usfm-grammar");
+
+/// The roots the harness discovers cases under, each with the prefix its test
+/// names carry. tcdocs cases keep their bare `<category>/<case>` names, so a
+/// baseline entry, a `--show` argument and a patch path all keep meaning what
+/// they meant when tcdocs was the only root.
+pub const ROOTS: &[(&str, &str)] = &[(TCDOCS_ROOT, ""), (USFM_GRAMMAR_ROOT, "usfm-grammar")];
+
 /// Patches to the reference USX, one unified diff per test at
 /// `<test name>.patch`. See the README in that directory for the rules.
 pub const PATCH_ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tcdocs-patches");
@@ -75,15 +104,41 @@ impl From<&str> for ValidationStatus {
     }
 }
 
-/// A single test case from the tcdocs suite
+/// A single test case from one of the [`ROOTS`]
 #[derive(Debug, Clone)]
 pub struct TestCase {
-    /// Unique identifier derived from path (e.g., "basic/minimal")
+    /// Unique identifier derived from path (e.g., "basic/minimal" or
+    /// "usfm-grammar/bugfixes/q4")
     pub name: String,
+    /// The category this case is reported under: the directory below its
+    /// root, with the root's prefix (e.g. "basic", "usfm-grammar/bugfixes")
+    pub category: String,
     /// Full path to the test directory
     pub path: PathBuf,
     /// Test metadata
     pub metadata: TestMetadata,
+}
+
+/// The name a case at `path` carries, and the category it belongs to, taken
+/// from whichever root contains it. A path under no root keeps its own text as
+/// its name and its first component as its category.
+fn name_and_category(path: &Path) -> (String, String) {
+    let (relative, prefix) = ROOTS
+        .iter()
+        .find_map(|(root, prefix)| Some((path.strip_prefix(root).ok()?, *prefix)))
+        .unwrap_or((path, ""));
+    let relative = relative
+        .to_string_lossy()
+        .replace(std::path::MAIN_SEPARATOR, "/");
+    let head = relative.split('/').next().unwrap_or(&relative);
+    let join = |tail: &str| {
+        if prefix.is_empty() {
+            tail.to_string()
+        } else {
+            format!("{prefix}/{tail}")
+        }
+    };
+    (join(&relative), join(head))
 }
 
 impl TestCase {
@@ -96,15 +151,11 @@ impl TestCase {
             TestMetadata::default()
         };
 
-        // Derive name from path relative to tcdocs/tests
-        let name = path
-            .strip_prefix(TCDOCS_ROOT)
-            .unwrap_or(path)
-            .to_string_lossy()
-            .replace(std::path::MAIN_SEPARATOR, "/");
+        let (name, category) = name_and_category(path);
 
         Ok(TestCase {
             name,
+            category,
             path: path.to_path_buf(),
             metadata,
         })
@@ -154,6 +205,33 @@ impl TestCase {
         Ok(content.trim_start_matches('\u{feff}').replace("\r\n", "\n"))
     }
 
+    /// usfm-grammar writes `<usx version>` truncated to `major.minor`, so a
+    /// book whose `\usfm` line says `3.1.2` gets `version="3.1"` in its
+    /// reference file. We write the declared version through, which is what
+    /// the tcdocs files show for `\usfm 3.1` and what `usx.rnc` allows
+    /// (`\d+\.\d+(\.\d+)?`). Put the dropped component back, and only that:
+    /// a reference version that is not a prefix of the declared one is left
+    /// alone and still has to match.
+    fn restore_usx_version(&self, text: String) -> String {
+        if !self.path.starts_with(USFM_GRAMMAR_ROOT) {
+            return text;
+        }
+        let Some(declared) = self
+            .read_usfm()
+            .ok()
+            .and_then(|usfm| usfm_version(&usfm).map(String::from))
+        else {
+            return text;
+        };
+        let Some((major_minor, _)) = declared.rsplit_once('.') else {
+            return text;
+        };
+        text.replace(
+            &format!("<usx version=\"{major_minor}\""),
+            &format!("<usx version=\"{declared}\""),
+        )
+    }
+
     /// The reference USX with this test's patch applied, if there is one.
     fn patched_reference_text(&self) -> Result<String, TestError> {
         let text = self.reference_text()?;
@@ -181,15 +259,18 @@ impl TestCase {
     }
 
     /// Read and parse the expected USX: the reference file, patched if a
-    /// patch exists for this test.
+    /// patch exists for this test. The version is restored after the patch,
+    /// so a patch is written against the file's own text.
     pub fn read_expected_usx(&self) -> Result<XmlNode, TestError> {
-        Self::parse_usx_text(&self.patched_reference_text()?)
+        let text = self.restore_usx_version(self.patched_reference_text()?);
+        Self::parse_usx_text(&text)
     }
 
-    /// Read and parse the reference USX as the submodule has it, ignoring
-    /// any patch.
+    /// Read and parse the reference USX as the file has it, ignoring any
+    /// patch.
     pub fn read_unpatched_usx(&self) -> Result<XmlNode, TestError> {
-        Self::parse_usx_text(&self.reference_text()?)
+        let text = self.restore_usx_version(self.reference_text()?);
+        Self::parse_usx_text(&text)
     }
 
     /// Check if expected USX contains end milestones (eid= attributes)
@@ -230,6 +311,26 @@ impl TestCase {
         context.include_vid = include_vid;
         let usx = result.document.to_usx(&mut context);
         Ok((usx, result.diagnostics))
+    }
+
+    /// Put a tree into the form the comparison works on: [`normalize_tree`]
+    /// for every case, plus [`collapse_whitespace_tree`] for the usfm-grammar
+    /// root, whose reference files do not normalise whitespace at all.
+    ///
+    /// usfm-grammar copies the source text into USX verbatim, so a line break
+    /// inside a paragraph stays a line break and the newline before the next
+    /// marker stays in the text (`q4/origin.xml` keeps it after verse 33 and
+    /// loses it after verse 34 only because the file ends there). Our rules 1-6
+    /// on `Text` turn that run into one space and drop it at a paragraph-level
+    /// boundary; they are pinned against the tcdocs files, which agree with
+    /// them, and tested in `usfm_parser/tests/whitespace.rs`. So for this root
+    /// whitespace is not what is under test: the markers, attributes and
+    /// structure are.
+    pub fn normalize_for_comparison(&self, node: &mut XmlNode) {
+        normalize_tree(node);
+        if self.path.starts_with(USFM_GRAMMAR_ROOT) {
+            collapse_whitespace_tree(node);
+        }
     }
 
     /// Run the test and compare output
@@ -313,11 +414,18 @@ impl TestCase {
             };
         }
 
-        // If no expected output, we can only verify parsing succeeds
+        // A case with no reference USX is still a real expectation when the
+        // input is marked `pass`: "must parse with no error diagnostics", which
+        // the check above has just established. Only a `fail` input that
+        // reported nothing and has nothing to compare against is undecidable,
+        // and that is the one shape still skipped.
         if !self.has_expected_usx() {
-            return TestResult::Skipped {
-                reason: "No origin.xml file for comparison".to_string(),
-            };
+            if marked_fail {
+                return TestResult::Skipped {
+                    reason: "No origin.xml file for comparison".to_string(),
+                };
+            }
+            return TestResult::Passed;
         }
 
         // Compare with expected
@@ -330,8 +438,8 @@ impl TestCase {
                 };
             }
         };
-        normalize_tree(&mut actual);
-        normalize_tree(&mut expected);
+        self.normalize_for_comparison(&mut actual);
+        self.normalize_for_comparison(&mut expected);
 
         // A patch exists to paper over one specific difference. When the
         // output matches the reference file as it is, that difference is
@@ -340,7 +448,7 @@ impl TestCase {
         if self.has_patch()
             && let Ok(mut unpatched) = self.read_unpatched_usx()
         {
-            normalize_tree(&mut unpatched);
+            self.normalize_for_comparison(&mut unpatched);
             if compare_xml(&actual, &unpatched).is_ok() {
                 return TestResult::Failed {
                     reason: format!(
@@ -446,6 +554,14 @@ impl Display for XmlMismatch {
     }
 }
 
+/// The version on the `\usfm` line of a USFM document, if it has one.
+fn usfm_version(usfm: &str) -> Option<&str> {
+    usfm.lines().find_map(|line| {
+        let rest = line.trim().strip_prefix("\\usfm ")?;
+        Some(rest.trim())
+    })
+}
+
 /// Read test metadata from metadata.xml
 fn read_metadata(path: &Path) -> Result<TestMetadata, TestError> {
     let file = File::open(path).map_err(TestError::Io)?;
@@ -499,15 +615,18 @@ enum MetadataField {
 // - A verse-end milestone is placed after the whitespace that precedes the
 //   next verse (`text <verse eid/><verse sid/>` becomes
 //   `text<verse eid/> <verse sid/>`), which is where the parser puts it.
-// - `closed="false"` is Paratext bookkeeping the parser does not emit.
+// - `closed` is bookkeeping the parser does not emit: it records whether a
+//   marker was closed explicitly in the source, which the AST keeps in the
+//   node itself. Paratext writes `closed="false"` in eight tcdocs files and
+//   usfm-grammar writes `closed="true"` on every explicitly closed `<char>`.
 // - A verse start directly after text gets a space before it, since the
 //   reference implementation always separates them.
 static MATCH_BAD_VERSE_END: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r#" <verse eid="([^"]+)" /><verse"#).unwrap());
 const REPLACE_BAD_VERSE_END: &str = r#"<verse eid="$1" /> <verse"#;
 
-static MATCH_CLOSED_FALSE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r#" closed="false""#).unwrap());
+static MATCH_CLOSED: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#" closed="(?:true|false)""#).unwrap());
 
 static MATCH_NO_SPACE_BEFORE_VERSE: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r#"([^\s>])(<verse [^>]*sid)"#).unwrap());
@@ -515,7 +634,7 @@ static MATCH_NO_SPACE_BEFORE_VERSE: LazyLock<regex::Regex> =
 /// Normalize USX content for comparison
 fn normalize_usx(content: &str) -> String {
     let content = MATCH_BAD_VERSE_END.replace_all(content, REPLACE_BAD_VERSE_END);
-    let content = MATCH_CLOSED_FALSE.replace_all(&content, "");
+    let content = MATCH_CLOSED.replace_all(&content, "");
     let content = MATCH_NO_SPACE_BEFORE_VERSE.replace_all(&content, "$1 $2");
     content.into_owned()
 }
@@ -539,6 +658,30 @@ pub fn normalize_tree(node: &mut XmlNode) {
     if element.name.local_name == "note" || element.name.local_name == "cell" {
         trim_trailing_text(element);
     }
+}
+
+/// Collapse every run of ASCII whitespace inside a text node to one space,
+/// trim each text node at both ends, and drop what becomes empty. Applied to
+/// both trees, this compares two documents for everything except how much
+/// whitespace sits between their pieces. See
+/// [`TestCase::normalize_for_comparison`] for why one root needs it.
+pub fn collapse_whitespace_tree(node: &mut XmlNode) {
+    let XmlNode::Element(element) = node else {
+        return;
+    };
+    for child in &mut element.children {
+        collapse_whitespace_tree(child);
+    }
+    element.children.retain_mut(|child| {
+        let XmlNode::Text(text) = child else {
+            return true;
+        };
+        *text = text
+            .split_ascii_whitespace()
+            .collect::<Vec<&str>>()
+            .join(" ");
+        !text.is_empty()
+    });
 }
 
 /// Trim ASCII whitespace from the end of the last text in `element`,
@@ -663,9 +806,28 @@ pub fn compare_xml(actual: &XmlNode, expected: &XmlNode) -> Result<(), XmlMismat
     }
 }
 
-/// Discover all test cases in the tcdocs suite
+/// Discover all test cases, under every root in [`ROOTS`]
 pub fn discover_tests() -> Vec<TestCase> {
-    discover_tests_in(Path::new(TCDOCS_ROOT))
+    let mut tests: Vec<TestCase> = ROOTS
+        .iter()
+        .flat_map(|(root, _)| discover_tests_in(Path::new(root)))
+        .collect();
+    tests.sort_by(|a, b| a.name.cmp(&b.name));
+    tests
+}
+
+/// The directory of the case named `name`, looked up in each root in turn.
+/// The inverse of [`TestCase::name`], for `--show` and the like.
+pub fn path_for_name(name: &str) -> Option<PathBuf> {
+    let name = name.trim_end_matches('/');
+    ROOTS.iter().find_map(|(root, prefix)| {
+        let tail = match *prefix {
+            "" => name,
+            prefix => name.strip_prefix(prefix)?.strip_prefix('/')?,
+        };
+        let path = Path::new(root).join(tail);
+        path.is_dir().then_some(path)
+    })
 }
 
 /// Discover test cases in a specific directory
@@ -731,7 +893,7 @@ pub fn run_tests(tests: &[TestCase]) -> TestSummary {
     summary
 }
 
-/// Filter tests by category (top-level directory in tcdocs/tests)
+/// Filter tests by category, or by any prefix of a test name
 pub fn filter_by_category<'a>(tests: &'a [TestCase], category: &str) -> Vec<&'a TestCase> {
     tests
         .iter()
@@ -741,10 +903,7 @@ pub fn filter_by_category<'a>(tests: &'a [TestCase], category: &str) -> Vec<&'a 
 
 /// Get all unique categories from test cases
 pub fn get_categories(tests: &[TestCase]) -> Vec<String> {
-    let mut categories: Vec<String> = tests
-        .iter()
-        .filter_map(|t| t.name.split('/').next().map(String::from))
-        .collect();
+    let mut categories: Vec<String> = tests.iter().map(|t| t.category.clone()).collect();
     categories.sort();
     categories.dedup();
     categories

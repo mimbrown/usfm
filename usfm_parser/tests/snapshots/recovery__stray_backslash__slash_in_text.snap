@@ -1,0 +1,30 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN genesis Some desc\n\\c 1\n\\p\n\\v 1 test verse\n\\s3 test\n\\p\n\\v 2 more verse and \\ a slash\n\\c 2\n\\p\n\\v 1 text and \\slash without space\n\\v 2 more text"
+---
+Book GEN "genesis Some desc" @0..25
+ChapterStart 1@26..30
+Para p@31..50
+  VerseStart 1@34..38
+  Text "test verse"@39..50
+  VerseEnd 1
+Para s3@50..59
+  Text "test"@54..59
+Para p@59..92
+  VerseStart 2@62..66
+  Text "more verse and \\ a slash"@67..92
+  VerseEnd 2
+ChapterEnd 1
+ChapterStart 2@92..96
+Para p@97..149
+  VerseStart 1@100..104
+  Text "text and without space"@105..135
+  VerseEnd 1
+  Text " "
+  VerseStart 2@135..139
+  Text "more text"@140..149
+  VerseEnd 2
+ChapterEnd 2
+--- diagnostics
+error[stray-backslash] @82..83: `\` does not start a marker; kept as text
+error[unknown-marker] @114..120: unknown marker `\slash`

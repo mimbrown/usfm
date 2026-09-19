@@ -37,16 +37,38 @@ design decisions. The parser never fails: it recovers and reports
 pipelines. Every recovery rule is a `Code` variant with a test in
 `usfm_parser/tests/recovery.rs`.
 
-tcdocs status (260 tests, 2026-09-12):
-- 215 passed, 0 failed, 0 panicked, 1 skipped, 44 expected failures, 0 unexpected passes
+Conformance status (276 tests across two roots, 2026-09-19):
+- tcdocs (260 tests): 215 passed, 0 failed, 0 panicked, 1 skipped,
+  44 expected failures, 0 unexpected passes
+- `usfm-grammar/bugfixes` (16 tests, vendored under
+  `tests/fixtures/usfm-grammar/`, MIT): 16 passed, 0 failed
+- `BookCode::Other([u8; 3])` holds a code USX accepts that the enum does not
+  name: `book@code` in `usx.rnc` is the book list *or* the pattern
+  `[A-Z][A-Z0-9]{2}|[0-9][A-Z][0-9]|[0-9]{2}[A-Z]`, so `\id TST` is valid and
+  round-trips as `<book code="TST">`. `unknown-book-code` (Error, `\id`
+  dropped) now means a code that matches neither; the new
+  `unlisted-book-code` (Warning, nothing dropped) means one that matches the
+  pattern but no listed book.
 - Harness semantics: `pass` inputs must match USX with no error diagnostics;
-  `fail` inputs must either report an error or match the expected USX.
-- Ten reference files are read through a patch in `tests/tcdocs-patches/`
-  (rules in its README): a unified diff with the rationale above it, for a
-  reference quirk or an accepted deviation, never for a parser gap. The
-  harness fails a patch that stops applying or that the parser no longer
-  needs. `cargo run -p usfm_tests -- --show <name>` prints one test's
-  diagnostics, output and patched expected USX.
+  `fail` inputs must either report an error or match the expected USX; a
+  `pass` input with no `origin.xml` at all (three usfm-grammar cases) must
+  parse with no error diagnostics, which is then the whole assertion; a
+  `fail` input with no `origin.xml` and no error reported is skipped.
+  The usfm-grammar reference files are compared with whitespace inside text
+  collapsed on both sides and their `<usx version>` restored from the `\usfm`
+  line, because that generator copies source whitespace verbatim and truncates
+  the version to `major.minor`; tcdocs is compared exactly as before.
+- Fourteen reference files (nine tcdocs, five usfm-grammar) are read through a
+  patch in `tests/tcdocs-patches/`
+  (rules in its README; the directory covers both roots): a unified diff with
+  the rationale above it, for a reference quirk or an accepted deviation, never
+  for a parser gap. The harness fails a patch that stops applying or that the
+  parser no longer needs. `cargo run -p usfm_tests -- --show <name>` prints one
+  test's diagnostics, output and patched expected USX.
+- `usfm_parser/usfm-extra.sty` is appended to Paratext's `usfm.sty` by
+  `usfm_parser/build.rs`: the markers that sheet predates (`\ipc`, `\ta`,
+  `\wl`) and the one entry it gets wrong (`\xta` occurs under `\ex` too),
+  each citing `tcdocs/grammar/usx.rnc`.
 - AST snapshot corpus: `cargo test -p usfm_parser --test snapshot` (review with `cargo insta review`)
 - Run `git submodule update --init tcdocs` first. Without it the `usfm_tests` build
   fails on purpose, so a zero-test run can never report a pass rate.

@@ -26,7 +26,7 @@ Done when the corpus reports zero error diagnostics and the gate is green.
 
 ## Answer
 
-Landed via PR #11 (2026-09-19). `ParserImpl::eat_note_caller` accepts a
+Landed in `5a6e429` (PR #11, 2026-09-19). `ParserImpl::eat_note_caller` accepts a
 `Kind::Star` as the caller (and a word glued to it, so `*abc` reads like
 `+abc`); the lexer is unchanged. Tests: `recovery.rs::star_note_caller`,
 `star_note_caller_with_trailing_word`, `usx_text.rs::star_note_caller_is_written`;

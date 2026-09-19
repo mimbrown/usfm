@@ -1,6 +1,6 @@
 # 08. usfm-grammar's `autofix` and `bugfixes` fixtures as conformance cases and fuzz seeds
 
-Status: ready-for-agent
+Status: resolved
 Milestone: M2
 Blocked by: 06
 
@@ -29,3 +29,40 @@ twelve categories, which we already run; two are new to us:
 
 Done when every vendored file has a decided role, the new recovery tests pass,
 and the gate is green.
+
+## Comments
+
+2026-09-19, orchestrator: `tests/bugfixes/` is in tcdocs' own layout
+(`metadata.xml` with `<validated>`, `origin.usfm`, `origin.xml`), so the 13
+cases that have an `origin.xml` can run through the existing `usfm_tests`
+harness as a second root rather than as hand-written tests; the 3 without one
+(`multiple-sr`, `nestedchar-footnote`, `rem_with_char`) and the 12 `autofix`
+inputs are recovery/snapshot material. Vendor under `tests/fixtures/` for now
+(M3 ticket 17 moves `tests/` to `tasks/conformance`). Upstream commit
+`4ee1b91c9b725f7f5be3654805ab6447b111da58`, MIT, © 2021 Bridge Connectivity
+Solutions.
+
+## Answer
+
+Landed via PR #12 (2026-09-19). `tests/fixtures/usfm-grammar/` (MIT, commit
+`4ee1b91c`) holds `bugfixes/` (16 cases, run by the `usfm_tests` harness as a
+second root, category `usfm-grammar/bugfixes`, 16 / 0) and `autofix/` (13
+inputs, covered by `recovery.rs` tests: 8 already-diagnosed shapes get a
+variant test each, 4 are valid USFM and get a snapshot, none was silently
+accepted). All 29 inputs are fuzz seeds.
+
+Parser fixes on the way: `tl`/`wl` default `lang`, `vid` default `ref`;
+`usfm-extra.sty` (appended to Paratext's unchanged `usfm.sty` by `build.rs`)
+adds `\ipc`, `\wl`, `\ta` and `\xta` under `\ex`, all from usx.rnc; `\tcc3`
+writes `style="tcc3" align="center"`; and `BookCode::Other([u8; 3])` keeps a
+well-formed but unlisted code (`\id TST`) as USX allows, reported as
+`unlisted-book-code` (Warning), while `unknown-book-code` (Error) is now only
+for a code that matches nothing. Harness: a `pass` case with no `origin.xml`
+must parse with no error diagnostic; for this root ASCII whitespace is
+collapsed on both sides and a truncated `<usx version>` is restored. Five
+patches under `tests/tcdocs-patches/usfm-grammar/bugfixes/`, each with its
+rationale (two reference files are not valid USX; three place a verse end
+differently from tcdocs, whose placement we follow).
+
+Follow-ups: ticket 18 (`\ts-s |\*`, an empty attribute list on a milestone,
+is an unfoldingWord convention we call an Error).
