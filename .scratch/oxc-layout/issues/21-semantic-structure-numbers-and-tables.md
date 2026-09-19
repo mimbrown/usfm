@@ -180,7 +180,7 @@ unchanged from ticket 20's finding.
 
 ## Answer
 
-Landed via PR #25 (2026-09-19). All 55 codes audited (table in the
+Landed in `738e588` (PR #25, 2026-09-19). All 55 codes audited (table in the
 diagnostics module doc and under Comments above): 18 are semantic now. Moved
 here: `missing-id`, `id-not-first`, `empty-book`, `verse-text-before-chapter`,
 `verse-outside-chapter`, `verse-in-heading`, `verse-in-character-style`,

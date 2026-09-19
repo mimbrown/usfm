@@ -10,10 +10,10 @@
 //! |---|---|---|
 //! | [`span`] | `usfm_span` | [`Span`], `LineIndex` |
 //! | [`style`] | `usfm_style` | [`StyleSheet`], `StyleRule`, `StyleId` |
-//! | [`ast`] | `usfm_ast` | [`Document`] and its nodes, `Visit`/`VisitMut`/`Fold`, `Cursor`, `ReferenceIndex` |
+//! | [`ast`] | `usfm_ast` | [`Document`] and its nodes, `Visit`/`VisitMut`/`Fold`, `Cursor` |
 //! | [`diagnostics`] | `usfm_diagnostics` | [`Diagnostic`], [`Code`], [`Severity`], [`ParseResult`] |
 //! | [`parser`] | `usfm_parser` | the lexer and the parser |
-//! | [`semantic`] | `usfm_semantic` | the checks that read a finished tree |
+//! | [`semantic`] | `usfm_semantic` | the checks that read a finished tree, and [`ReferenceIndex`] |
 //! | [`usx`] | `usfm_usx` | AST to USX (feature `usx`) |
 //! | [`html`] | `usfm_html` | AST to HTML (feature `html`) |
 //! | [`json`] | `usfm_json` | AST to JSON (feature `json`) |
@@ -50,6 +50,7 @@ pub use usfm_usx as usx;
 // does not have to remember which layer each one lives in.
 pub use usfm_ast::Document;
 pub use usfm_diagnostics::{Code, Diagnostic, ParseResult, Severity};
+pub use usfm_semantic::ReferenceIndex;
 pub use usfm_span::Span;
 pub use usfm_style::StyleSheet;
 
@@ -70,7 +71,7 @@ pub use usfm_parser::DEFAULT_STYLESHEET;
 /// let result = usfm::parse("\\id GEN\n\\c 1\n\\p\n\\v 1 In the beginning.\n");
 /// assert!(result.diagnostics.is_empty());
 ///
-/// let index = result.document.reference_index();
+/// let index = usfm::semantic::ReferenceIndex::new(&result.document);
 /// assert_eq!(index.verse(1, 1).unwrap().text().trim(), "In the beginning.");
 /// ```
 pub fn parse(source: &str) -> ParseResult<'_> {

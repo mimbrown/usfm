@@ -31,8 +31,10 @@
 # * `usfm_semantic` (ticket 19) — it slices no bytes at all. A check there reads
 #   a built tree: it compares a `BookCode`, copies a `Span` a node already
 #   carries and formats a message. There is no `unsafe`, no indexing into a
-#   `&str` and no source text in the crate, so Miri would only re-run three
-#   assertions over hand-built nodes. Revisit if a check ever reads source text.
+#   `&str` and no source text in the crate, so Miri would only re-run a handful
+#   of assertions over hand-built nodes. The same goes for `ReferenceIndex`,
+#   which arrived with ticket 22: it walks `NodeRef`s, pushes child indices and
+#   clones a `NumberList`. Revisit if a check ever reads source text.
 # * `usfm_pipeline` — its lib suite is the text replacements, which spend all
 #   their time inside the `regex` crate; that is not this repo's code, and it
 #   cost 66 s of the parser's 86 s while it lived there (ticket 15 moved it).
@@ -66,8 +68,11 @@ run -p usfm_span --lib
 # escaping that walks a `&str` char by char.                            ~5 s
 run -p usfm_diagnostics --lib
 
-# `string_parser` (through `number`), `cursor`, the visitors, `reference`,
-# `text`.                                                              ~9 s
+# `string_parser` (through `number`), `cursor`, the visitors, `text`. The
+# `reference` tests were here until ticket 22 moved `ReferenceIndex` to
+# `usfm_semantic`; they are not re-added below, for the reason that crate is
+# skipped — the index walks node references and clones a `NumberList`, and
+# slices no bytes.                                                      ~9 s
 run -p usfm_ast --lib
 
 # `write_escaped`: a byte-table scan over a `&str` that slices at the indices

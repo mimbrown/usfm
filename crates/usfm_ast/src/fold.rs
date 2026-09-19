@@ -16,7 +16,7 @@
 //! Because children are folded before their parent, state that has to be
 //! captured at a node's *start* (the verse open when a paragraph begins,
 //! say) is not available here. That is a job for [`Visit`](crate::visit)
-//! or for a pre-pass such as [`ReferenceIndex`](crate::ReferenceIndex).
+//! or for a pre-pass such as `usfm_semantic::ReferenceIndex`.
 
 use crate::{
     Block, Book, ChapterEnd, ChapterStart, Char, Document, Inline, Milestone, Note, OptBreak, Para,

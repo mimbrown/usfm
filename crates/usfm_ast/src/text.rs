@@ -16,7 +16,7 @@
 use usfm_style::{StyleRule, StyleSheet};
 
 use crate::visit::{Visit, walk_char, walk_note, walk_para, walk_table_cell};
-use crate::{Char, Document, NodeRef, Note, Para, StyleId, TableCell, Text};
+use crate::{Char, Document, NodePath, NodeRef, Note, Para, StyleId, TableCell, Text};
 
 pub struct PlainText<'s> {
     style_sheet: &'s StyleSheet,
@@ -85,13 +85,12 @@ impl<'s> PlainText<'s> {
         self.finish()
     }
 
-    /// The text of nodes with their paths, as [`VerseRef::nodes`] yields
-    /// them: a change of block (the first path element) is a boundary.
-    ///
-    /// [`VerseRef::nodes`]: crate::VerseRef::nodes
+    /// The text of nodes with their paths, as `usfm_semantic`'s
+    /// `VerseRef::nodes` yields them: a change of block (the first path
+    /// element) is a boundary.
     pub fn of_located<'a>(
         &mut self,
-        nodes: impl IntoIterator<Item = (Vec<usize>, NodeRef<'a>)>,
+        nodes: impl IntoIterator<Item = (NodePath, NodeRef<'a>)>,
     ) -> String {
         self.reset();
         let mut block: Option<usize> = None;

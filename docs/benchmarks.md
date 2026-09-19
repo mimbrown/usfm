@@ -25,7 +25,7 @@ Seven groups, each reporting throughput over the bytes of USFM it was given:
 | `parse_usx` | `parse`, then `usx::to_usx_string(&document)` |
 | `parse_html` | `parse`, then `to_html_string(&document, document.style_sheet())` |
 | `parse_json` | `parse`, then `usfm_json::to_json_string(&document)` |
-| `reference_index` | `document.reference_index()`; the parse is done once **outside** the timed loop |
+| `reference_index` | `usfm_semantic::ReferenceIndex::new(&document)`; the parse is done once **outside** the timed loop |
 
 Five benchmark ids per group, one per file class. **The input of one id is the
 whole class**: an iteration lexes or parses every file of the class, one after
@@ -135,6 +135,11 @@ tree, expressed against the bytes of source the tree came from. They are the
 noisiest numbers here and the least comparable across classes: alignment-heavy
 is fast per source byte only because its 3.7 MB of source holds one ordinary
 book's worth of chapters and verses wrapped in milestone markup.
+
+Ticket 22 moved the index to `usfm_semantic`, so the group now calls
+`usfm_semantic::ReferenceIndex::new(&document)` where it called
+`document.reference_index()`; the walk is the same code and the numbers below
+still stand.
 
 | Class | Run 1 | Run 2 | Run 3 | Median | Spread |
 | --- | ---: | ---: | ---: | ---: | ---: |

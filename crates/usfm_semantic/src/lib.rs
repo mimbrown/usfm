@@ -24,7 +24,13 @@
 //! and [`EMITS`] is the list, kept in step with [`Code::is_semantic`] by a
 //! test.
 //!
-//! [`analyze`] is the whole API. Callers usually reach it through
+//! [`ReferenceIndex`] is here for the same reason (ticket 22): the chapters and
+//! verses of a document are *derived* from the tree, not part of it, and the
+//! order checks that read them are this crate's. It is the one thing here that
+//! is not a check — a caller that only wants "the content of Genesis 1:2" can
+//! build one and ignore [`analyze`].
+//!
+//! [`analyze`] is the whole API of the checks. Callers usually reach it through
 //! `usfm::parse`, which merges these diagnostics with the parser's; a caller
 //! that has a `Document` from somewhere else — an editor holding a cached
 //! tree, a test — can call it directly.
@@ -50,6 +56,10 @@
 //! [`usfm_ast::Attributes`] keeps the `|` and each [`usfm_ast::Attribute`] its
 //! name: an attribute diagnostic points at the attribute, exactly as it did
 //! when the parser reported it mid-parse.
+
+pub mod reference;
+
+pub use reference::{ChapterRef, ReferenceIndex, VerseRef};
 
 use usfm_ast::visit::{Visit, walk_note, walk_para, walk_table_cell};
 use usfm_ast::{

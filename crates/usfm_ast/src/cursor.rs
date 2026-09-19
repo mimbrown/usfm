@@ -4,6 +4,15 @@ use crate::{
     Periph, Sidebar, Table, TableCell, TableRow, Text, VerseEnd, VerseStart,
 };
 
+/// The path to a node from the document root: the block index, then the
+/// index of each child on the way down. Paths order like document order: a
+/// parent sorts before its descendants, a node before its later siblings.
+///
+/// It is what [`NodeRef::descend`] takes and what [`NodeRef::descendants`]
+/// builds, which is why it lives here rather than with the index that made it
+/// (`usfm_semantic::ReferenceIndex`, ticket 22).
+pub type NodePath = Vec<usize>;
+
 /// A reference to any node in the AST tree.
 #[derive(Debug, Clone, Copy)]
 pub enum NodeRef<'a> {

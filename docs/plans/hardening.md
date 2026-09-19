@@ -443,12 +443,17 @@ consumer of a `Document` never needs the parser crate to walk it.
       are folded before their parent, so a fold cannot see state at a node's start
       (the verse open when a paragraph begins); that is `Visit`'s job, or a
       `ReferenceIndex` pre-pass.
-- [x] `ReferenceIndex` (`usfm_ast::reference`, `document.reference_index()`):
+- [x] `ReferenceIndex` (`usfm_semantic::reference`, `ReferenceIndex::new(&document)`;
+      it was `usfm_ast::reference` and `document.reference_index()` until ticket 22
+      moved it to the crate the ADR puts it in — it is derived from the tree, not
+      part of it):
       book, chapters with their block ranges, verses with the paths of their start
       and end milestones; `verse(c, v)` finds 4 in `\v 3-5`. It borrows the
       document rather than caching on it, since `blocks` is public and a cached
       index would go stale silently. `VerseRef::nodes` yields the content between
-      the milestones as the largest nodes that fit, each with its path.
+      the milestones as the largest nodes that fit, each with its path. Nothing is
+      deduplicated: `chapters()` and `verses()` are one entry per `\c` / `\v` in
+      document order, which is what the order checks read.
 - [x] `Cursor` stays read-only and gets no mutable counterpart. `VisitMut` is the
       mutation API, and the language server (Phase 5) needs positions (spans, the
       index) rather than a mutable zipper. Revisit only if Phase 5 finds a need.
