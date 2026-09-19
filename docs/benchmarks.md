@@ -15,12 +15,13 @@ licence). One command runs everything:
 cargo bench -p usfm_benchmark
 ```
 
-Six groups, each reporting throughput over the bytes of USFM it was given:
+Seven groups, each reporting throughput over the bytes of USFM it was given:
 
 | Group | One iteration does |
 | --- | --- |
 | `lex` | `Lexer::new(&text, …)` driven to exhaustion, every token black-boxed |
-| `parse` | `Parser::new(&text).parse(&sheet)` |
+| `parse` | `Parser::new(&text).parse(&sheet)` — the parser alone |
+| `parse_semantic` | `usfm::parse(&text)` — the parser, then `usfm_semantic::analyze` |
 | `parse_usx` | `parse`, then `usx::to_usx_string(&document)` |
 | `parse_html` | `parse`, then `to_html_string(&document, document.style_sheet())` |
 | `parse_json` | `parse`, then `usfm_json::to_json_string(&document)` |
@@ -50,7 +51,7 @@ Criterion is configured in `benches/corpus.rs` at `warm_up_time` 1 s,
 `measurement_time` 5 s and `sample_size` 10 — the smallest settings that still
 give criterion its ten samples when one whole-corpus iteration takes a quarter
 of a second. The defaults (100 samples over 5 s) would take hours. A full run
-of all six groups is about **5 minutes**.
+of all seven groups is about **6 minutes**.
 
 Criterion's own output directory, `target/criterion`, is git-ignored through
 the `/target` entry in `.gitignore`, so nothing a run writes is committed.
@@ -514,6 +515,45 @@ Spread — (max − min) / median over the three rounds — is 0.5–1.0% for `l
 why the 3% threshold applies to the first four and `reference_index` is judged
 only past ~15%. Raw criterion output is not committed; rerun with the recipe
 above.
+
+## `parse_semantic` (ticket 19)
+
+The new group, 2026-09-19, on the machine and toolchain of the baseline above.
+One iteration is `usfm::parse(&text)`: the parse of the `parse` group, plus
+`usfm_semantic::analyze` over the tree it built and the merge and sort of the
+two diagnostic lists. Like `parse_json` it is a **new row compared to
+nothing** — the semantic pass did not exist before — but unlike `parse_json`
+it has a natural neighbour, so `parse` was rerun in the same sitting, turn
+about with it, from one bench binary built once
+(`cargo bench -p usfm_benchmark --no-run`, then
+`corpus-… --bench parse_semantic` and `corpus-… --bench '^parse/'`, three
+rounds each). MiB/s, as everywhere in this file.
+
+| Class | Run 1 | Run 2 | Run 3 | Median | Spread | `parse` median, same sitting |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| plain | 65.55 | 66.11 | 65.19 | **65.55** | 1.4% | 65.47 |
+| attributes-heavy | 31.24 | 32.28 | 32.61 | **32.28** | 4.3% | 32.51 |
+| alignment-heavy | 59.74 | 61.78 | 61.77 | **61.77** | 3.3% | 62.18 |
+| note-heavy | 47.19 | 47.13 | 47.10 | **47.13** | 0.2% | 47.49 |
+| **whole-corpus** | 48.49 | 47.46 | 47.34 | **47.46** | 2.4% | 49.01 |
+
+**What the pass costs: about 3% of a parse, and nothing that shows above the
+noise on three of the five classes.** Whole-corpus is the one number worth
+reading: 47.46 against 49.01 MiB/s is 0.269 s against 0.261 s for the 12.78 MiB
+corpus, so the semantic walk plus the merge and the sort cost about **8 ms over
+12.78 MiB**, or a walk running at roughly 1 500 MiB/s. That is what a second
+full traversal of a built tree costs when the only check on it so far reads one
+block kind: the walk itself dominates, not `unlisted-book-code`. `plain` shows
+the two groups inside 0.2% of each other and `attributes-heavy` shows
+`parse_semantic` *faster* than `parse`, which is this VM's noise floor (spread
+within one group is 1.4–4.3%) rather than a finding.
+
+The number to watch as ticket 20 and ticket 21 move the placement, attribute
+and table checks across is the gap between the two medians, not the absolute:
+the traversal is already paid for, so a check added to the existing walk should
+cost far less than the first one did. A future run that finds the gap widening
+past ~10% on whole-corpus means a check is doing real work per node and wants
+its own line in this file.
 
 ## Reading a regression
 

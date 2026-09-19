@@ -314,7 +314,11 @@ The breaking change. Do it in one branch so downstream code is updated once.
       `strict_with(threshold)`.
 - [x] Recovery table: each `Code` variant documents trigger, recovery, severity.
       `crates/usfm_parser/tests/recovery.rs` has one snapshot test per code and a coverage test that
-      fails when a code has no snapshot. Structural checks (missing `\id`, verse
+      fails when a code has no snapshot. Since M4 started (ticket 19) the rule
+      spans two files: a code the semantic pass reports (`Code::is_semantic`)
+      has its snapshot test in `crates/usfm_semantic/tests/checks.rs` instead,
+      and each file's coverage test reads `is_semantic` to know which codes are
+      its own. Structural checks (missing `\id`, verse
       before `\c`, verse in heading, sidebars, `\fig` unclosed, empty `\w`,
       newline in attributes) are included because the tcdocs `fail` inputs need
       them to be classified.
@@ -464,7 +468,9 @@ ADR's directory layout, so the crates are under `crates/`, the binary under
 `apps/usfm_cli`, and the conformance runner, benches and fuzz targets under
 `tasks/`. What follows Phase 4 is no longer Phase 5 directly: M4
 (`usfm_semantic`) and M5 (`usfm_codegen`) come first, and the language server
-below is M6.
+below is M6. M4 opened 2026-09-19 with ticket 19: `crates/usfm_semantic`
+exists, `usfm::parse` returns the union of its diagnostics and the parser's,
+and `unlisted-book-code` is the first check to have moved.
 
 - [x] `usfm_usx`, `usfm_html`, `usfm_json` crates, each a `Fold` or `Visit` over the
       AST with no shared mutable `Context` (each carries only the state it needs).

@@ -663,6 +663,7 @@ dependencies = [
  "usfm_json",
  "usfm_parser",
  "usfm_pipeline",
+ "usfm_semantic",
  "usfm_span",
  "usfm_style",
  "usfm_usx",
@@ -745,6 +746,18 @@ dependencies = [
  "usfm_parser",
  "usfm_style",
  "usfm_usx",
+]
+
+[[package]]
+name = "usfm_semantic"
+version = "0.1.0"
+dependencies = [
+ "insta",
+ "usfm",
+ "usfm_ast",
+ "usfm_diagnostics",
+ "usfm_span",
+ "usfm_style",
 ]
 
 [[package]]

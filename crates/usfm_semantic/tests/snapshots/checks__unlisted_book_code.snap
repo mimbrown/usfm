@@ -1,5 +1,5 @@
 ---
-source: usfm_parser/tests/recovery.rs
+source: crates/usfm_semantic/tests/checks.rs
 description: "\\id ZZZ Some book\n\\c 1\n\\p \\v 1 a"
 ---
 Book ZZZ "Some book" @0..17
@@ -10,4 +10,4 @@ Para p@23..32
   VerseEnd 1
 ChapterEnd 1
 --- diagnostics
-warning[unlisted-book-code] @4..7: `ZZZ` is not one of the book codes USFM lists; kept as written
+warning[unlisted-book-code] @0..17: `ZZZ` is not one of the book codes USFM lists; kept as written
