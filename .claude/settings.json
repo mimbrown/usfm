@@ -11,7 +11,21 @@
       "Bash(ls:*)",
       "Bash(wc:*)",
       "Bash(grep:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(scripts/session-start.sh)",
+      "Bash(gh api:*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/session-start.sh"
+          }
+        ]
+      }
     ]
   }
 }
