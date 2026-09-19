@@ -51,9 +51,8 @@ use std::panic::{self, AssertUnwindSafe};
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
-use usfm::parser::DEFAULT_STYLESHEET;
-use usfm::parser::diagnostics::Diagnostic;
-use usfm::parser::parser::Parser;
+use usfm::diagnostics::Diagnostic;
+use usfm::{DEFAULT_STYLESHEET, parse_with_options};
 use usfm::usx::{UsxOptions, XmlDocument, XmlElement, XmlNode, to_usx_node_with_options};
 use xml::reader::{EventReader, XmlEvent};
 
@@ -301,8 +300,12 @@ impl TestCase {
         include_vid: bool,
     ) -> Result<(XmlNode, Vec<Diagnostic>), TestError> {
         let usfm = self.read_usfm()?;
-        let result =
-            Parser::new(&usfm).parse_with_options(&DEFAULT_STYLESHEET, insert_end_milestones);
+        // Through the facade, so the harness sees what a caller sees: the
+        // parser's diagnostics *and* `usfm_semantic`'s (ticket 19). A `pass`
+        // case is judged on error diagnostics, so a semantic Warning changes
+        // no verdict; what it does mean is that every tcdocs input runs the
+        // semantic checks on every run.
+        let result = parse_with_options(&usfm, &DEFAULT_STYLESHEET, insert_end_milestones);
         // The serializer resolves styles against the document's own
         // stylesheet, which is the base sheet plus anything the parser derived
         // (hardening plan D3); `include_vid` is the one thing a caller varies.

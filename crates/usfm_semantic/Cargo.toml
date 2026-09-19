@@ -1,0 +1,29 @@
+[package]
+name = "usfm_semantic"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+# The semantic pass of `docs/adr/0001-oxc-style-crate-layout.md` (M4): the
+# checks that read a finished tree rather than a token stream. It sits beside
+# the parser in the dependency order — `span <- style, ast <- diagnostics <-
+# semantic` — and deliberately does *not* depend on `usfm_parser`: a check here
+# is a function of the `Document` and its stylesheet, so anything that can hand
+# over those two can be checked, whoever built them.
+[dependencies]
+usfm_ast = { path = "../usfm_ast" }
+# `Diagnostic`, `Code`, `Severity`; `Code::is_semantic` is the list of the
+# codes this crate owns.
+usfm_diagnostics = { path = "../usfm_diagnostics" }
+# `Span`, on every diagnostic this crate reports.
+usfm_span = { path = "../usfm_span" }
+usfm_style = { path = "../usfm_style" }
+
+[dev-dependencies]
+insta = "1"
+# The integration tests parse through the facade, because the union of the
+# parser's diagnostics and this crate's is what the facade produces and what
+# the tests are really about. A dev-dependency cycle (`usfm` depends on this
+# crate), which cargo allows: nothing but this crate's tests is affected, and
+# the default features stay off so the test build pulls in no output crate.
+usfm = { path = "../usfm", default-features = false }

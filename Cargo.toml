@@ -9,6 +9,7 @@ members = [
   "crates/usfm_json",
   "crates/usfm_parser",
   "crates/usfm_pipeline",
+  "crates/usfm_semantic",
   "crates/usfm_span",
   "crates/usfm_style",
   "crates/usfm_usx",

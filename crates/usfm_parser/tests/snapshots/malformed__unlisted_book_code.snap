@@ -9,5 +9,3 @@ Para p@38..48
   Text "x"@46..48
   VerseEnd 1
 ChapterEnd 1
---- diagnostics
-warning[unlisted-book-code] @4..7: `ZZZ` is not one of the book codes USFM lists; kept as written
