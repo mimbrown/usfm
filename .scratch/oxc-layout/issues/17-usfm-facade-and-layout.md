@@ -33,7 +33,7 @@ spec records M3 closed.
 
 ## Answer
 
-Landed via PR #20 (2026-09-19). `crates/usfm` re-exports `span`, `style`,
+Landed in `5ae620d` (PR #20, 2026-09-19). `crates/usfm` re-exports `span`, `style`,
 `ast`, `diagnostics`, `parser` unconditionally and `usx`, `html`, `json`,
 `pipeline` behind features (all on by default; `benchmarking`/`testing`
 forward to the parser), lifts the common types to its root, and adds

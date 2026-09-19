@@ -100,6 +100,11 @@ The ADR's tree still lacks `usfm_semantic` (M4) and `usfm_codegen` (M5).
 
 ## M4. Semantic pass
 
+Ticketed 2026-09-19 at the M3 boundary: 19 (crate, facade union, first
+moved check), 20 (placement and attribute checks), 21 (the audit of every
+`Code`: repairs stay, reports move), 22 (`ReferenceIndex`), 23 (verse and
+chapter order). Ticket 18 (`\ts-s |\*`) precedes them by number.
+
 Move non-syntactic checks (`OccursUnder` placement, table columns, leading zeros,
 attribute validation that needs the stylesheet) and `ReferenceIndex` into
 `usfm_semantic`.

@@ -257,7 +257,7 @@ and M3 all closed 2026-09-19 (exit criteria recorded in the spec); **M4
 (`usfm_semantic`) is next**: move the non-syntactic checks (`OccursUnder`
 placement, table columns, leading zeros, the attribute validation that needs
 the stylesheet) and `ReferenceIndex` out of the parser, with `usfm::parse()`
-still returning the union so tcdocs is unchanged. Tickets are in
+still returning the union so tcdocs is unchanged. M4 is ticketed (18–23). Tickets are in
 `.scratch/oxc-layout/issues/`, written one milestone ahead. Unattended
 sessions follow `docs/agents/loop.md`; `scripts/gate.sh` is the gate before every push.
 
