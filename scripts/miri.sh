@@ -60,8 +60,15 @@ run -p usfm_ast --lib
 # it stops on, plus the reader round trip (ticket 13).                  ~3 s
 run -p usfm_usx --lib
 
-# The lexer's own unit tests, including `lexer::source`, plus the parser,
-# style and HTML unit tests.                                          ~20 s
+# `write_escaped` / `write_escaped_attribute`: the same byte-table scan over a
+# `&str`, slicing at the indices it stops on (ticket 14).               ~1 s
+# Only the `escape` tests: the rest of `usfm_html`'s lib suite parses whole
+# documents through the HTML writer, which is 14 s of Miri for byte handling
+# the parser suites below already cover (whole suite: 15 s).
+run -p usfm_html --lib escape::
+
+# The lexer's own unit tests, including `lexer::source`, plus the parser and
+# style unit tests.                                                   ~20 s
 run -p usfm_parser --lib -- --skip text_replacements
 
 # Whole-document parses: the lexer over real markup, and the span

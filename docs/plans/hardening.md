@@ -253,7 +253,8 @@ paragraph-level attributes (`unexpected-pipe`).
       raw, which was not well-formed XML) and writes an element with text among its
       children on one line instead of adding a newline and indent inside it.
       `usfm_parser/tests/usx_text.rs` pins all three. `serialize.rs` survives: the
-      HTML serializer still implements it.
+      HTML serializer still implements it (since ticket 14,
+      `usfm_html/src/serialize.rs`).
 - [x] Fix the failing `serialize_html::tests::test_to_html_trait`. Verified passing
       2026-09-19 (26/26 lib tests); `cargo test -p usfm_parser` runs every suite.
 - [x] CLI prints diagnostics as `file:line:col` and exits non-zero under `--strict`
@@ -342,7 +343,8 @@ The breaking change. Do it in one branch so downstream code is updated once.
       `Caller::Custom` became `Cow<'a, str>`; a `&'a str` cannot become `'static`.
 - [x] Strict policy: `ParseResult::strict()` and `strict_with(threshold)`. (Landed
       with D1; this line duplicated it.)
-- [x] Update `usx.rs` (now `usfm_usx/src/usx.rs`), `serialize_html.rs`,
+- [x] Update `usx.rs` (now `usfm_usx/src/usx.rs`), `serialize_html.rs` (now
+      `usfm_html/src/serialize_html.rs`),
       `main.rs`, the tests crate, and the cursor to the new shapes.
 - [x] tcdocs harness: `pass` inputs must match the USX *and* produce no error
       diagnostics (a false positive is a failure); `fail` inputs pass if an error is

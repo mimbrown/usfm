@@ -16,6 +16,13 @@ and `main.rs` logic has tests.
   `IterSections`, and the prompt format, each as a function over `Document`s
   with a unit test on a small input. `todo!()`/`unimplemented!()` arms in the
   driver become `Err` with a message.
+- Two things ticket 14 found in `main.rs`: `DocumentSectionHtmlSerializer`
+  (diglot) writes text sections into HTML raw, bypassing the writer's
+  escaping; route it through `usfm_html::write_escaped` when it moves. And
+  `usfm_html::serialize::Serialize` has no implementor anywhere (the SILE
+  output goes through USX since ticket 06): delete the trait and the
+  `to_sile_string` path's dead half, or give `sile` a real implementor if one
+  is cheap; say which.
 - New binary crate `apps/usfm_cli` (package `usfm_cli`, binary `usfm`) on
   `clap` (derive): `usfm parse <files>` with `--format usx|html|sile|prompt`,
   `--stylesheet`, `--replace <file>` (repeatable), `--diglot …`, `--watch`,

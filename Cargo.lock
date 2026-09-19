@@ -580,6 +580,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "usfm_html"
+version = "0.1.0"
+dependencies = [
+ "usfm_ast",
+ "usfm_parser",
+ "usfm_style",
+]
+
+[[package]]
 name = "usfm_parser"
 version = "0.1.0"
 dependencies = [
@@ -589,6 +598,7 @@ dependencies = [
  "regex-automata",
  "usfm_ast",
  "usfm_diagnostics",
+ "usfm_html",
  "usfm_parser",
  "usfm_style",
  "usfm_usx",

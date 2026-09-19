@@ -90,12 +90,19 @@ Rebuilt in `apps/` on `ParseResult`, `usfm_semantic` and `usfm_codegen`
   ebible.org is blocked from the cloud environment; see
   `tasks/benchmark/corpus/README.md`.
 - M3: whether `Context` (note numbering, counters) survives as HTML-only state.
-  Half settled in ticket 13: `usfm_usx` needs none of it. Its walk is a
-  `usfm_ast::visit::Visit` implementation over private state (book code,
-  chapter, open verse, `include_vid`, the document's stylesheet), and the note
-  counters and `metadata`/`custom_counters` maps were dead weight for USX.
-  `usfm_parser::context::Context` stays where it is for the HTML writer, which
-  ticket 14 decides on.
+  **Settled: yes, as `usfm_html::Context`.** Ticket 13 found `usfm_usx` needs
+  none of it — its walk is a `usfm_ast::visit::Visit` implementation over
+  private state (book code, chapter, open verse, `include_vid`, the document's
+  stylesheet), and the note counters and `metadata`/`custom_counters` maps were
+  dead weight for USX. Ticket 14 moved `context.rs` into `usfm_html` beside the
+  HTML and `Serialize` writers that are its only callers: the note counters are
+  footnote markers, `custom_counters` is the generated-id sequence, and
+  `metadata` carries `\cp`'s replacement chapter number from the `\c` to the
+  paragraph that prints it. Dead with the move: `from_book` and `marker`.
+  The `ToHtml`/`SerializeHtml` traits were **not** rewritten as a `Visit`: they
+  are the crate's public customisation surface (the example and the CLI's
+  diglot serializer override single hooks), so that rewrite is its own ticket
+  if it is ever wanted. `usfm_parser::context` is a re-export until ticket 17.
 - M4: `usfm_semantic` should own verse-number uniqueness and order (a
   duplicated `\v 6` or a `\v 5` after `\v 7a` is reported nowhere today; found
   by ticket 09 in machine.py's `41MATTes.SFM`), which needs versification.

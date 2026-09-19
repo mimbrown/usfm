@@ -1,6 +1,6 @@
 # 14. `usfm_html`: HTML output as its own crate
 
-Status: ready-for-agent
+Status: resolved
 Milestone: M3
 Blocked by: 13
 
@@ -32,3 +32,30 @@ lines, the generic `Serialize` trait the SILE output and
 - Bench: `parse_html` within 3% (interleaved), recorded.
 
 Done when the gate is green and the bench is within 3%.
+
+## Answer
+
+Landed via PR #17 (2026-09-19). `usfm_html` (depends on `usfm_ast` and
+`usfm_style`; `usfm_parser` only as a dev-dependency for tests) holds
+`serialize_html.rs`, `serialize.rs`, `context.rs` (now `usfm_html::Context`,
+minus the dead `from_book`/`marker`; the spec's `Context` question is settled:
+it survives as HTML-only state), the example and its doc. `usfm_parser::
+serialize_html`/`serialize`/`context` re-export it until ticket 17.
+
+Found on the way: the HTML writer escaped nothing at all, not even `&`, `<`,
+`>`. Every document-derived string now goes through `write_escaped` /
+`write_escaped_attribute` (`escape.rs`, the same byte-table scan as the USX
+writer, copied on purpose: no output crate depends on another), forbidden
+control characters become U+FFFD, and a milestone attribute with an invalid
+name is dropped as in USX. `tests/footnotes.rs` pins the 268 footnote numbers
+of `71-WIS.usfm` and the two-counter behaviour of custom callers
+(`note-c1`…). New `parse_html` fuzz target with a tag-balance and entity
+scanner: two 10-minute runs, no findings. `parse_html` interleaved against
+`d918bd4`: whole-corpus 39.92 → 38.84 MiB/s (−2.7%), all classes within 3%;
+the escaping costs 2–3% on text-heavy classes, recorded in
+`docs/benchmarks.md` "After ticket 14". Miri runs the `escape` tests (the
+whole lib is 15 s, over budget).
+
+Follow-ups, on ticket 15: the diglot section serializer in `main.rs` writes
+raw text and must use `write_escaped`; the `Serialize` trait has no
+implementor.
