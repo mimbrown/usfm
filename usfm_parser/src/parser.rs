@@ -1821,7 +1821,7 @@ impl<'a> ParserImpl<'a> {
         span: Span,
     ) -> Option<InnerListCloser> {
         let name = self.marker_name(marker);
-        let caller = match self.eat_word() {
+        let caller = match self.eat_note_caller() {
             Some(word) => Caller::from(word),
             None => {
                 self.emit(

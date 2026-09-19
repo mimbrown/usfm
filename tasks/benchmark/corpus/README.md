@@ -130,11 +130,11 @@ The other tags line up the same way: `add` 1050, `b` 1021, `d` 139, `k` 91,
 
 Every file was run through `target/release/usfm_parser <file> -o out.usx`.
 
-`web/` — 86 files, **one** diagnostic in the whole corpus:
+`web/` — 86 files, **not one diagnostic** in the whole corpus:
 
 | Code | Severity | Count |
 | --- | --- | --- |
-| `missing-note-caller` | Error | 1 |
+| — | — | 0 |
 
 `synthetic/` — 4 files, **no errors**:
 
@@ -147,28 +147,15 @@ The two Info codes are expected and realistic: `\w` inside `\wj` (Luke) and
 inside `\qs` (Psalms) is what unfoldingWord's aligned texts write too, and
 `\zaln-s`/`\zaln-e` are custom milestones no stylesheet declares.
 
-### Known parser gap: a `*` note caller
+### Fixed: a `*` note caller
 
-`web/78-1MA.usfm` line 22 (1 Maccabees 2:18) has
-
-```
-... in the number of the king’s\f * \ft See 1 Maccabees 3:38; ...\f* Friends, ...
-```
-
-and the parser reports
-
-```
-error[missing-note-caller]: `\f` must be followed by a caller (`+`, `-`, or custom); `+` assumed
-```
-
-then falls back to `+` and leaves the `*` as note text
-(`<note caller="+" style="f">* <char style="ft">…`). USFM 3 allows a custom
-caller character, and `?`, `a` and `†` all parse; only `*` does not, because
-`usfm_parser/src/lexer/mod.rs` lexes a bare `*` as `Kind::Star` while
-`Parser::parse_note` takes its caller from `Cursor::eat_word`, which needs a
-`Kind::Word`. A `*` that no marker name precedes cannot be a closing marker,
-so this is a parser gap on legitimate input, not bad USFM. The file is left
-as eBible.org has it; fixing the parser is a separate ticket.
+`web/78-1MA.usfm` line 22 (1 Maccabees 2:18) has `\f * \ft See 1 Maccabees
+3:38; ...\f*`. USFM 3 allows any custom caller character, but the parser used
+to report `missing-note-caller`, fall back to `+` and leave the `*` in the
+note text, because a bare `*` lexes as `Kind::Star`. Ticket 07 taught
+`parse_note` to accept that token as the caller, so the note now reads
+`<note caller="*" style="f">` and the corpus parses with **zero** error
+diagnostics.
 
 ## File classes
 
