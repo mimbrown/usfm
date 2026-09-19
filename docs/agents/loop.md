@@ -21,8 +21,9 @@ the tickets are a chain, and parallel edits to a crate split collide.
    (at most three rounds, then see Stop).
 5. **Land.** `main` is protected: a pull request and a green `test` check are
    required, for everyone. Work on a branch named `NN-<slug>` after the ticket,
-   commit, push, `gh pr create`, wait with `gh pr checks --watch`, then
-   `gh pr merge --squash --delete-branch` (auto-merge is off for this repository). A red check is fixed on the branch; never close
+   commit, push, `gh pr create`, then `gh pr merge --squash --auto` so the PR
+   lands even if the session is interrupted, and wait for it with
+   `gh pr checks --watch`. GitHub deletes the merged branch. A red check is fixed on the branch; never close
    the PR and retry around it. After the merge, `git checkout main && git pull`
    and delete the branch. The claim (step 2) and the resolution (step 6) ride in
    the same PR as the work, so a ticket is one PR.
