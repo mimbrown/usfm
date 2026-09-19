@@ -1,0 +1,19 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\cl Chapter One\\f + \\ft note\\f*\n\\p \\v 1 a"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para cl@13..45
+  Text "Chapter One"@17..28
+  Note f caller=+@28..44
+    Char ft@33..44
+      Text "note"@37..41
+Para p@45..54
+  VerseStart 1@48..52
+  Text "a"@53..54
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+info[marker-not-listed-here] @28..30: `\f` is not listed as occurring under `\cl`

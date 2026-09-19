@@ -1,0 +1,19 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\r\n\\c 1\r\n\\s some text\r\n\\p\r\n\\v 1 \\qt-s|Speaker\\*verse text \r\n\\v 2 verse text\\qt-e\\*\r\n"
+---
+Book GEN "" @0..7
+ChapterStart 1@9..13
+Para s@15..29
+  Text "some text"@18..29
+Para p@29..90
+  VerseStart 1@33..37
+  Milestone qt-s@38..53 "Speaker"
+  Text "verse text"@53..66
+  VerseEnd 1
+  Text " "
+  VerseStart 2@66..70
+  Text "verse text"@71..81
+  Milestone qt-e@81..88
+  VerseEnd 2
+ChapterEnd 1

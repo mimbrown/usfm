@@ -1,0 +1,28 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n\\c 1\n\\p\n\\v 16\n\\esb \\cat History\\cat*\n\\ms Fish and Fishing\n\\p In Jesus' time, fishing took place mostly on lake Galilee, because Jewish people\ncould not use many of the harbors along the coast of the Mediterranean Sea, since these\nharbors were often controlled by unfriendly neighbors. The most common fish in the Lake\nof Galilee were carp and catfish. The Law of Moses allowed people to eat any fish with\nfins and scales, but since catfish lack scales (as do eels and sharks) they were not to\nbe eaten (\\xt Lev 11.9-12\\xt*). Fish were also probably brought from Tyre and Sidon,\nwhere they were dried and salted.\n...\n\\p Among early Christians, the fish was a favorite image for Jesus, because the Greek\nword for fish (\\tl ichthus\\tl*) consists of the first letters of the Greek words that\ntell who Jesus is: \\fig Christian Fish Image\\fig*\n\\esbe\n\\p\nPassing alongside the Sea of Galilee, he saw Simon and Andrew the brother of Simon casting a net into the sea, for they were fishermen.\n"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..22
+  VerseStart 16@16..21
+Sidebar esb@22..851 category="History"@27..44
+  Para ms@45..66
+    Text "Fish and Fishing"@49..66
+  Para p@66..624
+    Text "In Jesus' time, fishing took place mostly on lake Galilee, because Jewish people could not use many of the harbors along the coast of the Mediterranean Sea, since these harbors were often controlled by unfriendly neighbors. The most common fish in the Lake of Galilee were carp and catfish. The Law of Moses allowed people to eat any fish with fins and scales, but since catfish lack scales (as do eels and sharks) they were not to be eaten ("@69..511
+    Char xt@511..530
+      Text "Lev 11.9-12"@515..526
+    Text "). Fish were also probably brought from Tyre and Sidon, where they were dried and salted. ..."@530..624
+  Para p@624..846
+    Text "Among early Christians, the fish was a favorite image for Jesus, because the Greek word for fish ("@627..725
+    Char tl@725..740
+      Text "ichthus"@729..736
+    Text ") consists of the first letters of the Greek words that tell who Jesus is: "@740..815
+    Char fig@815..845
+      Text "Christian Fish Image"@820..840
+Para p@852..991
+  Text "Passing alongside the Sea of Galilee, he saw Simon and Andrew the brother of Simon casting a net into the sea, for they were fishermen."@855..991
+  VerseEnd 16
+ChapterEnd 1

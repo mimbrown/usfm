@@ -1,0 +1,16 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 hello \\em world \\em* \\em* extra close\n"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..59
+  VerseStart 1@16..20
+  Text "hello "@21..27
+  Char em@27..41
+    Text "world "@31..37
+  Text "  extra close"@41..59
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[unmatched-closing-marker] @42..46: closing marker `\em*` has no matching `\em`

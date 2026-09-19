@@ -1,0 +1,11 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "text before any marker\n\\p a"
+---
+Para p@0..23
+  Text "text before any marker"@0..23
+Para p@23..27
+  Text "a"@26..27
+--- diagnostics
+error[content-outside-paragraph] @0..4: content outside a paragraph; an implicit `\p` was opened
+error[missing-id] @0..0: document must start with `\id`

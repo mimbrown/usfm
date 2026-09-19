@@ -1,0 +1,24 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\r\n\\c 1\r\n\\p \\xq quote \\xq* \\x + \\xo 1.1 \\em stuff\\em*\\x*\r\n\\v 1 something"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 1@9..13
+Para p@15..78
+  Char xq@18..32
+    Text "quote "@22..28
+  Text " "@32..33
+  Note x caller=+@33..62
+    Char xo@38..62
+      Text "1.1 "@42..46
+      Char em@46..59
+        Text "stuff"@50..55
+  Text " "@62..64
+  VerseStart 1@64..68
+  Text "something"@69..78
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[marker-not-allowed-here] @18..21: `\xq` cannot occur under `\p`
+info[character-style-nested-without-plus] @46..49: `\em` is nested without `+`; treated as `\+em`

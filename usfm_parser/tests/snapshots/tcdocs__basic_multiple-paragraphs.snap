@@ -1,0 +1,35 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id JHN\n\\c 1\n\\s1 The Preaching of John the Baptist\n\\r (Matthew 3.1-12; Luke 3.1-18; John 1.19-28)\n\\p\n\\v 1 This is the Good News about Jesus Christ, the Son of God.\n\\v 2 It began as the prophet Isaiah had written:\n\\q1 “God said, ‘I will send my messenger ahead of you\n\\q2 to open the way for you.’\n\\q1\n\\v 3 Someone is shouting in the desert,\n\\q2 ‘Get the road ready for the Lord;\n\\q2 make a straight path for him to travel!’”\n\\p\n\\v 4 So John appeared in the desert, baptizing and preaching. “Turn away from your sins and be baptized,” he told the people, “and God will forgive your sins.”"
+---
+Book JHN "" @0..7
+ChapterStart 1@8..12
+Para s1@13..51
+  Text "The Preaching of John the Baptist"@17..51
+Para r@51..98
+  Text "(Matthew 3.1-12; Luke 3.1-18; John 1.19-28)"@54..98
+Para p@98..213
+  VerseStart 1@101..105
+  Text "This is the Good News about Jesus Christ, the Son of God."@106..164
+  VerseEnd 1
+  Text " "
+  VerseStart 2@164..168
+  Text "It began as the prophet Isaiah had written:"@169..213
+Para q1@213..271
+  Text "“God said, ‘I will send my messenger ahead of you"@217..271
+Para q2@271..303
+  Text "to open the way for you.’"@275..303
+  VerseEnd 2
+Para q1@303..347
+  VerseStart 3@307..311
+  Text "Someone is shouting in the desert,"@312..347
+Para q2@347..387
+  Text "‘Get the road ready for the Lord;"@351..387
+Para q2@387..437
+  Text "make a straight path for him to travel!’”"@391..437
+  VerseEnd 3
+Para p@437..607
+  VerseStart 4@440..444
+  Text "So John appeared in the desert, baptizing and preaching. “Turn away from your sins and be baptized,” he told the people, “and God will forgive your sins.”"@445..607
+  VerseEnd 4
+ChapterEnd 1

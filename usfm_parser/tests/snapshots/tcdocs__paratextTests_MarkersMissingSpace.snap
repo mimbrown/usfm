@@ -1,0 +1,23 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\r\n\\c 1\r\n\\p\r\n\\v 1 should have error\\p\\nd testing \\nd*\r\n\\c 2\r\n\\p\r\n\\v 2 \\em end/beg markers \\em*\\nd with no space are OK\\nd*\r\n"
+---
+Book GEN "" @0..7
+ChapterStart 1@9..13
+Para p@15..41
+  VerseStart 1@19..23
+  Text "should have error"@24..41
+Para p@41..61
+  Char nd@43..59
+    Text "testing "@47..55
+  VerseEnd 1
+ChapterEnd 1
+ChapterStart 2@61..65
+Para p@67..130
+  VerseStart 2@71..75
+  Char em@76..100
+    Text "end/beg markers "@80..96
+  Char nd@100..128
+    Text "with no space are OK"@104..124
+  VerseEnd 2
+ChapterEnd 2

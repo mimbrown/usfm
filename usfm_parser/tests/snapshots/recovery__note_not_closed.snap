@@ -1,0 +1,21 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 a\\f + \\ft note\n\\p \\v 2 b"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..36
+  VerseStart 1@16..20
+  Text "a"@21..22
+  Note f caller=+@22..36
+    Char ft@27..36
+      Text "note"@31..36
+  VerseEnd 1
+Para p@36..45
+  VerseStart 2@39..43
+  Text "b"@44..45
+  VerseEnd 2
+ChapterEnd 1
+--- diagnostics
+error[note-not-closed] @22..24: `\f` is not closed by `\f*`
+warning[character-style-not-closed] @27..30: `\ft` was still open at `\p`

@@ -1,0 +1,15 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 a \\em b"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..28
+  VerseStart 1@16..20
+  Text "a "@21..23
+  Char em@23..28
+    Text "b"@27..28
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+warning[character-style-not-closed] @23..26: `\em` was still open at end of input

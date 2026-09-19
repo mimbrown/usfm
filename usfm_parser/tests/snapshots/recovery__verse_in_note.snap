@@ -1,0 +1,17 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 a\\f + \\ft see \\v 2 there\\f* b"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..50
+  VerseStart 1@16..20
+  Text "a"@21..22
+  Note f caller=+@22..48
+    Char ft@27..48
+      Text "see there"@31..45
+  Text " b"@48..50
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[verse-in-note] @35..37: `\v` is not allowed inside a note

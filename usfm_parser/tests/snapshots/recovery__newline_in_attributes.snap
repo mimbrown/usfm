@@ -1,0 +1,15 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 \\w a|lemma=\"x\"\nstrong=\"H1\"\\w* b"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..52
+  VerseStart 1@16..20
+  Char w@21..50 lemma="x" strong="H1"
+    Text "a"@24..25
+  Text " b"@50..52
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[newline-in-attributes] @35..36: line break inside an attribute list

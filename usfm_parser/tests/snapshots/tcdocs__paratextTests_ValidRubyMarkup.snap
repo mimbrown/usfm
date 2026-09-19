@@ -1,0 +1,45 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\r\n\\c 1\r\n\\s some text\r\n\\p\r\n\\v 1 verse text \r\n\\rb B|g\\rb* \r\n\\v 1 verse text\r\n\\rb 僕使御|g\\rb* \r\n\\v 1 verse text \r\n\\rb BB|g:g\\rb* \r\n\\v 1 verse text \r\n\\rb BB|gg\\rb* \r\n\\v 1 verse text \r\n\\rb B僕使御|g:g\\rb* \r\n\\v 1 verse text \r\n\\rb BB|gloss=\"g:g\"\\rb* \r\n"
+---
+Book GEN "" @0..7
+ChapterStart 1@9..13
+Para s@15..29
+  Text "some text"@18..29
+Para p@29..259
+  VerseStart 1@33..37
+  Text "verse text "@38..51
+  Char rb@51..62 "g"
+    Text "B"@55..56
+  VerseEnd 1
+  Text " "
+  VerseStart 1@65..69
+  Text "verse text "@70..82
+  Char rb@82..101 "g"
+    Text "僕使御"@86..95
+  VerseEnd 1
+  Text " "
+  VerseStart 1@104..108
+  Text "verse text "@109..122
+  Char rb@122..136 "g:g"
+    Text "BB"@126..128
+  VerseEnd 1
+  Text " "
+  VerseStart 1@139..143
+  Text "verse text "@144..157
+  Char rb@157..170 "gg"
+    Text "BB"@161..163
+  VerseEnd 1
+  Text " "
+  VerseStart 1@173..177
+  Text "verse text "@178..191
+  Char rb@191..213 "g:g"
+    Text "B僕使御"@195..205
+  VerseEnd 1
+  Text " "
+  VerseStart 1@216..220
+  Text "verse text "@221..234
+  Char rb@234..256 gloss="g:g"
+    Text "BB"@238..240
+  VerseEnd 1
+ChapterEnd 1

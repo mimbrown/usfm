@@ -1,0 +1,15 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 \\w word| \\w*"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..33
+  VerseStart 1@16..20
+  Char w@21..33
+    Text "word"@24..28
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[empty-attribute-list] @28..29: `|` is not followed by any attribute

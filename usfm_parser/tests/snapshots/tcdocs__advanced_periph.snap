@@ -1,0 +1,9 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id FRT\n\\periph My Title|id=\"title\"\n\\p this is the title details"
+snapshot_kind: text
+---
+Book FRT "" @0..7
+Periph periph@8..64 title="My Title"@16..24 id="title"
+  Para p@36..64
+    Text "this is the title details"@39..64

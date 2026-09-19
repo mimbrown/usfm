@@ -1,0 +1,21 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 9 nine\n\\lit Glory:\n\\v 15 fifteen\n\\p \\v 16 sixteen"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..26
+  VerseStart 9@16..20
+  Text "nine"@21..26
+  VerseEnd 9
+Para lit@26..52
+  Text "Glory: "@31..38
+  VerseStart 15@38..43
+  Text "fifteen"@44..52
+  VerseEnd 15
+Para p@52..68
+  VerseStart 16@55..60
+  Text "sixteen"@61..68
+  VerseEnd 16
+ChapterEnd 1

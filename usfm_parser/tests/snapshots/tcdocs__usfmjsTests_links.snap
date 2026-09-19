@@ -1,0 +1,17 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n\\c 1\n\\p\n\\v 1 But you, speak what fits with faithful instruction.\nThe traditional translation of verse 1, as given in \\jmp RSV|link-href=\"prj:RSV52 GEN 1:1\" link-title=\"Revised Standard Version\"\\jmp*, may be appropriate. Storehouses, as used here, refers to large buildings with walls and roof, where grain was kept until needed. (See illustration: \\jmp Storehouse|link-href=\"figures/storehouse.png\" link-title=\"Ancient storehouse\"\\jmp*)\n"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..445
+  VerseStart 1@16..20
+  Text "But you, speak what fits with faithful instruction. The traditional translation of verse 1, as given in "@21..125
+  Char jmp@125..206 link-href="prj:RSV52 GEN 1:1" link-title="Revised Standard Version"
+    Text "RSV"@130..133
+  Text ", may be appropriate. Storehouses, as used here, refers to large buildings with walls and roof, where grain was kept until needed. (See illustration: "@206..356
+  Char jmp@356..443 link-href="figures/storehouse.png" link-title="Ancient storehouse"
+    Text "Storehouse"@361..371
+  Text ")"@443..445
+  VerseEnd 1
+ChapterEnd 1

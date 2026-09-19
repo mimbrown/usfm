@@ -1,0 +1,41 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id TIT Titus\n\\ide UTF-8\n\\h Titus\n\\c 1\n\\p\n\\v 1 \\w Παῦλος|lemma=\"Παῦλος\" strong=\"G39720\" x-morph=\"Gr,N,,,,,NMS,\"\\w*\n\\w δοῦλος|lemma=\"δοῦλος\" strong=\"G14010\" x-morph=\"Gr,N,,,,,NMS,\"\\w*\n\\w Χριστοῦ|lemma=\"Χριστός\" strong=\"G55470\" x-morph=\"Gr,N,,,,,GMS,\"\\w*\n\\w κατὰ|lemma=\"κατά\" strong=\"G25960\" x-morph=\"Gr,P,,,,,A,,,\"\\w*\n\\c 2\n\\p\n\\v 1 \\w Σὺ|lemma=\"σύ\" strong=\"G47710\" x-morph=\"Gr,RP,,,2N,S,\"\\w*\n\\w δὲ|lemma=\"δέ\" strong=\"G11610\" x-morph=\"Gr,CC,,,,,,,,\"\\w*\n\\w λάλει|lemma=\"λαλέω\" strong=\"G29800\" x-morph=\"Gr,VTMPA2,,S,\"\\w*\n\\w ἃ|lemma=\"ὅς\" strong=\"G37390\" x-morph=\"Gr,RR,,,,ANP,\"\\w*\n"
+---
+Book TIT "Titus" @0..13
+Para ide@14..25
+  Text "UTF-8"@19..25
+Para h@25..34
+  Text "Titus"@28..34
+ChapterStart 1@34..38
+Para p@39..369
+  VerseStart 1@42..46
+  Char w@47..128 lemma="Παῦλος" strong="G39720" x-morph="Gr,N,,,,,NMS,"
+    Text "Παῦλος"@50..63
+  Text " "@128..129
+  Char w@129..210 lemma="δοῦλος" strong="G14010" x-morph="Gr,N,,,,,NMS,"
+    Text "δοῦλος"@132..145
+  Text " "@210..211
+  Char w@211..295 lemma="Χριστός" strong="G55470" x-morph="Gr,N,,,,,GMS,"
+    Text "Χριστοῦ"@214..229
+  Text " "@295..296
+  Char w@296..368 lemma="κατά" strong="G25960" x-morph="Gr,P,,,,,A,,,"
+    Text "κατὰ"@299..308
+  VerseEnd 1
+ChapterEnd 1
+ChapterStart 2@369..373
+Para p@374..652
+  VerseStart 1@377..381
+  Char w@382..446 lemma="σύ" strong="G47710" x-morph="Gr,RP,,,2N,S,"
+    Text "Σὺ"@385..390
+  Text " "@446..447
+  Char w@447..511 lemma="δέ" strong="G11610" x-morph="Gr,CC,,,,,,,,"
+    Text "δὲ"@450..455
+  Text " "@511..512
+  Char w@512..587 lemma="λαλέω" strong="G29800" x-morph="Gr,VTMPA2,,S,"
+    Text "λάλει"@515..525
+  Text " "@587..588
+  Char w@588..651 lemma="ὅς" strong="G37390" x-morph="Gr,RR,,,,ANP,"
+    Text "ἃ"@591..594
+  VerseEnd 1
+ChapterEnd 2

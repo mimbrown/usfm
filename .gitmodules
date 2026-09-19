@@ -1,0 +1,3 @@
+[submodule "tcdocs"]
+	path = tcdocs
+	url = https://github.com/usfm-bible/tcdocs.git

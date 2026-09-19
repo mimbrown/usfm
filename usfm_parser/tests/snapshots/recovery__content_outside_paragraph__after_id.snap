@@ -1,0 +1,13 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\v 1 a"
+---
+Book GEN "" @0..7
+Para p@8..14
+  VerseStart 1@8..12
+  Text "a"@13..14
+  VerseEnd 1
+--- diagnostics
+error[content-outside-paragraph] @8..10: content outside a paragraph; an implicit `\p` was opened
+error[verse-text-before-chapter] @8..10: `\p` (verse text) before the first `\c`
+error[verse-outside-chapter] @8..10: `\v` before any `\c`

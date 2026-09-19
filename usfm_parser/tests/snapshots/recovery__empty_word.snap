@@ -1,0 +1,15 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 a \\w |lemma=\"x\"\\w* b"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..41
+  VerseStart 1@16..20
+  Text "a "@21..23
+  Char w@23..39 lemma="x"
+  Text " b"@39..41
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[empty-word] @23..25: `\w` has attributes but no text

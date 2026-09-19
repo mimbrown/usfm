@@ -1,0 +1,19 @@
+Reference quirk. `definition\v 2` has no whitespace before the verse
+marker; Paratext writes `definition <verse ...>` with a space it invented.
+The parser keeps the text as written. The first paragraph has a line break
+there and keeps its space on both sides.
+
+--- origin.xml
++++ origin.xml
+@@ -6,9 +6,9 @@
+   <para style="p" vid="GLO 1:1">
+     <char style="k">blah</char> definition <verse eid="GLO 1:1" /><verse number="2" style="v" sid="GLO 1:2" />something</para>
+   <para style="p" vid="GLO 1:2">
+-    <char style="w">grace</char> definition <verse eid="GLO 1:2" /><verse number="2" style="v" sid="GLO 1:2" />something</para>
++    <char style="w">grace</char> definition<verse eid="GLO 1:2" /><verse number="2" style="v" sid="GLO 1:2" />something</para>
+   <para style="p" vid="GLO 1:2">
+-    <char style="w" lemma="grace ">grace</char> definition <verse eid="GLO 1:2" /><verse number="2" style="v" sid="GLO 1:2" />something</para>
++    <char style="w" lemma="grace ">grace</char> definition<verse eid="GLO 1:2" /><verse number="2" style="v" sid="GLO 1:2" />something</para>
+   <para style="p" vid="GLO 1:2">
+     <char style="w" lemma="grace ">gracious</char> definition<verse eid="GLO 1:2" /></para>
+   <chapter eid="GLO 1" />

@@ -1,0 +1,14 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 2 \\zunknown-s |x=\"1\"\\* text\n"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..47
+  VerseStart 2@16..20
+  Milestone zunknown-s@21..41 x="1"
+  Text " text"@41..47
+  VerseEnd 2
+ChapterEnd 1
+--- diagnostics
+info[unknown-custom-milestone] @21..32: custom milestone `\zunknown-s` is not in the stylesheet

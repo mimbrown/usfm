@@ -1,0 +1,15 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\esb \\cat People\\cat* stray\n\\p a\n\\esbe"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Sidebar esb@13..51 category="People"@18..34
+  Para p@13..41
+    Text "stray"@34..41
+  Para p@41..46
+    Text "a"@44..46
+ChapterEnd 1
+--- diagnostics
+error[content-outside-paragraph] @13..41: content after `\esb` is outside a paragraph; an implicit `\p` was opened

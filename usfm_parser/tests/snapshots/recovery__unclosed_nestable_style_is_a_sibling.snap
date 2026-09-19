@@ -1,0 +1,18 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 a\\x - \\xo 1.1 \\xt Gen 1\\x* b"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..49
+  VerseStart 1@16..20
+  Text "a"@21..22
+  Note x caller=-@22..47
+    Char xo@27..35
+      Text "1.1 "@31..35
+    Char xt@35..47
+      Text "Gen 1"@39..44
+  Text " b"@47..49
+  VerseEnd 1
+ChapterEnd 1

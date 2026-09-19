@@ -1,0 +1,19 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\r\n\\ib\r\n\\ip\r\n\\c 1\r\n\\p \\v 1 Hi.\r\n\\p\r\n\\p george \\v 2\r\n\r\n"
+---
+Book GEN "" @0..7
+Para ib@9..14
+Para ip@14..19
+ChapterStart 1@19..23
+Para p@25..38
+  VerseStart 1@28..32
+  Text "Hi."@33..38
+Para p@38..42
+Para p@42..60
+  Text "george"@45..52
+  VerseEnd 1
+  Text " "
+  VerseStart 2@52..56
+  VerseEnd 2
+ChapterEnd 1

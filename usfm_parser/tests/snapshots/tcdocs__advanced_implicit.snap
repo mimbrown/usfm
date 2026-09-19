@@ -1,0 +1,18 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n\\c 1\n\\p\n\\v 1 the first verse \\f + \\fr 1:1 \\ft Some noteable text\\fr*\\f*\n"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..80
+  VerseStart 1@16..20
+  Text "the first verse "@21..37
+  Note f caller=+@37..79
+    Char fr@42..50
+      Text "1:1 "@46..50
+    Char ft@50..79
+      Text "Some noteable text"@54..72
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[unmatched-closing-marker] @72..76: closing marker `\fr*` has no matching `\fr`

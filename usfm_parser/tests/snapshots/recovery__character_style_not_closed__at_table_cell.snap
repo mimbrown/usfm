@@ -1,0 +1,17 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\tr \\tc1 \\em a \\tc2 b"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Table@13..34
+  Row@13..34
+    Cell header=false align=start column=1 colspan=1@17..28
+      Char em@22..28
+        Text "a"@26..28
+    Cell header=false align=start column=2 colspan=1@28..34
+      Text "b"@33..34
+ChapterEnd 1
+--- diagnostics
+warning[character-style-not-closed] @22..25: `\em` was still open at the next table cell

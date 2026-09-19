@@ -1,0 +1,20 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 a \\fig caption|src=\"a.jpg\" size=\"col\"\n\\p \\v 2 b"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..59
+  VerseStart 1@16..20
+  Text "a "@21..23
+  Char fig@23..59 src="a.jpg" size="col"
+    Text "caption"@28..35
+  VerseEnd 1
+Para p@59..68
+  VerseStart 2@62..66
+  Text "b"@67..68
+  VerseEnd 2
+ChapterEnd 1
+--- diagnostics
+error[figure-not-closed] @23..27: `\fig` was still open at `\p`
+error[newline-in-attributes] @58..59: line break inside an attribute list

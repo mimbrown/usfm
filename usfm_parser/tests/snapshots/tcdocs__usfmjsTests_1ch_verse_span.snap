@@ -1,0 +1,43 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id ISA Unlocked Literal Bible\n\\ide UTF-8\n\\h Isaiah\n\\toc1 The Book of Isaiah\n\\toc2 Isaiah\n\\toc3 Isa\n\\mt The Book of the Prophet Isaiah\n\\c 8\n\\s5\n\\p\n\\s5\n\\p \\v 14 Beriah had these sons: Ahio, Shashak, Jeremoth,\n\\v 15 Zebadiah, Arad, Eder,\n\\v 16 Michael, Ishpah, and Joha were the sons of Beriah.\n\\v 17-18 Elpaal had these sons: Zebadiah, Meshullam, Hizki, Heber, Ishmerai, Izliah, and Jobab.\n\n\\s5\n\\p \\v 19-21 Shimei had these sons: Jakim, Zikri, Zabdi, Elienai, Zillethai, Eliel, Adaiah, Beraiah, and Shimrath.\n\n"
+---
+Book ISA "Unlocked Literal Bible" @0..30
+Para ide@31..42
+  Text "UTF-8"@36..42
+Para h@42..52
+  Text "Isaiah"@45..52
+Para toc1@52..77
+  Text "The Book of Isaiah"@58..77
+Para toc2@77..90
+  Text "Isaiah"@83..90
+Para toc3@90..100
+  Text "Isa"@96..100
+Para mt@100..135
+  Text "The Book of the Prophet Isaiah"@104..135
+ChapterStart 8@135..139
+Para s5@140..144
+Para p@144..147
+Para s5@147..151
+Para p@151..390
+  VerseStart 14@154..159
+  Text "Beriah had these sons: Ahio, Shashak, Jeremoth,"@160..208
+  VerseEnd 14
+  Text " "
+  VerseStart 15@208..213
+  Text "Zebadiah, Arad, Eder,"@214..236
+  VerseEnd 15
+  Text " "
+  VerseStart 16@236..241
+  Text "Michael, Ishpah, and Joha were the sons of Beriah."@242..293
+  VerseEnd 16
+  Text " "
+  VerseStart 17-18@293..301
+  Text "Elpaal had these sons: Zebadiah, Meshullam, Hizki, Heber, Ishmerai, Izliah, and Jobab."@302..390
+  VerseEnd 17-18
+Para s5@390..394
+Para p@394..509
+  VerseStart 19-21@397..405
+  Text "Shimei had these sons: Jakim, Zikri, Zabdi, Elienai, Zillethai, Eliel, Adaiah, Beraiah, and Shimrath."@406..509
+  VerseEnd 19-21
+ChapterEnd 8

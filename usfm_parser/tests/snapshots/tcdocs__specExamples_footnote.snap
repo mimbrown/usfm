@@ -1,0 +1,71 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id MAT 41MATGNT92.SFM, Good News Translation, June 2003\n\\c 136\n\\s1 The Preaching of John the Baptist\n\\r (Matthew 3.1-12; Luke 3.1-18; John 1.19-28)\n\\p\n\\v 1 This is the Good News about Jesus Christ, the Son of God. \\f + \\fr 1.1: \\ft Some manuscripts do not have \\fq the Son of God.\\f*\n\\v 20 Adam \\f + \\fr 3.20: \\fk Adam: \\ft This name in Hebrew means “all human beings.”\\f* named his wife Eve, \\f + \\fr 3.20: \\fk Eve: \\ft This name sounds similar to the Hebrew word for “living,” which is rendered in this context as “human beings.”\\f* because she was the mother of all human beings.\n\\v 38 whoever believes in me should drink. As the scripture says, ‘Streams of life-giving water will pour out from his side.’” \\f + \\fr 7.38: \\ft Jesus' words in verses 37-38 may be translated: \\fqa “Whoever is thirsty should come to me and drink. \\fv 38\\fv*\\ft As the scripture says, ‘Streams of life-giving water will pour out ...’”\\f*\n\\v 3 Él es el resplandor glorioso de Dios,\\f c \\fr 1.3: \\fk Resplandor: \\ft Cf. Jn 1.4-9,14\\fdc ; también Sab 7.25-26, donde algo parecido se dice de la sabiduría.\\f* la imagen misma ...\n"
+---
+Book MAT "41MATGNT92.SFM, Good News Translation, June 2003" @0..56
+ChapterStart 136@57..63
+Para s1@64..102
+  Text "The Preaching of John the Baptist"@68..102
+Para r@102..149
+  Text "(Matthew 3.1-12; Luke 3.1-18; John 1.19-28)"@105..149
+Para p@149..1138
+  VerseStart 1@152..156
+  Text "This is the Good News about Jesus Christ, the Son of God. "@157..215
+  Note f caller=+@215..284
+    Char fr@220..229
+      Text "1.1: "@224..229
+    Char ft@229..262
+      Text "Some manuscripts do not have "@233..262
+    Char fq@262..284
+      Text "the Son of God."@266..281
+  VerseEnd 1
+  Text " "
+  VerseStart 20@285..290
+  Text "Adam "@291..296
+  Note f caller=+@296..377
+    Char fr@301..311
+      Text "3.20: "@305..311
+    Char fk@311..321
+      Text "Adam: "@315..321
+    Char ft@321..377
+      Text "This name in Hebrew means “all human beings.”"@325..374
+  Text " named his wife Eve, "@377..398
+  Note f caller=+@398..547
+    Char fr@403..413
+      Text "3.20: "@407..413
+    Char fk@413..422
+      Text "Eve: "@417..422
+    Char ft@422..547
+      Text "This name sounds similar to the Hebrew word for “living,” which is rendered in this context as “human beings.”"@426..544
+  Text " because she was the mother of all human beings."@547..596
+  VerseEnd 20
+  Text " "
+  VerseStart 38@596..601
+  Text "whoever believes in me should drink. As the scripture says, ‘Streams of life-giving water will pour out from his side.’” "@602..729
+  Note f caller=+@729..947
+    Char fr@734..744
+      Text "7.38: "@738..744
+    Char ft@744..796
+      Text "Jesus' words in verses 37-38 may be translated: "@748..796
+    Char fqa@796..852
+      Text "“Whoever is thirsty should come to me and drink. "@801..852
+    Char fv@852..862
+      Text "38"@856..858
+    Char ft@862..947
+      Text "As the scripture says, ‘Streams of life-giving water will pour out ...’”"@866..944
+  VerseEnd 38
+  Text " "
+  VerseStart 3@948..952
+  Text "Él es el resplandor glorioso de Dios,"@953..991
+  Note f caller=c@991..1117
+    Char fr@996..1005
+      Text "1.3: "@1000..1005
+    Char fk@1005..1021
+      Text "Resplandor: "@1009..1021
+    Char ft@1021..1040
+      Text "Cf. Jn 1.4-9,14"@1025..1040
+    Char fdc@1040..1117
+      Text "; también Sab 7.25-26, donde algo parecido se dice de la sabiduría."@1045..1114
+  Text " la imagen misma ..."@1117..1138
+  VerseEnd 3
+ChapterEnd 136

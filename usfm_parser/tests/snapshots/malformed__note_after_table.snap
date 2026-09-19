@@ -1,0 +1,20 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n\\c 1\n\\tr \\tc1 a \\tc2 b\n\\f + \\ft orphan note\n"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Table@13..52
+  Row@13..52
+    Cell header=false align=start column=1 colspan=1@17..24
+      Text "a"@22..24
+    Cell header=false align=start column=2 colspan=1@24..52
+      Text "b "@29..31
+      Note f caller=+@31..52
+        Char ft@36..52
+          Text "orphan note"@40..52
+ChapterEnd 1
+--- diagnostics
+error[note-not-closed] @31..33: `\f` is not closed by `\f*`
+warning[character-style-not-closed] @36..39: `\ft` was still open at end of input

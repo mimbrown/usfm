@@ -1,0 +1,21 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 \\nd Lord\\nd*\\f + \\fr 1.3 \\ft note \\+nd Lord\\+nd* end\\f* tail\n"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..82
+  VerseStart 1@16..20
+  Char nd@21..33
+    Text "Lord"@25..29
+  Note f caller=+@33..76
+    Char fr@38..46
+      Text "1.3 "@42..46
+    Char ft@46..76
+      Text "note "@50..55
+      Char nd@55..69
+        Text "Lord"@60..64
+      Text " end"@69..73
+  Text " tail"@76..82
+  VerseEnd 1
+ChapterEnd 1

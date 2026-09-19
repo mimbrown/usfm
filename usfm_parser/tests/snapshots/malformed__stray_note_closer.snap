@@ -1,0 +1,13 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 hello \\x* stray\n"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..37
+  VerseStart 1@16..20
+  Text "hello  stray"@21..37
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[unmatched-closing-marker] @27..30: closing marker `\x*` has no matching `\x`

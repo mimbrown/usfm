@@ -1,0 +1,15 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 \\em caption|no default\\em*"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..47
+  VerseStart 1@16..20
+  Char em@21..47 "no default"
+    Text "caption"@25..32
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[no-default-attribute] @32..33: `\em` has no default attribute; the value needs a name

@@ -1,0 +1,18 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 a \\qt-s |who=\"Pilate\" b \\qt-e\\* c"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..54
+  VerseStart 1@16..20
+  Text "a "@21..23
+  Milestone qt-s@23..45 who="Pilate" "b "
+  Milestone qt-e@45..52
+  Text " c"@52..54
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[milestone-not-closed] @23..28: milestone `\qt-s` is not closed by `\*`
+error[default-attribute-with-others] @29..30: a bare value must be the only attribute; give it a name

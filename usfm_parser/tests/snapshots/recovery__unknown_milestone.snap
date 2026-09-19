@@ -1,0 +1,16 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\ts\\*\n\\p \\v 1 a \\ts\\* b"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Milestone ts@13..18
+Para p@19..36
+  VerseStart 1@22..26
+  Text "a "@27..29
+  Milestone ts@29..34
+  Text " b"@34..36
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+warning[unknown-milestone] @13..16: milestone `\ts` is not in the stylesheet

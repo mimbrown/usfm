@@ -1,0 +1,23 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 before\n\\esb \\cat People\\cat*\n\\ms Title\n\\p inside\n\\esbe\n\\p after\n\\p \\v 2 next"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..28
+  VerseStart 1@16..20
+  Text "before"@21..28
+Sidebar esb@28..75 category="People"@33..49
+  Para ms@50..60
+    Text "Title"@54..60
+  Para p@60..70
+    Text "inside"@63..70
+Para p@76..85
+  Text "after"@79..85
+  VerseEnd 1
+Para p@85..97
+  VerseStart 2@88..92
+  Text "next"@93..97
+  VerseEnd 2
+ChapterEnd 1

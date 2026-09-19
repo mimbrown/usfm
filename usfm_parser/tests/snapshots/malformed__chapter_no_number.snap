@@ -1,0 +1,13 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 text\n\\c\n"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..26
+  VerseStart 1@16..20
+  Text "text"@21..26
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[missing-chapter-number] @26..28: `\c` must be followed by a chapter number

@@ -1,0 +1,17 @@
+{
+  "name": "usfm-tools",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "vscode:watch": "npm run -w vscode watch",
+    "vscode:dev": "npm run -w vscode compile && npm run -w vscode server:build:debug",
+    "reinstall": "npm run -w vscode reinstall",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "workspaces": [
+    "vscode"
+  ]
+}

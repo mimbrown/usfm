@@ -1,0 +1,15 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 a \\k-s |x-strong=\"G1\"\\* b \\k-e\\* c"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..55
+  VerseStart 1@16..20
+  Text "a "@21..23
+  Milestone k-s@23..44 x-strong="G1"
+  Text " b "@44..47
+  Milestone k-e@47..53
+  Text " c"@53..55
+  VerseEnd 1
+ChapterEnd 1

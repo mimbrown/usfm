@@ -1,0 +1,38 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n\\mt1 ഉല്പത്തിപുസ്തകം\n\\c 1\n\\p\n\\v 1 ആദിയിൽ ദൈവം \\w ആകാശവും|lemma=\"ആകാശം\" strong=\"l\" x-morph=\"He,R:Sp1cs\"\\w* ഭൂമിയും സൃഷ്ടിച്ചു.\n\\v 2 ആദിയിൽ ദൈവം \\w ആകാശവും|lemma=\"\" strong=\"l\" x-morph=\"He,R:Sp1cs\"\\w* ഭൂമിയും സൃഷ്ടിച്ചു.\n\\v 3 ആദിയിൽ ദൈവം \\w ആകാശവും|\"ആകാശം\"\\w* ഭൂമിയും സൃഷ്ടിച്ചു.\n\\v 4 ആദിയിൽ ദൈവം \\w ആകാശവും|ആകാശം\\w* ഭൂമിയും സൃഷ്ടിച്ചു."
+snapshot_kind: text
+---
+Book GEN "" @0..7
+Para mt1@8..59
+  Text "ഉല\u{d4d}പത\u{d4d}തിപ\u{d41}സ\u{d4d}തകം"@13..59
+ChapterStart 1@59..63
+Para p@64..673
+  VerseStart 1@67..71
+  Text "ആദിയിൽ ദൈവം "@72..104
+  Char w@104..187 lemma="ആക\u{d3e}ശം" strong="l" x-morph="He,R:Sp1cs"
+    Text "ആക\u{d3e}ശവ\u{d41}ം"@107..128
+  Text " ഭ\u{d42}മിയ\u{d41}ം സ\u{d43}ഷ\u{d4d}ടിച\u{d4d}ച\u{d41}."@187..242
+  VerseEnd 1
+  Text " "
+  VerseStart 2@242..246
+  Text "ആദിയിൽ ദൈവം "@247..279
+  Char w@279..347 lemma="" strong="l" x-morph="He,R:Sp1cs"
+    Text "ആക\u{d3e}ശവ\u{d41}ം"@282..303
+  Text " ഭ\u{d42}മിയ\u{d41}ം സ\u{d43}ഷ\u{d4d}ടിച\u{d4d}ച\u{d41}."@347..402
+  VerseEnd 2
+  Text " "
+  VerseStart 3@402..406
+  Text "ആദിയിൽ ദൈവം "@407..439
+  Char w@439..484 "\"ആക\u{d3e}ശം\""
+    Text "ആക\u{d3e}ശവ\u{d41}ം"@442..463
+  Text " ഭ\u{d42}മിയ\u{d41}ം സ\u{d43}ഷ\u{d4d}ടിച\u{d4d}ച\u{d41}."@484..539
+  VerseEnd 3
+  Text " "
+  VerseStart 4@539..543
+  Text "ആദിയിൽ ദൈവം "@544..576
+  Char w@576..619 "ആക\u{d3e}ശം"
+    Text "ആക\u{d3e}ശവ\u{d41}ം"@579..600
+  Text " ഭ\u{d42}മിയ\u{d41}ം സ\u{d43}ഷ\u{d4d}ടിച\u{d4d}ച\u{d41}."@619..673
+  VerseEnd 4
+ChapterEnd 1

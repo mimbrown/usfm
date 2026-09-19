@@ -1,0 +1,102 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id MAT A correct but complex example\n\\h Matthew\n\\toc1 Matthew\n\\toc2 Mat\n\\toc3 Mt\n\\mt2 The Gospel According to\n\\mt1 Matthew\n\\is Some introductory matterial\n\\im \\k Book: \\k* Matthew. Matthew wrote a gospel\n\\ip Matthew's gospel is aimed at a Jewish audience of its time.\n\\iot Outline\n\\io1 Genealogy \\ior 1:1-1:17\\ior*\n\\io1 Birth of Jesus \\ior 1:18-2:23\\ior*\n\\io2 Visit of the Wise Men \\ior 2:1-2:12\\ior*\n\\io2 Flight to Egypt \\ior 2:13-2:18\\ior*\n\\io2 His Return \\ior 2:19-2:23\\ior*\n\\c 1\n\\s The Genealogy of Jesus Christ\n\\r (Luke 3:23-38)\n\\p\n\\v 1 This is the genealogy of Jesus Christ, the son of David, the son of Abraham.\n\\li\n\\v 2 Abraham was the father of Isaac, and\n\\li Isaac was he father of Jacob, and\n\\li Jacob was the father of Judah and his brothers,\n\\s The Birth of Jesus Christ\n\\r (Luke 2:1-7)\n\\p\n\\v 18 Now the birth of Jesus Christ took place this way. When his mother Mary had been \\w betrothed|betroth\\w* to Joseph...\n\\v 19 And her husband Joseph, being a just man...\n\\c 2\n\\p\n\\v 5 They told him, \"In Bethlehem of Judea, for so it is written by the prophet:\n\\q1\n\\v 6 'And you, O Bethlehem, in the land of Judah,\n\\q2 are by no means least among the rulers of Judah;\n\\q1 for from you shall come a ruler\n\\q2 who will shepherd my people Israel.'\"\\x + \\xo 2:6 \\xt \\ref Micah 5:2|MIC 5:2\\ref*\\x*\n"
+---
+Book MAT "A correct but complex example" @0..37
+Para h@38..49
+  Text "Matthew"@41..49
+Para toc1@49..63
+  Text "Matthew"@55..63
+Para toc2@63..73
+  Text "Mat"@69..73
+Para toc3@73..82
+  Text "Mt"@79..82
+Para mt2@82..111
+  Text "The Gospel According to"@87..111
+Para mt1@111..124
+  Text "Matthew"@116..124
+Para is@124..156
+  Text "Some introductory matterial"@128..156
+Para im@156..205
+  Char k@160..172
+    Text "Book: "@163..169
+  Text " Matthew. Matthew wrote a gospel"@172..205
+Para ip@205..269
+  Text "Matthew's gospel is aimed at a Jewish audience of its time."@209..269
+Para iot@269..282
+  Text "Outline"@274..282
+Para io1@282..316
+  Text "Genealogy "@287..297
+  Char ior@297..315
+    Text "1:1-1:17"@302..310
+Para io1@316..356
+  Text "Birth of Jesus "@321..336
+  Char ior@336..355
+    Text "1:18-2:23"@341..350
+Para io2@356..402
+  Text "Visit of the Wise Men "@361..383
+  Char ior@383..401
+    Text "2:1-2:12"@388..396
+Para io2@402..443
+  Text "Flight to Egypt "@407..423
+  Char ior@423..442
+    Text "2:13-2:18"@428..437
+Para io2@443..479
+  Text "His Return "@448..459
+  Char ior@459..478
+    Text "2:19-2:23"@464..473
+ChapterStart 1@479..483
+Para s@484..517
+  Text "The Genealogy of Jesus Christ"@487..517
+Para r@517..535
+  Text "(Luke 3:23-38)"@520..535
+Para p@535..620
+  VerseStart 1@538..542
+  Text "This is the genealogy of Jesus Christ, the son of David, the son of Abraham."@543..620
+  VerseEnd 1
+Para li@620..666
+  VerseStart 2@624..628
+  Text "Abraham was the father of Isaac, and"@629..666
+Para li@666..704
+  Text "Isaac was he father of Jacob, and"@670..704
+Para li@704..756
+  Text "Jacob was the father of Judah and his brothers,"@708..756
+  VerseEnd 2
+Para s@756..785
+  Text "The Birth of Jesus Christ"@759..785
+Para r@785..801
+  Text "(Luke 2:1-7)"@788..801
+Para p@801..978
+  VerseStart 18@804..809
+  Text "Now the birth of Jesus Christ took place this way. When his mother Mary had been "@810..891
+  Char w@891..914 "betroth"
+    Text "betrothed"@894..903
+  Text " to Joseph..."@914..928
+  VerseEnd 18
+  Text " "
+  VerseStart 19@928..933
+  Text "And her husband Joseph, being a just man..."@934..978
+  VerseEnd 19
+ChapterEnd 1
+ChapterStart 2@978..982
+Para p@983..1067
+  VerseStart 5@986..990
+  Text "They told him, \"In Bethlehem of Judea, for so it is written by the prophet:"@991..1067
+  VerseEnd 5
+Para q1@1067..1121
+  VerseStart 6@1071..1075
+  Text "'And you, O Bethlehem, in the land of Judah,"@1076..1121
+Para q2@1121..1174
+  Text "are by no means least among the rulers of Judah;"@1125..1174
+Para q1@1174..1210
+  Text "for from you shall come a ruler"@1178..1210
+Para q2@1210..1299
+  Text "who will shepherd my people Israel.'\""@1214..1251
+  Note x caller=+@1251..1298
+    Char xo@1256..1264
+      Text "2:6 "@1260..1264
+    Char xt@1264..1298
+      Char ref@1268..1295 "MIC 5:2"
+        Text "Micah 5:2"@1273..1282
+  VerseEnd 6
+ChapterEnd 2

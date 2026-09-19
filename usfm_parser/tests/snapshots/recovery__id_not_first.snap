@@ -1,0 +1,20 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 a\n\\id EXO\n\\c 1\n\\p \\v 1 b"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..23
+  VerseStart 1@16..20
+  Text "a"@21..23
+  VerseEnd 1
+Book EXO "" @23..30
+ChapterEnd 1
+ChapterStart 1@31..35
+Para p@36..45
+  VerseStart 1@39..43
+  Text "b"@44..45
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[id-not-first] @23..26: `\id` must be the first marker in the file

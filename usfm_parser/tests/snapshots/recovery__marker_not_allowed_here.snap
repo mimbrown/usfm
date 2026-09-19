@@ -1,0 +1,17 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 a \\xq quote\\xq* b"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..38
+  VerseStart 1@16..20
+  Text "a "@21..23
+  Char xq@23..36
+    Text "quote"@27..32
+  Text " b"@36..38
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[marker-not-allowed-here] @23..26: `\xq` cannot occur under `\p`

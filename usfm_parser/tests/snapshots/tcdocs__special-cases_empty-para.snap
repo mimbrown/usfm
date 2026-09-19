@@ -1,0 +1,13 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n\\c 1\n\\p\n\\b\n\\m\\v 1 verse text"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..16
+Para b@16..19
+Para m@19..36
+  VerseStart 1@21..25
+  Text "verse text"@26..36
+  VerseEnd 1
+ChapterEnd 1

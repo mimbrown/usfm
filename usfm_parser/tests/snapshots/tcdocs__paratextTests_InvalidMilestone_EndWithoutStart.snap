@@ -1,0 +1,18 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\r\n\\c 1\r\n\\s some text\r\n\\p\r\n\\v 1 verse text \r\n\\v 2 verse text\\qt-e |eid=\"qt2\"\\*\r\n"
+---
+Book GEN "" @0..7
+ChapterStart 1@9..13
+Para s@15..29
+  Text "some text"@18..29
+Para p@29..86
+  VerseStart 1@33..37
+  Text "verse text"@38..51
+  VerseEnd 1
+  Text " "
+  VerseStart 2@51..55
+  Text "verse text"@56..66
+  Milestone qt-e@66..84 eid="qt2"
+  VerseEnd 2
+ChapterEnd 1

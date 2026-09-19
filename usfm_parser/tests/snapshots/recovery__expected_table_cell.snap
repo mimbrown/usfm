@@ -1,0 +1,21 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\tr a \\tc2 b\n\\tr \\em c\\em*"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Table@13..39
+  Row@13..26
+    Cell header=false align=start column=1 colspan=1@17..19
+      Text "a"@17..19
+    Cell header=false align=start column=2 colspan=1@19..26
+      Text "b"@24..26
+  Row@26..39
+    Cell header=false align=start column=1 colspan=1@30..39
+      Char em@30..39
+        Text "c"@34..35
+ChapterEnd 1
+--- diagnostics
+error[expected-table-cell] @17..18: `\tr` must be followed by a table cell marker; an implicit `\tc1` was opened
+error[expected-table-cell] @30..33: `\tr` must be followed by a table cell marker; an implicit `\tc1` was opened

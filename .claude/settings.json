@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo:*)",
+      "Bash(rustup:*)",
+      "Bash(git:*)",
+      "Bash(gh run:*)",
+      "Bash(gh pr:*)",
+      "Bash(scripts/gate.sh)",
+      "Bash(scripts/cloud-setup.sh)",
+      "Bash(ls:*)",
+      "Bash(wc:*)",
+      "Bash(grep:*)",
+      "Bash(python3:*)"
+    ]
+  }
+}

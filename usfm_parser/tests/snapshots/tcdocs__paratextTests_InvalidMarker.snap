@@ -1,0 +1,19 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\r\n\\ib\r\n\\ip Hi mom.\r\n\\c 1\r\n\\p \\v 1 Hi \\nd Bob\\nd*.\r\n\\ix text\r\n"
+---
+Book GEN "" @0..7
+Para ib@9..14
+Para ip@14..27
+  Text "Hi mom."@18..27
+ChapterStart 1@27..31
+Para p@33..68
+  VerseStart 1@36..40
+  Text "Hi "@41..44
+  Char nd@44..55
+    Text "Bob"@48..51
+  Text ". text"@55..68
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[unknown-marker] @58..61: unknown marker `\ix`

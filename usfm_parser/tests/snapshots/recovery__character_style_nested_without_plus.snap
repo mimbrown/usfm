@@ -1,0 +1,19 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 \\bk The Book of the \\nd Lord\\nd*'s Battles\\bk* speaks"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..74
+  VerseStart 1@16..20
+  Char bk@21..67
+    Text "The Book of the "@25..41
+    Char nd@41..53
+      Text "Lord"@45..49
+    Text "'s Battles"@53..63
+  Text " speaks"@67..74
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+info[character-style-nested-without-plus] @41..44: `\nd` is nested without `+`; treated as `\+nd`

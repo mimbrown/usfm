@@ -1,0 +1,40 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id TIT Titus\n\\c 1\n\\p\n\\v 1 \\w ἀπόστολος|lemma=\"ἀπόστολος\" strong=\"G06520\" x-morph=\"Gr,N,,,,,NMS,\" x-tw=\"rc://*/tw/dict/bible/kt/apostle\"\\w*\n\\w δὲ|lemma=\"δέ\" strong=\"G11610\" x-morph=\"Gr,CC,,,,,,,,\"\\w*\\k-s | x-tw=\"rc://*/tw/dict/bible/kt/jesus\"\\*\\w Ἰησοῦ|lemma=\"Ἰησοῦς\" strong=\"G24240\" x-morph=\"Gr,N,,,,,GMS,\"\\w*\n\\w Χριστοῦ|lemma=\"χριστός\" strong=\"G55470\" x-morph=\"Gr,N,,,,,GMS,\" x-tw=\"rc://*/tw/dict/bible/kt/christ\"\\w*\\k-e\\*,\n\\w κατὰ|lemma=\"κατά\" strong=\"G25960\" x-morph=\"Gr,P,,,,,A,,,\"\\w*\n\n\\v 4 \\w ἀπὸ|lemma=\"ἀπό\" strong=\"G05750\" x-morph=\"Gr,P,,,,,G,,,\"\\w*\\k-s | x-tw=\"rc://*/tw/dict/bible/kt/godthefather\"\\*\\w Θεοῦ|lemma=\"θεός\" strong=\"G23160\" x-morph=\"Gr,N,,,,,GMS,\" x-tw=\"rc://*/tw/dict/bible/kt/god\"\\w*\n\\w Πατρὸς|lemma=\"πατήρ\" strong=\"G39620\" x-morph=\"Gr,N,,,,,GMS,\"\\w*\\k-e\\*\n\\w καὶ|lemma=\"καί\" strong=\"G25320\" x-morph=\"Gr,CC,,,,,,,,\"\\w*\n"
+---
+Book TIT "Titus" @0..13
+ChapterStart 1@14..18
+Para p@19..944
+  VerseStart 1@22..26
+  Char w@27..159 lemma="ἀπόστολος" strong="G06520" x-morph="Gr,N,,,,,NMS," x-tw="rc://*/tw/dict/bible/kt/apostle"
+    Text "ἀπόστολος"@30..49
+  Text " "@159..160
+  Char w@160..224 lemma="δέ" strong="G11610" x-morph="Gr,CC,,,,,,,,"
+    Text "δὲ"@163..168
+  Milestone k-s@224..269 x-tw="rc://*/tw/dict/bible/kt/jesus"
+  Char w@269..350 lemma="Ἰησοῦς" strong="G24240" x-morph="Gr,N,,,,,GMS,"
+    Text "Ἰησοῦ"@272..284
+  Text " "@350..351
+  Char w@351..473 lemma="χριστός" strong="G55470" x-morph="Gr,N,,,,,GMS," x-tw="rc://*/tw/dict/bible/kt/christ"
+    Text "Χριστοῦ"@354..369
+  Milestone k-e@473..479
+  Text ", "@479..481
+  Char w@481..553 lemma="κατά" strong="G25960" x-morph="Gr,P,,,,,A,,,"
+    Text "κατὰ"@484..493
+  VerseEnd 1
+  Text " "
+  VerseStart 4@555..559
+  Char w@560..630 lemma="ἀπό" strong="G05750" x-morph="Gr,P,,,,,G,,,"
+    Text "ἀπὸ"@563..571
+  Milestone k-s@630..682 x-tw="rc://*/tw/dict/bible/kt/godthefather"
+  Char w@682..789 lemma="θεός" strong="G23160" x-morph="Gr,N,,,,,GMS," x-tw="rc://*/tw/dict/bible/kt/god"
+    Text "Θεοῦ"@685..694
+  Text " "@789..790
+  Char w@790..868 lemma="πατήρ" strong="G39620" x-morph="Gr,N,,,,,GMS,"
+    Text "Πατρὸς"@793..806
+  Milestone k-e@868..874
+  Text " "@874..875
+  Char w@875..943 lemma="καί" strong="G25320" x-morph="Gr,CC,,,,,,,,"
+    Text "καὶ"@878..885
+  VerseEnd 4
+ChapterEnd 1

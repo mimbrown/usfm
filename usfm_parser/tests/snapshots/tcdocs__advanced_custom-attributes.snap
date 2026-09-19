@@ -1,0 +1,28 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n\\c 1\n\\p\n\\v 1 the first verse\n\\v 2 the second verse \\w gracious|x-myattr=\"metadata\" \\w*\n\\q1 “Someone is shouting in the desert,\n\\q2 ‘Prepare a road for the Lord;\n\\q2 make a straight path for him to travel!’ ”\n\\s \\jmp |link-id=\"article-john_the_baptist\" \\jmp*John the Baptist\n\\p John is sometimes called..."
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..95
+  VerseStart 1@16..20
+  Text "the first verse"@21..37
+  VerseEnd 1
+  Text " "
+  VerseStart 2@37..41
+  Text "the second verse "@42..59
+  Char w@59..94 x-myattr="metadata"
+    Text "gracious"@62..70
+Para q1@95..137
+  Text "“Someone is shouting in the desert,"@99..137
+Para q2@137..173
+  Text "‘Prepare a road for the Lord;"@141..173
+Para q2@173..224
+  Text "make a straight path for him to travel!’ ”"@177..224
+Para s@224..290
+  Char jmp@227..273 link-id="article-john_the_baptist"
+  Text "John the Baptist"@273..290
+Para p@290..320
+  Text "John is sometimes called..."@293..320
+  VerseEnd 2
+ChapterEnd 1

@@ -1,0 +1,109 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id MAT 41MATGNT92.SFM, Good News Translation, June 2003\n\\usfm 3.1\n\\c 6\n\\p\\v 18 “Why do you call me good?” Jesus asked him. “No one is good except God alone.\n\\v 19 \\x - \\xo 10.19: a \\xt Exo 20.13; Deu 5.17; \\xo b \\xt Exo 20.14; Deu 5.18; \\xo c \\xt Exo 20.15; Deu 5.19; \\xo d \\xt Exo 20.16; Deu 5.20; \\xo e \\xt Exo 20.12; Deu 5.16.\\x* You know the commandments: ‘Do not commit murder...\n\\c 2\n\\cd \\ref 1|GEN 2:1\\ref* Бог благословляет седьмой день; \\ref 8|GEN 2:8\\ref* человек в раю Едемском; четыре реки; дерево познания добра и зла. \\ref 18|GEN 2:18\\ref* Человек дает названия животным. \\ref 21|GEN 2:21\\ref* Создание женщины.\n\\p\n\\v 1 Так совершены небо и земля и все воинство их.\n\\c 3\n\\s1 The Preaching of John the Baptist\\x - \\xo 3.0 \\xta Compare with \\xt Mk 1.1-8; Lk 3.1-18; \\xta and \\xt Jn 1.19-28 \\xta parallel passages.\\x*\n\\p\n\\v 1 At that time John the Baptist came to...\n\\v 2 \\x - \\xo 1:1 \\xop Гл 1. (1)\\xop* \\xt 4 Царств. 14:25.\\x*И биде слово Господне към Иона, син Аматиев:\n\\v 3 Our God is in heaven;\n\\q2 he does whatever he wishes.\n\\q1\n\\v 4 \\x - \\xo 115.4-8: \\xt Ps 135.15-18; \\xdc Ltj Jr 4-73; \\xt Rev 9.20.\\x* Their gods are made of silver and gold,\n"
+---
+Book MAT "41MATGNT92.SFM, Good News Translation, June 2003" @0..56
+Para usfm@57..67
+  Text "3.1"@63..67
+ChapterStart 6@67..71
+Para p@72..394
+  VerseStart 18@74..79
+  Text "“Why do you call me good?” Jesus asked him. “No one is good except God alone."@80..164
+  VerseEnd 18
+  Text " "
+  VerseStart 19@164..169
+  Note x caller=-@170..339
+    Char xo@175..188
+      Text "10.19: a "@179..188
+    Char xt@188..213
+      Text "Exo 20.13; Deu 5.17; "@192..213
+    Char xo@213..219
+      Text "b "@217..219
+    Char xt@219..244
+      Text "Exo 20.14; Deu 5.18; "@223..244
+    Char xo@244..250
+      Text "c "@248..250
+    Char xt@250..275
+      Text "Exo 20.15; Deu 5.19; "@254..275
+    Char xo@275..281
+      Text "d "@279..281
+    Char xt@281..306
+      Text "Exo 20.16; Deu 5.20; "@285..306
+    Char xo@306..312
+      Text "e "@310..312
+    Char xt@312..339
+      Text "Exo 20.12; Deu 5.16."@316..336
+  Text " You know the commandments: ‘Do not commit murder..."@339..394
+  VerseEnd 19
+ChapterEnd 6
+ChapterStart 2@394..398
+Para cd@399..756
+  Char ref@403..422 "GEN 2:1"
+    Text "1"@408..409
+  Text " Бог благословляет седьмой день; "@422..482
+  Char ref@482..501 "GEN 2:8"
+    Text "8"@487..488
+  Text " человек в раю Едемском; четыре реки; дерево познания добра и зла. "@501..620
+  Char ref@620..641 "GEN 2:18"
+    Text "18"@625..627
+  Text " Человек дает названия животным. "@641..701
+  Char ref@701..722 "GEN 2:21"
+    Text "21"@706..708
+  Text " Создание женщины."@722..756
+Para p@756..846
+  VerseStart 1@759..763
+  Text "Так совершены небо и земля и все воинство их."@764..846
+  VerseEnd 1
+ChapterEnd 2
+ChapterStart 3@846..850
+Para s1@851..995
+  Text "The Preaching of John the Baptist"@855..888
+  Note x caller=-@888..994
+    Char xo@893..901
+      Text "3.0 "@897..901
+    Char xta@901..919
+      Text "Compare with "@906..919
+    Char xt@919..944
+      Text "Mk 1.1-8; Lk 3.1-18; "@923..944
+    Char xta@944..953
+      Text "and "@949..953
+    Char xt@953..968
+      Text "Jn 1.19-28 "@957..968
+    Char xta@968..994
+      Text "parallel passages."@973..991
+Para p@995..1220
+  VerseStart 1@998..1002
+  Text "At that time John the Baptist came to..."@1003..1044
+  VerseEnd 1
+  Text " "
+  VerseStart 2@1044..1048
+  Note x caller=-@1049..1113
+    Char xo@1054..1062
+      Text "1:1 "@1058..1062
+    Char xop@1062..1083
+      Text "Гл 1. (1)"@1067..1078
+    Text " "@1083..1084
+    Char xt@1084..1113
+      Text "4 Царств. 14:25."@1088..1110
+  Text "И биде слово Господне към Иона, син Аматиев:"@1113..1193
+  VerseEnd 2
+  Text " "
+  VerseStart 3@1193..1197
+  Text "Our God is in heaven;"@1198..1220
+Para q2@1220..1252
+  Text "he does whatever he wishes."@1224..1252
+  VerseEnd 3
+Para q1@1252..1372
+  VerseStart 4@1256..1260
+  Note x caller=-@1261..1331
+    Char xo@1266..1279
+      Text "115.4-8: "@1270..1279
+    Char xt@1279..1297
+      Text "Ps 135.15-18; "@1283..1297
+    Char xdc@1297..1315
+      Text "Ltj Jr 4-73; "@1302..1315
+    Char xt@1315..1331
+      Text "Rev 9.20."@1319..1328
+  Text " Their gods are made of silver and gold,"@1331..1372
+  VerseEnd 4
+ChapterEnd 3

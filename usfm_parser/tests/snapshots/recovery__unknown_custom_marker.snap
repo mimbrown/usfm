@@ -1,0 +1,14 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 a \\zfoo c\\zfoo* d"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..38
+  VerseStart 1@16..20
+  Text "a c d"@21..38
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+warning[unknown-custom-marker] @23..28: custom marker `\zfoo` is not in the stylesheet; dropped
+warning[unknown-custom-marker] @30..36: custom marker `\zfoo*` is not in the stylesheet; dropped

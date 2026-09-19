@@ -1,0 +1,13 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1 \\ca 2\n\\p \\v 1 a"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..19 alt=2
+Para p@19..28
+  VerseStart 1@22..26
+  Text "a"@27..28
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[alternate-chapter-not-closed] @13..16: `\ca` is not closed by `\ca*`

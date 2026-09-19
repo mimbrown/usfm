@@ -1,0 +1,14 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p a\n\\esbe\n\\p b"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..18
+  Text "a"@16..18
+Para esbe@18..24
+Para p@24..28
+  Text "b"@27..28
+ChapterEnd 1
+--- diagnostics
+error[unmatched-sidebar-end] @18..23: `\esbe` with no open `\esb`

@@ -1,0 +1,531 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "USFM",
+	"patterns": [
+		{
+			"include": "#identification-markers"
+		},
+		{
+			"include": "#titles-headings-and-labels-markers"
+		},
+		{
+			"include": "#chapters-and-verses-markers"
+		},
+		{
+			"include": "#paragraphs-markers"
+		},
+		{
+			"include": "#poetry-markers"
+		},
+		{
+			"include": "#lists-markers"
+		},
+		{
+			"include": "#tables-markers"
+		},
+		{
+			"include": "#footnotes-markers"
+		},
+		{
+			"include": "#cross-references-markers"
+		}
+	],
+	"repository": {
+		"identification-markers": {
+			"patterns": [
+				{
+					"include": "#id-marker"
+				},
+				{
+					"include": "#ide-marker"
+				},
+				{
+					"include": "#sts-marker"
+				},
+				{
+					"include": "#rem-marker"
+				},
+				{
+					"include": "#flag-marker"
+				},
+				{
+					"include": "#h-marker"
+				}
+			]
+		},
+		"introductions-markers": {
+			"patterns": [
+				{
+					"include": "#imt#"
+				},
+				{
+					"include": "#is#"
+				},
+				{
+					"include": "#ip-marker"
+				},
+				{
+					"include": "#ipi-marker"
+				},
+				{
+					"include": "#im-marker"
+				},
+				{
+					"include": "#imi-marker"
+				},
+				{
+					"include": "#ipq-marker"
+				},
+				{
+					"include": "#imq-marker"
+				},
+				{
+					"include": "#ipr-marker"
+				},
+				{
+					"include": "#iq#-marker"
+				},
+				{
+					"include": "#ib-marker"
+				},
+				{
+					"include": "#ili#-marker"
+				},
+				{
+					"include": "#iot-marker"
+				},
+				{
+					"include": "#io#-marker"
+				},
+				{
+					"include": "#iex-marker"
+				},
+				{
+					"include": "#imte#-marker"
+				},
+				{
+					"include": "#ie-marker"
+				}
+			]
+		},
+		"titles-headings-and-labels-markers": {
+			"patterns": [
+				{
+					"include": "#mt#-marker"
+				},
+				{
+					"include": "#mte#-marker"
+				},
+				{
+					"include": "#ms#-marker"
+				},
+				{
+					"include": "#mr-marker"
+				},
+				{
+					"include": "#s#-marker"
+				},
+				{
+					"include": "#r-marker"
+				},
+				{
+					"include": "#d-marker"
+				},
+				{
+					"include": "#sp-marker"
+				}
+			]
+		},
+		"chapters-and-verses-markers": {
+			"patterns": [
+				{
+					"include": "#c-marker"
+				},
+				{
+					"include": "#cl-marker"
+				},
+				{
+					"include": "#cp-marker"
+				},
+				{
+					"include": "#cd-marker"
+				},
+				{
+					"include": "#v-marker"
+				}
+			]
+		},
+		"paragraphs-markers": {
+			"patterns": [
+				{
+					"include": "#p-marker"
+				},
+				{
+					"include": "#m-marker"
+				},
+				{
+					"include": "#pr-marker"
+				},
+				{
+					"include": "#cls-marker"
+				},
+				{
+					"include": "#pi#-marker"
+				},
+				{
+					"include": "#mi-marker"
+				},
+				{
+					"include": "#nb-marker"
+				},
+				{
+					"include": "#pc-marker"
+				},
+				{
+					"include": "#ph#-marker"
+				},
+				{
+					"include": "#b-marker"
+				}
+			]
+		},
+		"poetry-markers": {
+			"patterns": [
+				{
+					"include": "#q#-marker"
+				},
+				{
+					"include": "#qr-marker"
+				},
+				{
+					"include": "#qc-marker"
+				},
+				{
+					"include": "#qa-marker"
+				}
+			]
+		},
+		"lists-markers": {
+			"patterns": [
+				{
+					"include": "#li#-marker"
+				}
+			]
+		},
+		"tables-markers": {
+			"patterns": [
+				{
+					"include": "#tr-marker"
+				},
+				{
+					"include": "#th#-marker"
+				},
+				{
+					"include": "#thr#-marker"
+				},
+				{
+					"include": "#tc#-marker"
+				},
+				{
+					"include": "#tcr#-marker"
+				}
+			]
+		},
+		"footnotes-markers": {
+			"patterns": [
+				{
+					"include": "#fr-marker"
+				},
+				{
+					"include": "#fq-marker"
+				},
+				{
+					"include": "#fqa-marker"
+				},
+				{
+					"include": "#fk-marker"
+				},
+				{
+					"include": "#ft-marker"
+				}
+			]
+		},
+		"cross-references-markers": {
+			"patterns": [
+				{
+					"include": "#xo-marker"
+				},
+				{
+					"include": "#xk-marker"
+				},
+				{
+					"include": "#xq-marker"
+				},
+				{
+					"include": "#xt-marker"
+				}
+			]
+		},
+		"id-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\id\\b"
+		},
+		"ide-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\ide\\b"
+		},
+		"sts-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\sts\\b"
+		},
+		"rem-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\rem\\b"
+		},
+		"flag-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\\\flag[*\\s]"
+		},
+		"h-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\h\\b"
+		},
+		"imt#": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\imt[1-6]?\\b"
+		},
+		"is#": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\is[1-6]?\\b"
+		},
+		"ip-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\ip\\b"
+		},
+		"ipi-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\ipi\\b"
+		},
+		"im-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\im\\b"
+		},
+		"imi-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\imi\\b"
+		},
+		"ipq-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\ipq\\b"
+		},
+		"imq-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\imq\\b"
+		},
+		"ipr-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\ipr\\b"
+		},
+		"iq#-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\iq[1-6]?\\b"
+		},
+		"ib-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\ib\\b"
+		},
+		"ili#-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\ili[1-6]?\\b"
+		},
+		"iot-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\iot\\b"
+		},
+		"io#-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\io[1-6]?\\b"
+		},
+		"iex-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\iex\\b"
+		},
+		"imte#-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\imte[1-6]?\\b"
+		},
+		"ie-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\ie\\b"
+		},
+		"mt#-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\mt[1-6]?\\b"
+		},
+		"mte#-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\mte[1-6]?\\b"
+		},
+		"ms#-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\ms[1-6]?\\b"
+		},
+		"mr-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\mr\\b"
+		},
+		"s#-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\s[1-6]?\\b"
+		},
+		"r-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\r\\b"
+		},
+		"d-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\d\\b"
+		},
+		"sp-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\sp\\b"
+		},
+		"c-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\c\\b"
+		},
+		"cl-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\cl\\b"
+		},
+		"cp-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\cp\\b"
+		},
+		"cd-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\cd\\b"
+		},
+		"v-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\v\\b"
+		},
+		"p-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\p\\b"
+		},
+		"m-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\m\\b"
+		},
+		"pr-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\pr\\b"
+		},
+		"cls-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\cls\\b"
+		},
+		"pi#-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\pi[1-6]?\\b"
+		},
+		"mi-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\mi\\b"
+		},
+		"nb-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\nb\\b"
+		},
+		"pc-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\pc\\b"
+		},
+		"ph#-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\ph[1-6]?\\b"
+		},
+		"b-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\b\\b"
+		},
+		"q#-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\q[1-6]?\\b"
+		},
+		"qr-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\qr\\b"
+		},
+		"qc-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\qc\\b"
+		},
+		"qa-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\qa\\b"
+		},
+		"li#-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\li[1-6]?\\b"
+		},
+		"tr-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\tr\\b"
+		},
+		"th#-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\th[1-9]?\\b"
+		},
+		"thr#-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\thr[1-9]?\\b"
+		},
+		"tc#-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\tc[1-9]?\\b"
+		},
+		"tcr#-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\tcr[1-9]?\\b"
+		},
+		"fr-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\fr\\b"
+		},
+		"fq-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\fq\\b"
+		},
+		"fqa-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\fqa\\b"
+		},
+		"fk-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\fk\\b"
+		},
+		"ft-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\ft\\b"
+		},
+		"xo-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\xo\\b"
+		},
+		"xk-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\xk\\b"
+		},
+		"xq-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\xq\\b"
+		},
+		"xt-marker": {
+			"name": "keyword.control.usfm",
+			"match": "\\B\\\\xt\\b"
+		}
+	},
+	"scopeName": "text.usfm"
+}

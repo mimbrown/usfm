@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  # Never write new insta snapshots in CI; a missing snapshot is a failure.
+  INSTA_UPDATE: "no"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+
+      # Toolchain comes from rust-toolchain.toml.
+      - run: rustup show active-toolchain
+
+      - uses: Swatinem/rust-cache@v2
+
+      # The same script agents run before pushing.
+      - name: Gate
+        run: scripts/gate.sh

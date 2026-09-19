@@ -1,0 +1,20 @@
+// A launch configuration that compiles the extension and then opens it inside a new window
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "extensionHost",
+      "request": "launch",
+      "name": "Launch Client",
+      "runtimeExecutable": "${execPath}",
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}/vscode"],
+      "sourceMaps": true,
+      "outFiles": ["${workspaceFolder}/vscode/dist/*.js"],
+      "env": {
+        "SERVER_PATH_DEV": "${workspaceRoot}/target/debug/usfm_language_server",
+        "USFM_PARSER_PATH_DEV": "${workspaceRoot}/target/debug/usfm_parser",
+        "RUST_LOG": "debug"
+      }
+    }
+  ]
+}

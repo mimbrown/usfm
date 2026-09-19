@@ -1,0 +1,19 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 \\vp 1b text\n\\p \\v 2 next"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..33
+  VerseStart 1@16..20
+  Char vp@21..33
+    Text "1b text"@25..33
+  VerseEnd 1
+Para p@33..45
+  VerseStart 2@36..40
+  Text "next"@41..45
+  VerseEnd 2
+ChapterEnd 1
+--- diagnostics
+error[alternate-verse-not-closed] @21..24: `\vp` is not closed by `\vp*`

@@ -1,0 +1,32 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id MAT 41MATGNT92.SFM, Good News Translation, June 2003\n\\c 1\n\\p \\v 1 \n\\q1 “Someone is shouting in the desert,\n\\q2 ‘Prepare a road for the Lord;\n\\q2 make a straight path for him to travel!’ ”\n\\esb \\cat People\\cat*\n\\ms \\jmp |link-id=\"article-john_the_baptist\"\\jmp*John the Baptist\n\\p John is sometimes called the last “Old Testament prophet” because of the warnings he brought about God's judgment and because he announced the coming of God's “Chosen One” (Messiah).\n\\esbe\n\\p \n\\v 2-6 From Abraham to King David, the following ancestors are listed: Abraham,...mother was \\jmp Ruth|link-href=\"#article-Ruth\"\\jmp*), Jesse, and King David.\n\\w gracious|link-href=\"http://bibles.org/search/grace/eng-GNTD/all\"\\w*"
+snapshot_kind: text
+---
+Book MAT "41MATGNT92.SFM, Good News Translation, June 2003" @0..56
+ChapterStart 1@57..61
+Para p@62..71
+  VerseStart 1@65..69
+Para q1@71..113
+  Text "“Someone is shouting in the desert,"@75..113
+Para q2@113..149
+  Text "‘Prepare a road for the Lord;"@117..149
+Para q2@149..200
+  Text "make a straight path for him to travel!’ ”"@153..200
+  VerseEnd 1
+Sidebar esb@200..487 category="People"@205..221
+  Para ms@222..288
+    Char jmp@226..271 link-id="article-john_the_baptist"
+    Text "John the Baptist"@271..288
+  Para p@288..482
+    Text "John is sometimes called the last “Old Testament prophet” because of the warnings he brought about God's judgment and because he announced the coming of God's “Chosen One” (Messiah)."@291..482
+Para p@488..721
+  VerseStart 2-6@492..498
+  Text "From Abraham to King David, the following ancestors are listed: Abraham,...mother was "@499..585
+  Char jmp@585..625 link-href="#article-Ruth"
+    Text "Ruth"@590..594
+  Text "), Jesse, and King David. "@625..651
+  Char w@651..721 link-href="http://bibles.org/search/grace/eng-GNTD/all"
+    Text "gracious"@654..662
+  VerseEnd 2-6
+ChapterEnd 1

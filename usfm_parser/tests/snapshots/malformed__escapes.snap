@@ -1,0 +1,11 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 back\\\\slash and pipe\\| escaped\n"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..52
+  VerseStart 1@16..20
+  Text "back\\slash and pipe| escaped"@21..52
+  VerseEnd 1
+ChapterEnd 1

@@ -1,0 +1,15 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 091\n\\p \\v 01 text"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 91@8..14
+Para p@15..28
+  VerseStart 1@18..23
+  Text "text"@24..28
+  VerseEnd 1
+ChapterEnd 91
+--- diagnostics
+error[number-has-leading-zero] @11..14: chapter number `091` has a leading zero
+error[number-has-leading-zero] @21..23: verse number `01` has a leading zero

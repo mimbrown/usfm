@@ -1,0 +1,78 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id MAT 41MATGNT92.SFM, Good News Translation, June 2003\n\\toc1 The Acts of the Apostles\n\\toc2 Acts\n\\ip One of these brothers, Joseph, had become...\n\\ipr (50.24)\n\\c 1\n\\po\n\\v 1 This is the Good News ...\n\\pr “And all the people will answer, ‘Amen!’\n\\v 2 It began as ..\n\\q1 “God said, ‘I will send ...\n\\q2 to open the way for you.’\n\\q1\n\\v 3 Someone is shouting in the desert,\n\\q2 ‘Get the road ready for the Lord;\n\\q2 make a straight path for him to travel!’”\n\\b\n\\m\n\\v 4 So John appeared in the desert, ...\n\\pmo We apostles and leaders send friendly\n\\pm\n\\v 24 We have heard that some ...\n\\v 25 So we met together and decided ..\n\\c 8\n\\nb\n\\v 26 These men have risked their lives ..\n\\pc I AM THE GREAT CITY OF BABYLON, ...\n\\v 27 We are also sending Judas and Silas, ..\n\\pm\n\\v 37 Jesus answered:\n\\pi The one who scattered the good ..\n\\mi\n\\v 28 The Holy Spirit has shown...\n\\pmc We send our best wishes.\n\\cls May God's grace be with you."
+---
+Book MAT "41MATGNT92.SFM, Good News Translation, June 2003" @0..56
+Para toc1@57..88
+  Text "The Acts of the Apostles"@63..88
+Para toc2@88..99
+  Text "Acts"@94..99
+Para ip@99..148
+  Text "One of these brothers, Joseph, had become..."@103..148
+Para ipr@148..161
+  Text "(50.24)"@153..161
+ChapterStart 1@161..165
+Para po@166..201
+  VerseStart 1@170..174
+  Text "This is the Good News ..."@175..201
+Para pr@201..272
+  Text "“And all the people will answer, ‘Amen!’"@205..252
+  VerseEnd 1
+  Text " "
+  VerseStart 2@252..256
+  Text "It began as .."@257..272
+Para q1@272..308
+  Text "“God said, ‘I will send ..."@276..308
+Para q2@308..340
+  Text "to open the way for you.’"@312..340
+  VerseEnd 2
+Para q1@340..384
+  VerseStart 3@344..348
+  Text "Someone is shouting in the desert,"@349..384
+Para q2@384..424
+  Text "‘Get the road ready for the Lord;"@388..424
+Para q2@424..474
+  Text "make a straight path for him to travel!’”"@428..474
+  VerseEnd 3
+Para b@474..477
+Para m@477..521
+  VerseStart 4@480..484
+  Text "So John appeared in the desert, ..."@485..521
+Para pmo@521..564
+  Text "We apostles and leaders send friendly"@526..564
+  VerseEnd 4
+Para pm@564..642
+  VerseStart 24@568..573
+  Text "We have heard that some ..."@574..602
+  VerseEnd 24
+  Text " "
+  VerseStart 25@602..607
+  Text "So we met together and decided .."@608..642
+  VerseEnd 25
+ChapterEnd 1
+ChapterStart 8@642..646
+Para nb@647..694
+  VerseStart 26@651..656
+  Text "These men have risked their lives .."@657..694
+Para pc@694..780
+  Text "I AM THE GREAT CITY OF BABYLON, ..."@698..734
+  VerseEnd 26
+  Text " "
+  VerseStart 27@734..739
+  Text "We are also sending Judas and Silas, .."@740..780
+  VerseEnd 27
+Para pm@780..806
+  VerseStart 37@784..789
+  Text "Jesus answered:"@790..806
+Para pi@806..844
+  Text "The one who scattered the good .."@810..844
+  VerseEnd 37
+Para mi@844..883
+  VerseStart 28@848..853
+  Text "The Holy Spirit has shown..."@854..883
+Para pmc@883..913
+  Text "We send our best wishes."@888..913
+Para cls@913..946
+  Text "May God's grace be with you."@918..946
+  VerseEnd 28
+ChapterEnd 8

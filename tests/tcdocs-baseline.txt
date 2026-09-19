@@ -1,0 +1,2 @@
+# tcdocs tests that currently fail. One name per line.
+# Regenerate with: cargo run --package usfm_tests -- --write-baseline tests/tcdocs-baseline.txt

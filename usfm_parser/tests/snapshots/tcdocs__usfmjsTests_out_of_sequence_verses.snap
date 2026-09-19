@@ -1,0 +1,57 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id PHP\n\\ide UTF-8\n\\h Philippians\n\\toc1 The Epistle of Paul the Apostle to the Philippians\n\\toc2 Philippians\n\\toc3 Php\n\\mt The Epistle of Paul the Apostle to the Philippians\n\\c 1\n\\p\n\\v 2 Grace to you and peace from God our Father and the Lord Jesus Christ.\n\\v 1 Paul and Timothy, servants of Christ Jesus, to all the ones set apart in Christ Jesus who are at Philippi, with the overseers and deacons.\n\\b\n\\s5\n\\p\n\\v 3 I thank my God with every thought of you,\n\\v 5 I give thanks for your fellowship in the gospel from the first day until now.\n\\v 4 Every time I pray for you, it is always a prayer of joy.\n\\s5\n\\c 2\n\\p\n\\v 1 If there is therefore any encouragement in Christ, if any comfort from his love, if any fellowship of the Spirit, if any tender mercies and compassions,\n\\s5\n\\p\n\\v 3 Do nothing through selfishness or empty pride, but instead in lowliness of mind count others better than yourself.\n\\v 2 make my joy full so that you are of the same mind, have the same love, are united in spirit, and have the same purpose.\n"
+---
+Book PHP "" @0..7
+Para ide@8..19
+  Text "UTF-8"@13..19
+Para h@19..34
+  Text "Philippians"@22..34
+Para toc1@34..91
+  Text "The Epistle of Paul the Apostle to the Philippians"@40..91
+Para toc2@91..109
+  Text "Philippians"@97..109
+Para toc3@109..119
+  Text "Php"@115..119
+Para mt@119..174
+  Text "The Epistle of Paul the Apostle to the Philippians"@123..174
+ChapterStart 1@174..178
+Para p@179..401
+  VerseStart 2@182..186
+  Text "Grace to you and peace from God our Father and the Lord Jesus Christ."@187..257
+  VerseEnd 2
+  Text " "
+  VerseStart 1@257..261
+  Text "Paul and Timothy, servants of Christ Jesus, to all the ones set apart in Christ Jesus who are at Philippi, with the overseers and deacons."@262..401
+  VerseEnd 1
+Para b@401..404
+Para s5@404..408
+Para p@408..603
+  VerseStart 3@411..415
+  Text "I thank my God with every thought of you,"@416..458
+  VerseEnd 3
+  Text " "
+  VerseStart 5@458..462
+  Text "I give thanks for your fellowship in the gospel from the first day until now."@463..541
+  VerseEnd 5
+  Text " "
+  VerseStart 4@541..545
+  Text "Every time I pray for you, it is always a prayer of joy."@546..603
+  VerseEnd 4
+Para s5@603..607
+ChapterEnd 1
+ChapterStart 2@607..611
+Para p@612..773
+  VerseStart 1@615..619
+  Text "If there is therefore any encouragement in Christ, if any comfort from his love, if any fellowship of the Spirit, if any tender mercies and compassions,"@620..773
+  VerseEnd 1
+Para s5@773..777
+Para p@777..1025
+  VerseStart 3@780..784
+  Text "Do nothing through selfishness or empty pride, but instead in lowliness of mind count others better than yourself."@785..900
+  VerseEnd 3
+  Text " "
+  VerseStart 2@900..904
+  Text "make my joy full so that you are of the same mind, have the same love, are united in spirit, and have the same purpose."@905..1025
+  VerseEnd 2
+ChapterEnd 2

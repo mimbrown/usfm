@@ -1,0 +1,23 @@
+[package]
+name = "usfm_parser"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[dependencies]
+notify.workspace = true
+regex = { workspace = true }
+regex-automata = { workspace = true }
+usfm_ast = { path = "../usfm_ast" }
+usfm_style = { path = "../usfm_style" }
+xml-rs = { workspace = true }
+
+[features]
+# Exposes UniquePromise::new_for_tests_and_benchmarks.
+benchmarking = []
+
+[build-dependencies]
+usfm_style = { path = "../usfm_style" }
+
+[dev-dependencies]
+insta = "1"

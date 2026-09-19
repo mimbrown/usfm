@@ -1,0 +1,16 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 a \\+nd Lord\\+nd* b"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..39
+  VerseStart 1@16..20
+  Text "a "@21..23
+  Char nd@23..37
+    Text "Lord"@28..32
+  Text " b"@37..39
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+warning[nested-marker-not-nested] @23..27: `\+nd` is nested but no character style is open

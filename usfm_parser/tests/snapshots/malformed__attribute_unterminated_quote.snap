@@ -1,0 +1,15 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 \\w word|lemma=\"unterminated \\w* next\n"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..58
+  VerseStart 1@16..20
+  Char w@21..52 lemma="unterminated "
+    Text "word"@24..28
+  Text " next"@52..58
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[unterminated-attribute-value] @35..36: attribute value is missing its closing `"`

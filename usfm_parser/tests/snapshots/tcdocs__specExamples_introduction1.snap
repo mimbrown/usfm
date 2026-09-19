@@ -1,0 +1,47 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id MAT 41MATGNT92.SFM, Good News Translation, June 2003\n\\h SAN MARCOS\n\\mt2 Evangelio según\n\\mt1 SAN MARCOS\n\\imt1 INTRODUCCIÓN\n\\is1 Importancia del evangelio de Marcos\n\\ip Este evangelio, segundo de los libros del NT, contiene poco material que no aparezca igualmente en \\bk Mateo\\bk* y \\bk Lucas.\\bk*\n\\ipi Many Protestants consider the following books to be Apocrypha as defined above: Tobit, Judith, additions to Esther (as found in Greek Esther in the CEV) ...\n\\imi \\em Translation it is that opens the window, to let in the light; that breaks the shell, that we may eat the kernel; that puts aside the curtain, that we may look into the most holy place; that removes the cover of the well, that we may come by the water.\\em* (“The Translators to the Reader,” King James Version, 1611).\n\\im The most important document in the history of the English language is the \\bk King James Version\\bk* of the Bible...\n\\c 1\n\\p\n\\v 1 ക്രിസ്തുയേശുവിന്റെ ബദ്ധനായ ...\n\\v 2 നമ്മുടെ പിതാവായ ...\n\\p\n\\v 3 കർത്താവായ യേശുവിനോടും ..."
+---
+Book MAT "41MATGNT92.SFM, Good News Translation, June 2003" @0..56
+Para h@57..71
+  Text "SAN MARCOS"@60..71
+Para mt2@71..93
+  Text "Evangelio según"@76..93
+Para mt1@93..109
+  Text "SAN MARCOS"@98..109
+Para imt1@109..129
+  Text "INTRODUCCIÓN"@115..129
+Para is1@129..170
+  Text "Importancia del evangelio de Marcos"@134..170
+Para ip@170..304
+  Text "Este evangelio, segundo de los libros del NT, contiene poco material que no aparezca igualmente en "@174..273
+  Char bk@273..286
+    Text "Mateo"@277..282
+  Text " y "@286..289
+  Char bk@289..303
+    Text "Lucas."@293..299
+Para ipi@304..466
+  Text "Many Protestants consider the following books to be Apocrypha as defined above: Tobit, Judith, additions to Esther (as found in Greek Esther in the CEV) ..."@309..466
+Para imi@466..796
+  Char em@471..730
+    Text "Translation it is that opens the window, to let in the light; that breaks the shell, that we may eat the kernel; that puts aside the curtain, that we may look into the most holy place; that removes the cover of the well, that we may come by the water."@475..726
+  Text " (“The Translators to the Reader,” King James Version, 1611)."@730..796
+Para im@796..917
+  Text "The most important document in the history of the English language is the "@800..874
+  Char bk@874..900
+    Text "King James Version"@878..896
+  Text " of the Bible..."@900..917
+ChapterStart 1@917..921
+Para p@922..1064
+  VerseStart 1@925..929
+  Text "ക\u{d4d}രിസ\u{d4d}ത\u{d41}യേശ\u{d41}വിന\u{d4d}റെ ബദ\u{d4d}ധന\u{d3e}യ ..."@930..1011
+  VerseEnd 1
+  Text " "
+  VerseStart 2@1011..1015
+  Text "നമ\u{d4d}മ\u{d41}ടെ പിത\u{d3e}വ\u{d3e}യ ..."@1016..1064
+  VerseEnd 2
+Para p@1064..1137
+  VerseStart 3@1067..1071
+  Text "കർത\u{d4d}ത\u{d3e}വ\u{d3e}യ യേശ\u{d41}വിനോട\u{d41}ം ..."@1072..1137
+  VerseEnd 3
+ChapterEnd 1

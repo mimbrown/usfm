@@ -1,0 +1,10 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id PHM Longer Heading\n\\c 1\n\\p\n\\v 1\n"
+---
+Book PHM "Longer Heading" @0..22
+ChapterStart 1@23..27
+Para p@28..36
+  VerseStart 1@31..35
+  VerseEnd 1
+ChapterEnd 1

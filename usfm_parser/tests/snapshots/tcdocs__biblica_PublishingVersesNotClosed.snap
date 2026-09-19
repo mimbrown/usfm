@@ -1,0 +1,31 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id MAT - New International Version® NIV® 2011, updated 2016\n\\rem Copyright © 1973, 1978, 1984, 2011 by Biblica, Inc. \n\\h Alternate Texts \n\\rem Matthew \n\\s1 Matthew 17:21 \n\\p \n\\v 20 He replied, \\wj “Because you have so little faith. Truly I tell you, if you have faith as small as a mustard seed, you can say to this mountain, ‘Move from here to there,’ and it will move. Nothing will be impossible for you.\\wj*\\vp 21\\wj \\+it But this kind does not go out except by prayer and fasting.\\+it*”\\wj* \n"
+snapshot_kind: text
+---
+Book MAT "- New International Version® NIV® 2011, updated 2016" @0..62
+Para rem@63..122
+  Text "Copyright © 1973, 1978, 1984, 2011 by Biblica, Inc."@68..122
+Para h@122..142
+  Text "Alternate Texts"@125..142
+Para rem@142..156
+  Text "Matthew"@147..156
+Para s1@156..175
+  Text "Matthew 17:21"@160..175
+Para p@175..508
+  VerseStart 20@179..184
+  Text "He replied, "@185..197
+  Char wj@197..420
+    Text "“Because you have so little faith. Truly I tell you, if you have faith as small as a mustard seed, you can say to this mountain, ‘Move from here to there,’ and it will move. Nothing will be impossible for you."@201..416
+  Char vp@420..508
+    Text "21"@424..426
+    Char wj@426..506
+      Char it@430..499
+        Text "But this kind does not go out except by prayer and fasting."@435..494
+      Text "”"@499..502
+  VerseEnd 20
+--- diagnostics
+error[verse-text-before-chapter] @175..177: `\p` (verse text) before the first `\c`
+error[verse-outside-chapter] @179..181: `\v` before any `\c`
+warning[character-style-not-closed] @420..423: `\vp` was still open at end of input
+info[character-style-nested-without-plus] @426..429: `\wj` is nested without `+`; treated as `\+wj`

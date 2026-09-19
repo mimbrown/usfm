@@ -1,0 +1,15 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 a \\ b \\+ c \\"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..33
+  VerseStart 1@16..20
+  Text "a \\ b \\+ c \\"@21..33
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[stray-backslash] @23..24: `\` does not start a marker; kept as text
+error[stray-backslash] @27..29: `\` does not start a marker; kept as text
+error[stray-backslash] @32..33: `\` does not start a marker; kept as text

@@ -1,0 +1,14 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 lone \\ backslash and trailing \\"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..52
+  VerseStart 1@16..20
+  Text "lone \\ backslash and trailing \\"@21..52
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[stray-backslash] @26..27: `\` does not start a marker; kept as text
+error[stray-backslash] @51..52: `\` does not start a marker; kept as text

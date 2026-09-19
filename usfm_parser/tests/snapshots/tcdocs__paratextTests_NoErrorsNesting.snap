@@ -1,0 +1,27 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\r\n\\ib\r\n\\ip Hi mom.\r\n\\c 1\r\n\\p \\v 1 Hi \\em Mr. \\+nd Bob\\+nd*\\em*.\r\n\\p And\\f + \\fr 1.1 \\ft stuff\\f*\r\n\\b\r\n"
+---
+Book GEN "" @0..7
+Para ib@9..14
+Para ip@14..27
+  Text "Hi mom."@18..27
+ChapterStart 1@27..31
+Para p@33..72
+  VerseStart 1@36..40
+  Text "Hi "@41..44
+  Char em@44..69
+    Text "Mr. "@48..52
+    Char nd@52..65
+      Text "Bob"@57..60
+  Text "."@69..72
+Para p@72..105
+  Text "And"@75..78
+  Note f caller=+@78..103
+    Char fr@83..91
+      Text "1.1 "@87..91
+    Char ft@91..103
+      Text "stuff"@95..100
+  VerseEnd 1
+Para b@105..109
+ChapterEnd 1

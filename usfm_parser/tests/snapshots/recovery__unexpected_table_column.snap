@@ -1,0 +1,22 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\tr \\th1 a \\th3 c\n\\tr \\tcr2 b \\tcr3 c"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Table@13..50
+  Row@13..31
+    Cell header=true align=start column=1 colspan=1@17..24
+      Text "a"@22..24
+    Cell header=true align=start column=3 colspan=1@24..31
+      Text "c"@29..31
+  Row@31..50
+    Cell header=false align=end column=2 colspan=1@35..43
+      Text "b"@41..43
+    Cell header=false align=end column=3 colspan=1@43..50
+      Text "c"@49..50
+ChapterEnd 1
+--- diagnostics
+error[unexpected-table-column] @24..28: `\th3` where column 2 was expected
+error[unexpected-table-column] @35..40: `\tcr2` where column 1 was expected

@@ -1,0 +1,18 @@
+Reference quirk. metadata.xml says the `lemma` value is missing its
+quotes, and the USX shows the whole attribute list read as text with the
+quotes gone from `lemma`; but origin.usfm as checked in has
+`lemma="ആകാശം"` with quotes, so the USX was generated from a different
+input. The input on disk is a valid attribute list and the parser reads it
+as one. The space before `|` stays in the word (rule 5 on `Text`).
+
+--- origin.xml
++++ origin.xml
+@@ -3,6 +3,6 @@
+   <para style="mt1">ഉല്പത്തി പുസ്തകം</para>
+   <chapter number="1" style="c" sid="GEN 1" />
+   <para style="p">
+-    <verse number="1" style="v" sid="GEN 1:1" />ആദിയിൽ ദൈവം <char style="w">ആകാശവും |lemma=ആകാശം strong="l" x-morph="He,R:Sp1cs"</char> ഭൂമിയും സൃഷ്ടിച്ചു.<verse eid="GEN 1:1" /></para>
++    <verse number="1" style="v" sid="GEN 1:1" />ആദിയിൽ ദൈവം <char style="w" lemma="ആകാശം" strong="l" x-morph="He,R:Sp1cs">ആകാശവും </char> ഭൂമിയും സൃഷ്ടിച്ചു.<verse eid="GEN 1:1" /></para>
+   <chapter eid="GEN 1" />
+ </usx>
+\ No newline at end of file

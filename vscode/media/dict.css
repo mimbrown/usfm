@@ -1,0 +1,66 @@
+body {
+  font-size: 2em;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .5rem 1rem;
+  margin: 0;
+}
+
+dt, dd {
+  padding: .5rem;
+  border: 1px solid #ccc;
+  border-radius: .25rem;
+  margin: 0;
+}
+
+dt {
+  grid-column: 1;
+  text-align: end;
+  justify-self: end;
+}
+
+dd {
+  grid-column: 2;
+  text-align: start;
+  justify-self: start;
+}
+
+.editing-target {
+  anchor-name: --editing;
+  opacity: 0;
+}
+
+.editing {
+  position: absolute;
+  position-anchor: --editing;
+  left: anchor(left);
+  top: anchor(top);
+  bottom: anchor(bottom);
+  height: anchor-size();
+  margin: 0;
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+
+  form {
+    height: 100%;
+  }
+
+  input {
+    height: 100%;
+    appearance: none;
+    border: none;
+    padding: .5rem;
+    border: 1px solid #ccc;
+    border-radius: .25rem;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    line-height: inherit;
+    field-sizing: content;
+  }
+}

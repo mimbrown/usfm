@@ -1,0 +1,18 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 \\em a \\f + \\ft b \\em* c\\f* d\\em*"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..53
+  VerseStart 1@16..20
+  Char em@21..53
+    Text "a "@25..27
+    Note f caller=+@27..47
+      Char ft@32..47
+        Text "b  c"@36..44
+    Text " d"@47..49
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[unmatched-closing-marker] @38..42: closing marker `\em*` has no matching `\em`

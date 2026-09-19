@@ -1,0 +1,15 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n\\c 1\n\\p\\v 1 no space after p\n\\q1\n\\v 2 marker at end of line\n"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..37
+  VerseStart 1@15..19
+  Text "no space after p"@20..37
+  VerseEnd 1
+Para q1@37..68
+  VerseStart 2@41..45
+  Text "marker at end of line"@46..68
+  VerseEnd 2
+ChapterEnd 1

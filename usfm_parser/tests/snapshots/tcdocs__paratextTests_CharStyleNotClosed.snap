@@ -1,0 +1,26 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\r\n\\ib\r\n\\ip Hi mom.\r\n\\c 1\r\n\\p \\v 1 Hi \\nd Bob.\r\n\\p And\\f + \\fr 1.1 \\ft stuff\\f*\r\n\\b\r\n"
+---
+Book GEN "" @0..7
+Para ib@9..14
+Para ip@14..27
+  Text "Hi mom."@18..27
+ChapterStart 1@27..31
+Para p@33..54
+  VerseStart 1@36..40
+  Text "Hi "@41..44
+  Char nd@44..54
+    Text "Bob."@48..54
+Para p@54..87
+  Text "And"@57..60
+  Note f caller=+@60..85
+    Char fr@65..73
+      Text "1.1 "@69..73
+    Char ft@73..85
+      Text "stuff"@77..82
+  VerseEnd 1
+Para b@87..91
+ChapterEnd 1
+--- diagnostics
+warning[character-style-not-closed] @44..47: `\nd` was still open at `\p`

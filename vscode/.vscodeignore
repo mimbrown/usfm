@@ -1,0 +1,11 @@
+**
+!icon.png
+!LICENSE
+!out/main.js
+!package.json
+!README.md
+!configuration-schema.json
+!language-configuration.json
+!usfm.tmLanguage.json
+!target/release/usfm_parser
+!target/release/usfm_parser.exe

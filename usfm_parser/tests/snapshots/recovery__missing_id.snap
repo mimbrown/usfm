@@ -1,0 +1,12 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\c 1\n\\p \\v 1 a"
+---
+ChapterStart 1@0..4
+Para p@5..14
+  VerseStart 1@8..12
+  Text "a"@13..14
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[missing-id] @0..0: document must start with `\id`

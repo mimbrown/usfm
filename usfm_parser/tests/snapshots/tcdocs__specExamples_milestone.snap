@@ -1,0 +1,63 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id MAT 41MATGNT92.SFM, Good News Translation, June 2003\n\\c 1\n\\p \n\\v 1 \n\\q1 “Someone is shouting in the desert,\n\\qt-s |sid=\"qt_123\" who=\"Pilate\"\\*“Are you the king of the Jews?”\\qt-e |eid=\"qt_123\"\\*\n\\zms\\*\n\\v 11 Jesus stood before the Roman governor, who questioned him. \\qt-s |who=\"Pilate\"\\*“Are you the king of the Jews?”\\qt-e\\* he asked.\n\\p \\qt-s |who=\"Jesus\"\\*“So you say,”\\qt-e\\* answered Jesus.\n\\v 12 But he said nothing in response to the accusations of the chief priests and elders.\n\\p\n\\v 13 So Pilate said to him, \\qt-s |who=\"Pilate\"\\*“Don't you hear all these things they accuse you of?”\\qt-e\\*\n\\p\n\\v 14 But Jesus refused to answer ...\n\\ts\\*\n\\p\n\\v 5 Now I wish to remind you, although...\n\\ts-s|sid=\"ts_JUD_5-6\"\\*\n\\p\n\\v 5 Now I wish to remind you, although you know everything, that the Lord once saved a\npeople out of the land of Egypt, but that afterward he destroyed those who did not believe.\n\\v 6 And angels who did not keep to their own principality, but left their proper dwelling\nplace—God has kept them in everlasting chains in darkness for the judgment of the\ngreat day.\n\\ts-e|eid=\"ts_JUD_5-6\"\\*\n"
+---
+Book MAT "41MATGNT92.SFM, Good News Translation, June 2003" @0..56
+ChapterStart 1@57..61
+Para p@62..72
+  VerseStart 1@66..70
+Para q1@72..351
+  Text "“Someone is shouting in the desert, "@76..114
+  Milestone qt-s@114..148 sid="qt_123" who="Pilate"
+  Text "“Are you the king of the Jews?”"@148..183
+  Milestone qt-e@183..204 eid="qt_123"
+  Text " "@204..205
+  Milestone zms@205..211
+  VerseEnd 1
+  Text " "
+  VerseStart 11@212..217
+  Text "Jesus stood before the Roman governor, who questioned him. "@218..277
+  Milestone qt-s@277..298 who="Pilate"
+  Text "“Are you the king of the Jews?”"@298..333
+  Milestone qt-e@333..340
+  Text " he asked."@340..351
+Para p@351..505
+  Milestone qt-s@354..374 who="Jesus"
+  Text "“So you say,”"@374..391
+  Milestone qt-e@391..398
+  Text " answered Jesus."@398..415
+  VerseEnd 11
+  Text " "
+  VerseStart 12@415..420
+  Text "But he said nothing in response to the accusations of the chief priests and elders."@421..505
+  VerseEnd 12
+Para p@505..623
+  VerseStart 13@508..513
+  Text "So Pilate said to him, "@514..537
+  Milestone qt-s@537..558 who="Pilate"
+  Text "“Don't you hear all these things they accuse you of?”"@558..615
+  Milestone qt-e@615..622
+  VerseEnd 13
+Para p@623..670
+  VerseStart 14@626..631
+  Text "But Jesus refused to answer ... "@632..664
+  Milestone ts@664..669
+  VerseEnd 14
+Para p@670..741
+  VerseStart 5@673..677
+  Text "Now I wish to remind you, although... "@678..716
+  Milestone ts-s@716..740 sid="ts_JUD_5-6"
+  VerseEnd 5
+Para p@741..1135
+  VerseStart 5@744..748
+  Text "Now I wish to remind you, although you know everything, that the Lord once saved a people out of the land of Egypt, but that afterward he destroyed those who did not believe."@749..924
+  VerseEnd 5
+  Text " "
+  VerseStart 6@924..928
+  Text "And angels who did not keep to their own principality, but left their proper dwelling place—God has kept them in everlasting chains in darkness for the judgment of the great day. "@929..1110
+  Milestone ts-e@1110..1134 eid="ts_JUD_5-6"
+  VerseEnd 6
+ChapterEnd 1
+--- diagnostics
+info[unknown-custom-milestone] @205..209: custom milestone `\zms` is not in the stylesheet
+warning[unknown-milestone] @664..667: milestone `\ts` is not in the stylesheet

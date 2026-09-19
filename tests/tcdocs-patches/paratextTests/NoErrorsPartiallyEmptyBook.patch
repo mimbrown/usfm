@@ -1,0 +1,18 @@
+Reference quirk. The source has `\rem`, `\h` and `\mt1` on three lines, all
+empty. Paratext writes the two markers after the empty `\rem` as its text,
+`<para style="rem">\h\mt1</para>`, which no reading of USFM supports. The
+parser gives each marker its own empty paragraph.
+
+--- origin.xml
++++ origin.xml
+@@ -1,7 +1,9 @@
+ <usx version="3.0">
+   <book code="GEN" style="id" />
+   <para style="ide" />
+-  <para style="rem">\h\mt1</para>
++  <para style="rem" />
++  <para style="h" />
++  <para style="mt1" />
+   <chapter number="1" style="c" sid="GEN 1" />
+   <para style="s1" />
+   <para style="m">

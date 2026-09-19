@@ -1,0 +1,16 @@
+[package]
+name = "usfm_tests"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[dependencies]
+usfm_parser = { path = "../usfm_parser" }
+xml-rs = { workspace = true }
+regex = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+diffy = "0.5.2"
+
+[dev-dependencies]
+walkdir = "2"

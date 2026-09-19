@@ -1,0 +1,43 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n\\c 1\n\\p\n\\v 1 verse one\n\\v 2 ...\\w herbs|strong=\"H6212\"\\w* \\w yielding|strong=\"H2232\"\\w* \\w seed|strong=\"H2233\"\\w*, \\add \\+w and|strong=\"H430\"\\+w*\\add* fruit-trees \\w bearing|strong=\"H6213\"\\w* \\w fruit|strong=\"H6529\"\\w* \\w after|strong=\"H5921\"\\w* \\w their|strong=\"H5921\"\\w* \\w kind|strong=\"H4327\"\\w*,..."
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..310
+  VerseStart 1@16..20
+  Text "verse one"@21..31
+  VerseEnd 1
+  Text " "
+  VerseStart 2@31..35
+  Text "..."@36..39
+  Char w@39..65 strong="H6212"
+    Text "herbs"@42..47
+  Text " "@65..66
+  Char w@66..95 strong="H2232"
+    Text "yielding"@69..77
+  Text " "@95..96
+  Char w@96..121 strong="H2233"
+    Text "seed"@99..103
+  Text ", "@121..123
+  Char add@123..158
+    Char w@128..153 strong="H430"
+      Text "and"@132..135
+  Text " fruit-trees "@158..171
+  Char w@171..199 strong="H6213"
+    Text "bearing"@174..181
+  Text " "@199..200
+  Char w@200..226 strong="H6529"
+    Text "fruit"@203..208
+  Text " "@226..227
+  Char w@227..253 strong="H5921"
+    Text "after"@230..235
+  Text " "@253..254
+  Char w@254..280 strong="H5921"
+    Text "their"@257..262
+  Text " "@280..281
+  Char w@281..306 strong="H4327"
+    Text "kind"@284..288
+  Text ",..."@306..310
+  VerseEnd 2
+ChapterEnd 1

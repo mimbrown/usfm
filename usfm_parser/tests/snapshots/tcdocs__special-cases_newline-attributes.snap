@@ -1,0 +1,19 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n\\c 1\n\\p\n\\v 22 Paul stood up in front of the city council and said, \\qt1-s |sid=\"qt1_ACT_17:22\"\nwho=\"Paul\"\\*“I see that in every way you Athenians are very religious.\n\\v 23 For as I walked through your city and looked at the places where you worship,"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..259
+  VerseStart 22@16..21
+  Text "Paul stood up in front of the city council and said, "@22..75
+  Milestone qt1-s@75..115 sid="qt1_ACT_17:22" who="Paul"
+  Text "“I see that in every way you Athenians are very religious."@115..176
+  VerseEnd 22
+  Text " "
+  VerseStart 23@176..181
+  Text "For as I walked through your city and looked at the places where you worship,"@182..259
+  VerseEnd 23
+ChapterEnd 1
+--- diagnostics
+error[newline-in-attributes] @102..103: line break inside an attribute list

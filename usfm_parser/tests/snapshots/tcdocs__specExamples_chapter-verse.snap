@@ -1,0 +1,36 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id MAT 41MATGNT92.SFM, Good News Translation, June 2003\n\\c 1\n\\ca 2\\ca*\n\\cp M\n\\cl Matthew\n\\cd Additional deacription about the chapter\n\\s1 The Ancestors of Jesus Christ\n\\r (Luke 3.23-38)\n\\p\n\\v 1 \\va 3\\va* \\vp 1b\\vp* This is the list of the ancestors of Jesus Christ, a descendant of David, who was a descendant of Abraham.\n\\c 2\n\\p\n\\v 1 ക്രിസ്തുയേശുവിന്റെ ബദ്ധനായ ...\n\\v 2 നമ്മുടെ പിതാവായ ...\n\\iex Written to the Romans from Corinthus, and sent by Phebe servant of the church at Cenchrea.\n\\p\n\\v 3 കർത്താവായ യേശുവിനോടും ..."
+snapshot_kind: text
+---
+Book MAT "41MATGNT92.SFM, Good News Translation, June 2003" @0..56
+ChapterStart 1@57..77 alt=2 pub="M"
+Para cl@78..90
+  Text "Matthew"@82..90
+Para cd@90..135
+  Text "Additional deacription about the chapter"@94..135
+Para s1@135..169
+  Text "The Ancestors of Jesus Christ"@139..169
+Para r@169..187
+  Text "(Luke 3.23-38)"@172..187
+Para p@187..323
+  VerseStart 1@190..215 alt=3 pub="1b"
+  Text "This is the list of the ancestors of Jesus Christ, a descendant of David, who was a descendant of Abraham."@216..323
+  VerseEnd 1
+ChapterEnd 1
+ChapterStart 2@323..327
+Para p@328..470
+  VerseStart 1@331..335
+  Text "ക\u{d4d}രിസ\u{d4d}ത\u{d41}യേശ\u{d41}വിന\u{d4d}റെ ബദ\u{d4d}ധന\u{d3e}യ ..."@336..417
+  VerseEnd 1
+  Text " "
+  VerseStart 2@417..421
+  Text "നമ\u{d4d}മ\u{d41}ടെ പിത\u{d3e}വ\u{d3e}യ ..."@422..470
+  VerseEnd 2
+Para iex@470..566
+  Text "Written to the Romans from Corinthus, and sent by Phebe servant of the church at Cenchrea."@475..566
+Para p@566..639
+  VerseStart 3@569..573
+  Text "കർത\u{d4d}ത\u{d3e}വ\u{d3e}യ യേശ\u{d41}വിനോട\u{d41}ം ..."@574..639
+  VerseEnd 3
+ChapterEnd 2

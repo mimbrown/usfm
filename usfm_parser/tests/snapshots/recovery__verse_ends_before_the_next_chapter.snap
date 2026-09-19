@@ -1,0 +1,24 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 5 last\n\\q1 line\n\\c 2\n\\s1 Heading\n\\d A Psalm\n\\p \\v 1 first"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..26
+  VerseStart 5@16..20
+  Text "last"@21..26
+Para q1@26..35
+  Text "line"@30..35
+  VerseEnd 5
+ChapterEnd 1
+ChapterStart 2@35..39
+Para s1@40..52
+  Text "Heading"@44..52
+Para d@52..63
+  Text "A Psalm"@55..63
+Para p@63..76
+  VerseStart 1@66..70
+  Text "first"@71..76
+  VerseEnd 1
+ChapterEnd 2

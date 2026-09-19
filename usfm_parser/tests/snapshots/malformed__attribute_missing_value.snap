@@ -1,0 +1,15 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 2 \\w word|lemma=\"x\" attr= \\w*\n"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..49
+  VerseStart 2@16..20
+  Char w@21..48 lemma="x" attr=""
+    Text "word"@24..28
+  VerseEnd 2
+ChapterEnd 1
+--- diagnostics
+error[missing-attribute-value] @44..44: `=` is not followed by a value

@@ -1,0 +1,12 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v \\em a\\em*"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..28
+  Char em@19..28
+    Text "a"@23..24
+ChapterEnd 1
+--- diagnostics
+error[missing-verse-number] @16..18: `\v` must be followed by a verse number

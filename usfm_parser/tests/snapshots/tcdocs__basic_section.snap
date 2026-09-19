@@ -1,0 +1,25 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n\\c 1\n\\p\n\\v 1 the first verse\n\\v 2 the second verse\n\\s A new section\n\\p\n\\v 3 the third verse\n\\v 4 the fourth verse"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..59
+  VerseStart 1@16..20
+  Text "the first verse"@21..37
+  VerseEnd 1
+  Text " "
+  VerseStart 2@37..41
+  Text "the second verse"@42..59
+  VerseEnd 2
+Para s@59..76
+  Text "A new section"@62..76
+Para p@76..121
+  VerseStart 3@79..83
+  Text "the third verse"@84..100
+  VerseEnd 3
+  Text " "
+  VerseStart 4@100..104
+  Text "the fourth verse"@105..121
+  VerseEnd 4
+ChapterEnd 1

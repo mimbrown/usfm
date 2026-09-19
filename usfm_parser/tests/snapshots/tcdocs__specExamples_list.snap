@@ -1,0 +1,50 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id MAT 41MATGNT92.SFM, Good News Translation, June 2003\n\\toc1 The Acts of the Apostles\n\\toc2 Acts\n\\ip One of these brothers, Joseph, had become...\n\\ipr (50.24)\n\\c 136\n\\p\n\\s1 God's Love Never Fails\n\\lh\n\\v 16-22 This is the list of the administrators of the tribes of Israel:\n\\li1 Reuben - Eliezer son of Zichri\n\\li1 Simeon - Shephatiah son of Maacah\n\\li1 Levi - Hashabiah son of Kemuel\n\\lf This was the list of the administrators of the tribes of Israel.\n\\v 7 in company with Zerubbabel, Jeshua, Nehemiah, Azariah, Raamiah, Nahamani, Mordecai,Bilshan, Mispereth, Bigvai, Nehum and Baanah):\n\\b\n\\pm The list of the men of Israel:\n\\b\n\\lim1\n\\v 8 the descendants of Parosh - \\litl 2,172\\litl*\n\\lim1\n\\v 9 of Shephatiah - \\litl 372\\litl*\n"
+---
+Book MAT "41MATGNT92.SFM, Good News Translation, June 2003" @0..56
+Para toc1@57..88
+  Text "The Acts of the Apostles"@63..88
+Para toc2@88..99
+  Text "Acts"@94..99
+Para ip@99..148
+  Text "One of these brothers, Joseph, had become..."@103..148
+Para ipr@148..161
+  Text "(50.24)"@153..161
+ChapterStart 136@161..167
+Para p@168..171
+Para s1@171..198
+  Text "God's Love Never Fails"@175..198
+Para lh@198..275
+  VerseStart 16-22@202..210
+  Text "This is the list of the administrators of the tribes of Israel:"@211..275
+Para li1@275..311
+  Text "Reuben - Eliezer son of Zichri"@280..311
+Para li1@311..350
+  Text "Simeon - Shephatiah son of Maacah"@316..350
+Para li1@350..386
+  Text "Levi - Hashabiah son of Kemuel"@355..386
+Para lf@386..590
+  Text "This was the list of the administrators of the tribes of Israel."@390..455
+  VerseEnd 16-22
+  Text " "
+  VerseStart 7@455..459
+  Text "in company with Zerubbabel, Jeshua, Nehemiah, Azariah, Raamiah, Nahamani, Mordecai,Bilshan, Mispereth, Bigvai, Nehum and Baanah):"@460..590
+Para b@590..593
+Para pm@593..628
+  Text "The list of the men of Israel:"@597..628
+  VerseEnd 7
+Para b@628..631
+Para lim1@631..688
+  VerseStart 8@637..641
+  Text "the descendants of Parosh - "@642..670
+  Char litl@670..687
+    Text "2,172"@676..681
+  VerseEnd 8
+Para lim1@688..731
+  VerseStart 9@694..698
+  Text "of Shephatiah - "@699..715
+  Char litl@715..730
+    Text "372"@721..724
+  VerseEnd 9
+ChapterEnd 136

@@ -1,0 +1,17 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\esb\n\\p a\n\\esb\n\\p b"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Sidebar esb@13..23
+  Para p@18..23
+    Text "a"@21..23
+Sidebar esb@23..32
+  Para p@28..32
+    Text "b"@31..32
+ChapterEnd 1
+--- diagnostics
+error[sidebar-not-closed] @13..17: `\esb` is not closed by `\esbe` before `\esb`
+error[sidebar-not-closed] @23..27: `\esb` is not closed by `\esbe`

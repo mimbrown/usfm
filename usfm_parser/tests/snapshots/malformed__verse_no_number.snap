@@ -1,0 +1,11 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n\\c 1\n\\p \\v This has no verse number\n"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..44
+  Text "has no verse number"@24..44
+ChapterEnd 1
+--- diagnostics
+error[malformed-verse-number] @19..23: `This` is not a valid verse number

@@ -1,0 +1,35 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n\\c 1\n\\p\n\\v 11 Jesus stood before the Roman governor, who questioned him. \\qt-s |who=\"Pilate\"\\*“Are\nyou the king of the Jews?”\\qt-e\\* he asked.\n\\p \\qt-s |who=\"Jesus\"\\*“So you say,”\\qt-e\\* answered Jesus.\n\\v 12 But he said nothing in response to the accusations of the chief priests and elders.\n\\p\n\\v 13 So Pilate said to him, \\qt-s |who=\"Pilate\"\\*“Don't you hear all these things they\naccuse you of?”\\qt-e\\*\n\\p\n\\v 14 But Jesus refused to answer a single word, with the result that the Governor was greatly\nsurprised."
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..155
+  VerseStart 11@16..21
+  Text "Jesus stood before the Roman governor, who questioned him. "@22..81
+  Milestone qt-s@81..102 who="Pilate"
+  Text "“Are you the king of the Jews?”"@102..137
+  Milestone qt-e@137..144
+  Text " he asked."@144..155
+Para p@155..309
+  Milestone qt-s@158..178 who="Jesus"
+  Text "“So you say,”"@178..195
+  Milestone qt-e@195..202
+  Text " answered Jesus."@202..219
+  VerseEnd 11
+  Text " "
+  VerseStart 12@219..224
+  Text "But he said nothing in response to the accusations of the chief priests and elders."@225..309
+  VerseEnd 12
+Para p@309..427
+  VerseStart 13@312..317
+  Text "So Pilate said to him, "@318..341
+  Milestone qt-s@341..362 who="Pilate"
+  Text "“Don't you hear all these things they accuse you of?”"@362..419
+  Milestone qt-e@419..426
+  VerseEnd 13
+Para p@427..535
+  VerseStart 14@430..435
+  Text "But Jesus refused to answer a single word, with the result that the Governor was greatly surprised."@436..535
+  VerseEnd 14
+ChapterEnd 1

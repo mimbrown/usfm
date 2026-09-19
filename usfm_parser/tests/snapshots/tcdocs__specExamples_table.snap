@@ -1,0 +1,63 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id MAT 41MATGNT92.SFM, Good News Translation, June 2003\n\\toc1 The Acts of the Apostles\n\\toc2 Acts\n\\ip One of these brothers, Joseph, had become...\n\\ipr (50.24)\n\\c 136\n\\p\n\\v 12-83 They presented their offerings in the following order:\n\\tr \\th1 Day \\th2 Tribe \\thr3 Leader\n\\tr \\tcr1 1st \\tc2 Judah \\tcr3 Nahshon son of Amminadab\n\\tr \\tcr1 2nd \\tc2 Issachar \\tcr3 Nethanel son of Zuar\n\\tr \\tcr1 3rd \\tc2 Zebulun \\tcr3 Eliab son of Helon\n\\tr \\tcr1 4th \\tc2 Reuben \\tcr3 Elizur son of Shedeur\n\\tr \\tcr1 5th \\tc2 Simeon \\tcr3 Shelumiel son of Zurishaddai\n"
+snapshot_kind: text
+---
+Book MAT "41MATGNT92.SFM, Good News Translation, June 2003" @0..56
+Para toc1@57..88
+  Text "The Acts of the Apostles"@63..88
+Para toc2@88..99
+  Text "Acts"@94..99
+Para ip@99..148
+  Text "One of these brothers, Joseph, had become..."@103..148
+Para ipr@148..161
+  Text "(50.24)"@153..161
+ChapterStart 136@161..167
+Para p@168..235
+  VerseStart 12-83@171..179
+  Text "They presented their offerings in the following order:"@180..235
+Table@235..550
+  Row@235..272
+    Cell header=true align=start column=1 colspan=1@239..248
+      Text "Day"@244..248
+    Cell header=true align=start column=2 colspan=1@248..259
+      Text "Tribe"@253..259
+    Cell header=true align=end column=3 colspan=1@259..272
+      Text "Leader"@265..272
+  Row@272..328
+    Cell header=false align=end column=1 colspan=1@276..286
+      Text "1st"@282..286
+    Cell header=false align=start column=2 colspan=1@286..297
+      Text "Judah"@291..297
+    Cell header=false align=end column=3 colspan=1@297..328
+      Text "Nahshon son of Amminadab"@303..328
+  Row@328..383
+    Cell header=false align=end column=1 colspan=1@332..342
+      Text "2nd"@338..342
+    Cell header=false align=start column=2 colspan=1@342..356
+      Text "Issachar"@347..356
+    Cell header=false align=end column=3 colspan=1@356..383
+      Text "Nethanel son of Zuar"@362..383
+  Row@383..435
+    Cell header=false align=end column=1 colspan=1@387..397
+      Text "3rd"@393..397
+    Cell header=false align=start column=2 colspan=1@397..410
+      Text "Zebulun"@402..410
+    Cell header=false align=end column=3 colspan=1@410..435
+      Text "Eliab son of Helon"@416..435
+  Row@435..489
+    Cell header=false align=end column=1 colspan=1@439..449
+      Text "4th"@445..449
+    Cell header=false align=start column=2 colspan=1@449..461
+      Text "Reuben"@454..461
+    Cell header=false align=end column=3 colspan=1@461..489
+      Text "Elizur son of Shedeur"@467..489
+  Row@489..550
+    Cell header=false align=end column=1 colspan=1@493..503
+      Text "5th"@499..503
+    Cell header=false align=start column=2 colspan=1@503..515
+      Text "Simeon"@508..515
+    Cell header=false align=end column=3 colspan=1@515..550
+      Text "Shelumiel son of Zurishaddai"@521..550
+      VerseEnd 12-83
+ChapterEnd 136

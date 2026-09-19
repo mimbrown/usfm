@@ -1,0 +1,12 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\p \\v 1 a"
+---
+Book GEN "" @0..7
+Para p@8..17
+  VerseStart 1@11..15
+  Text "a"@16..17
+  VerseEnd 1
+--- diagnostics
+error[verse-text-before-chapter] @8..10: `\p` (verse text) before the first `\c`
+error[verse-outside-chapter] @11..13: `\v` before any `\c`

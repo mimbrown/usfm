@@ -1,0 +1,10 @@
+[package]
+name = "usfm_ast"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[dependencies]
+# The AST is self-describing about style (hardening plan D3): a `Document`
+# owns the stylesheet its `StyleId`s resolve against.
+usfm_style = { path = "../usfm_style" }

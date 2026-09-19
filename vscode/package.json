@@ -1,0 +1,138 @@
+{
+  "name": "usfm-vscode",
+  "description": "usfm vscode extension",
+  "license": "MIT",
+  "version": "0.0.1",
+  "icon": "icon.png",
+  "publisher": "mimbrown",
+  "displayName": "USFM Language Tools",
+  "categories": [
+    "Linters"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mimbrown/usfm-tools"
+  },
+  "keywords": [
+    "linter",
+    "usfm"
+  ],
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "main": "./out/main.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "usfm.restartServer",
+        "title": "Restart USFM Server",
+        "category": "USFM"
+      },
+      {
+        "command": "usfm.preview",
+        "title": "Preview content",
+        "category": "USFM"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "usfm",
+      "properties": {
+        "usfm.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "enable usfm language server"
+        }
+      }
+    },
+    "languages": [
+      {
+        "id": "usfm",
+        "extensions": [
+          ".usfm",
+          ".USFM",
+          ".SFM"
+        ],
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "jsonc",
+        "filenames": [
+          "usfm.config.json"
+        ]
+      }
+    ],
+    "customEditors": [
+      {
+        "viewType": "usfm.dict",
+        "displayName": "Dictionary",
+        "selector": [
+          {
+            "filenamePattern": "*.dict"
+          }
+        ]
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "usfm.preview",
+          "when": "editorLangId == usfm",
+          "group": "navigation"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "usfm.preview",
+        "key": "ctrl+q s",
+        "mac": "cmd+q s",
+        "when": "editorTextFocus"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "usfm",
+        "scopeName": "text.usfm",
+        "path": "./usfm.tmLanguage.json"
+      }
+    ],
+    "jsonValidation": [
+      {
+        "fileMatch": [
+          "usfm.config.json"
+        ],
+        "url": "./configuration-schema.json"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "npm run server:build:release && npm run compile && npm run package",
+    "compile": "esbuild client/extension.ts --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node --target=node16 --minify --sourcemap",
+    "watch": "npm run compile -- --watch",
+    "write": "node build.ts",
+    "package": "vsce package --no-dependencies -o usfm_language_server.vsix",
+    "install-extension": "code --install-extension usfm_language_server.vsix --force",
+    "reinstall": "npm run build && npm run install-extension",
+    "server:build:debug": "cargo build -p usfm_parser",
+    "server:build:release": "cross-env CARGO_TARGET_DIR=./target cargo build -p usfm_parser --release"
+  },
+  "devDependencies": {
+    "@types/minimatch": "^6.0.0",
+    "@types/node": "^22.0.0",
+    "@types/vscode": "1.95.0",
+    "@vscode/vsce": "^3.0.0",
+    "cross-env": "^7.0.3",
+    "esbuild": "^0.24.0",
+    "ovsx": "^0.10.0",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "minimatch": "^10.0.3",
+    "vscode-languageclient": "^9.0.1",
+    "zod": "^4.0.13"
+  },
+  "vsce": {
+    "dependencies": false
+  }
+}

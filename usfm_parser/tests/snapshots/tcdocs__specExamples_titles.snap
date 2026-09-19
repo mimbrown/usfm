@@ -1,0 +1,93 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id MAT 41MATGNT92.SFM, Good News Translation, June 2003\n\\toc1 The Acts of the Apostles\n\\toc2 Acts\n\\mt1 THE ACTS\n\\mt2 of the Apostles\n\\c 1\n\\ms BOOK ONE\n\\mr (Psalms 1–41)\n\\s True Happiness\n\\p\n\\v 1 ക്രിസ്തുയേശുവിന്റെ ബദ്ധനായ ...\n\\s1 The Thirty Wise Sayings\n\\sr (22.17--24.22)\n\\r (Mark 1.1-8; Luke 3.1-18; John 1.19-28)\n\\p\n\\v 2 നമ്മുടെ പിതാവായ ...\n\\sd2\n\\p\n\\v 3 കർത്താവായ യേശുവിനോടും ...\n\\v 4 The Son was made greater than the angels, just as the name that God gave him is greater than theirs.\n\\v 5 For God never said to any of his angels,\n\\sp God\n\\q1 \"You are my Son;\n\\q2 today I have become your Father.\"\n\\rq Psa 2.7\\rq*\n\\b\n\\m Nor did God say about any angel,\n\\q1 \"I will be his Father,\n\\q2 and he will be my Son.\"\n\\rq 2Sa 7.14; 1Ch 17.13\\rq*\n\\c 3\n\\s1 Trust in God under Adversity\n\\d A Psalm of David, when he fled from his son Absalom.\n\\q1\n\\v 1 O \\nd Lord\\nd*, how many are my foes!\n\\q2 Many are rising against me;\n\\q1\n\\v 2 many are saying to me,\n\\q2 “There is no help for you in God.” \\qs Selah\\qs*\n\\mte2 The End of the Gospel according to\n\\mte1 John \n\n"
+snapshot_kind: text
+---
+Book MAT "41MATGNT92.SFM, Good News Translation, June 2003" @0..56
+Para toc1@57..88
+  Text "The Acts of the Apostles"@63..88
+Para toc2@88..99
+  Text "Acts"@94..99
+Para mt1@99..113
+  Text "THE ACTS"@104..113
+Para mt2@113..134
+  Text "of the Apostles"@118..134
+ChapterStart 1@134..138
+Para ms@139..152
+  Text "BOOK ONE"@143..152
+Para mr@152..172
+  Text "(Psalms 1–41)"@156..172
+Para s@172..190
+  Text "True Happiness"@175..190
+Para p@190..279
+  VerseStart 1@193..197
+  Text "ക\u{d4d}രിസ\u{d4d}ത\u{d41}യേശ\u{d41}വിന\u{d4d}റെ ബദ\u{d4d}ധന\u{d3e}യ ..."@198..279
+  VerseEnd 1
+Para s1@279..307
+  Text "The Thirty Wise Sayings"@283..307
+Para sr@307..326
+  Text "(22.17--24.22)"@311..326
+Para r@326..369
+  Text "(Mark 1.1-8; Luke 3.1-18; John 1.19-28)"@329..369
+Para p@369..425
+  VerseStart 2@372..376
+  Text "നമ\u{d4d}മ\u{d41}ടെ പിത\u{d3e}വ\u{d3e}യ ..."@377..425
+  VerseEnd 2
+Para sd2@425..430
+Para p@430..656
+  VerseStart 3@433..437
+  Text "കർത\u{d4d}ത\u{d3e}വ\u{d3e}യ യേശ\u{d41}വിനോട\u{d41}ം ..."@438..504
+  VerseEnd 3
+  Text " "
+  VerseStart 4@504..508
+  Text "The Son was made greater than the angels, just as the name that God gave him is greater than theirs."@509..610
+  VerseEnd 4
+  Text " "
+  VerseStart 5@610..614
+  Text "For God never said to any of his angels,"@615..656
+Para sp@656..664
+  Text "God"@660..664
+Para q1@664..685
+  Text "\"You are my Son;"@668..685
+Para q2@685..739
+  Text "today I have become your Father.\" "@689..723
+  Char rq@723..738
+    Text "Psa 2.7"@727..734
+Para b@739..742
+Para m@742..778
+  Text "Nor did God say about any angel,"@745..778
+Para q1@778..805
+  Text "\"I will be his Father,"@782..805
+Para q2@805..861
+  Text "and he will be my Son.\" "@809..833
+  Char rq@833..860
+    Text "2Sa 7.14; 1Ch 17.13"@837..856
+  VerseEnd 5
+ChapterEnd 1
+ChapterStart 3@861..865
+Para s1@866..899
+  Text "Trust in God under Adversity"@870..899
+Para d@899..955
+  Text "A Psalm of David, when he fled from his son Absalom."@902..955
+Para q1@955..1002
+  VerseStart 1@959..963
+  Text "O "@964..966
+  Char nd@966..978
+    Text "Lord"@970..974
+  Text ", how many are my foes!"@978..1002
+Para q2@1002..1034
+  Text "Many are rising against me;"@1006..1034
+  VerseEnd 1
+Para q1@1034..1066
+  VerseStart 2@1038..1042
+  Text "many are saying to me,"@1043..1066
+Para q2@1066..1123
+  Text "“There is no help for you in God.” "@1070..1109
+  Char qs@1109..1122
+    Text "Selah"@1113..1118
+  VerseEnd 2
+Para mte2@1123..1164
+  Text "The End of the Gospel according to"@1129..1164
+Para mte1@1164..1177
+  Text "John"@1170..1177
+ChapterEnd 3

@@ -1,0 +1,56 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id MAT 41MATGNT92.SFM, Good News Translation, June 2003\n\\toc1 The Acts of the Apostles\n\\toc2 Acts\n\\ip One of these brothers, Joseph, had become...\n\\ipr (50.24)\n\\c 136\n\\qa Aleph\n\\s1 God's Love Never Fails\n\\q1\n\\v 1 \\qac P\\qac*Praise the \\nd Lord\\nd*! He is good.\n\\qr God's love never fails \\qs Selah\\qs*\n\\q1\n\\v 2 Praise the God of all gods.\n\\q1 May his glory fill the whole world.\n\\b\n\\qc Amen! Amen!\n\\qd For the director of music. On my stringed instruments.\n\\b\n\\v 18 God's spirit took control of one of them, Amasai, who later became the commander of “The Thirty,” and he called out,\n\\qm1 “David son of Jesse, we are yours!\n\\qm1 Success to you and those who help you!\n\\qm1 God is on your side.”\n\\b\n\\m David welcomed them and made them officers in his army."
+---
+Book MAT "41MATGNT92.SFM, Good News Translation, June 2003" @0..56
+Para toc1@57..88
+  Text "The Acts of the Apostles"@63..88
+Para toc2@88..99
+  Text "Acts"@94..99
+Para ip@99..148
+  Text "One of these brothers, Joseph, had become..."@103..148
+Para ipr@148..161
+  Text "(50.24)"@153..161
+ChapterStart 136@161..167
+Para qa@168..178
+  Text "Aleph"@172..178
+Para s1@178..205
+  Text "God's Love Never Fails"@182..205
+Para q1@205..262
+  VerseStart 1@209..213
+  Char qac@214..225
+    Text "P"@219..220
+  Text "Praise the "@225..236
+  Char nd@236..248
+    Text "Lord"@240..244
+  Text "! He is good."@248..262
+Para qr@262..303
+  Text "God's love never fails "@266..289
+  Char qs@289..302
+    Text "Selah"@293..298
+  VerseEnd 1
+Para q1@303..340
+  VerseStart 2@307..311
+  Text "Praise the God of all gods."@312..340
+Para q1@340..380
+  Text "May his glory fill the whole world."@344..380
+Para b@380..383
+Para qc@383..399
+  Text "Amen! Amen!"@387..399
+Para qd@399..458
+  Text "For the director of music. On my stringed instruments."@403..458
+  VerseEnd 2
+Para b@458..588
+  VerseStart 18@461..466
+  Text "God's spirit took control of one of them, Amasai, who later became the commander of “The Thirty,” and he called out,"@467..588
+Para qm1@588..630
+  Text "“David son of Jesse, we are yours!"@593..630
+Para qm1@630..674
+  Text "Success to you and those who help you!"@635..674
+Para qm1@674..703
+  Text "God is on your side.”"@679..703
+Para b@703..706
+Para m@706..764
+  Text "David welcomed them and made them officers in his army."@709..764
+  VerseEnd 18
+ChapterEnd 136

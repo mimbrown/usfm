@@ -1,0 +1,18 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 \\em a \\nd b\\em* c\\nd*"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..42
+  VerseStart 1@16..20
+  Char em@21..27
+    Text "a "@25..27
+  Char nd@27..42
+    Text "b c"@31..38
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+info[character-style-implicitly-closed] @21..24: `\em` was implicitly closed by `\nd`
+error[unmatched-closing-marker] @32..36: closing marker `\em*` has no matching `\em`

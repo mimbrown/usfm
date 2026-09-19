@@ -1,0 +1,15 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 21 \\vp \\+it 21\\+it*\\vp* text"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..47
+  VerseStart 21@16..21
+  Char vp@22..42
+    Char it@26..38
+      Text "21"@31..33
+  Text "text"@43..47
+  VerseEnd 21
+ChapterEnd 1

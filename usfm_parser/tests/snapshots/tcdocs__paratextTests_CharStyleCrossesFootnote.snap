@@ -1,0 +1,20 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\r\n\\c 1\r\n\\p \\v 1 \\em word \\f + \\fr 1.1 \\ft stuff \\f* more text\\em*r\n"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 1@9..13
+Para p@15..74
+  VerseStart 1@18..22
+  Char em@23..72
+    Text "word "@27..32
+    Note f caller=+@32..58
+      Char fr@37..45
+        Text "1.1 "@41..45
+      Char ft@45..58
+        Text "stuff "@49..55
+    Text " more text"@58..68
+  Text "r"@72..74
+  VerseEnd 1
+ChapterEnd 1

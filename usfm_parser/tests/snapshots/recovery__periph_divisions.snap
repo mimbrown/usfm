@@ -1,0 +1,12 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id FRT\n\\periph Title Page|id=\"title\"\n\\p one\n\\periph Preface|preface\n\\p two"
+snapshot_kind: text
+---
+Book FRT "" @0..7
+Periph periph@8..45 title="Title Page"@16..26 id="title"
+  Para p@38..45
+    Text "one"@41..45
+Periph periph@45..75 title="Preface"@53..60 "preface"
+  Para p@69..75
+    Text "two"@72..75

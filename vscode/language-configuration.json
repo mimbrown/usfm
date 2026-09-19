@@ -1,0 +1,44 @@
+{
+  "comments": {
+    "lineComment": {
+      "comment": "\\rem"
+    }
+  },
+  // symbols that are auto closed when typing
+  "autoClosingPairs": [
+    [ "\\ior ",  "\\ior*"],
+    [  "\\rq ",   "\\rq*"],
+    [  "\\ca ",   "\\ca*"],
+    [  "\\vp ",   "\\vp*"],
+    [  "\\qs ",   "\\qs*"],
+    [ "\\qac ",  "\\qac*"],
+    [   "\\f ",    "\\f*"],
+    [  "\\fe ",   "\\fe*"],
+    [  "\\fv ",   "\\fv*"],
+    [  "\\fm ",   "\\fm*"],
+    [   "\\x ",    "\\x*"],
+    [ "\\xdc ",  "\\xdc*"],
+    [ "\\add ",  "\\add*"],
+    [  "\\bk ",   "\\bk*"],
+    [  "\\dc ",   "\\dc*"],
+    [   "\\k ",    "\\k*"],
+    [  "\\nd ",   "\\nd*"],
+    [ "\\ord ",  "\\ord*"],
+    [  "\\pn ",   "\\pn*"],
+    [  "\\qt ",   "\\qt*"],
+    [ "\\sig ",  "\\sig*"],
+    [ "\\sls ",  "\\sls*"],
+    [  "\\tl ",   "\\tl*"],
+    [  "\\bd ",   "\\bd*"],
+    [  "\\it ",   "\\it*"],
+    ["\\bdit ", "\\bdit*"],
+    [  "\\no ",   "\\no*"],
+    [  "\\sc ",   "\\sc*"],
+    [ "\\fig ",  "\\fig*"],
+    [ "\\ndx ",  "\\ndx*"],
+    [   "\\w ",    "\\w*"],
+    [  "\\wg ",   "\\wg*"],
+    [  "\\wh ",   "\\wh*"],
+    ["\\flag ", "\\flag*"]
+  ]
+}

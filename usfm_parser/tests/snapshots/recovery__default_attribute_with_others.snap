@@ -1,0 +1,15 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 \\w word|grace strong=\"H1234\"\\w*"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..52
+  VerseStart 1@16..20
+  Char w@21..52 "grace " strong="H1234"
+    Text "word"@24..28
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[default-attribute-with-others] @28..29: a bare value must be the only attribute; give it a name

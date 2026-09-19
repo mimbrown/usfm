@@ -1,0 +1,11 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 tab\tand  double  space and\nnewline inside\n"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..63
+  VerseStart 1@16..20
+  Text "tab and double space and newline inside"@21..63
+  VerseEnd 1
+ChapterEnd 1

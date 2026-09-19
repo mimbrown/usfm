@@ -1,0 +1,49 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n\\c 1\n\\s1 The Garden of Eden\n\\p\n\\v 1\n\\p When the \\nd Lord\\nd* \\f + \\fr 2.4: \\fk the \\+nd Lord\\+nd*: \\ft Where the Hebrew text\nhas Yahweh, traditionally transliterated as Jehovah, this translation employs \\+nd Lord\\+nd*\nwith capital letters, following a usage which is widespread in English versions.\\f* God made\nthe universe,\n\\v 5 there were no plants on the earth and no seeds had sprouted, because he had not sent\nany rain, and there was no one to cultivate the land;\n\\v 14 That is why \\bk The Book of the \\+nd Lord\\+nd*'s Battles\\bk* speaks of “...the\ntown of Waheb in the area of Suphah, and the valleys; the Arnon River,\n\\v 15 and the slope of the valleys that extend to the town of Ar and toward the border\nof Moab.”\n"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para s1@13..36
+  Text "The Garden of Eden"@17..36
+Para p@36..44
+  VerseStart 1@39..43
+Para p@44..734
+  Text "When the "@47..56
+  Char nd@56..68
+    Text "Lord"@60..64
+  Text " "@68..69
+  Note f caller=+@69..309
+    Char fr@74..83
+      Text "2.4: "@78..83
+    Char fk@83..107
+      Text "the "@87..91
+      Char nd@91..105
+        Text "Lord"@96..100
+      Text ": "@105..107
+    Char ft@107..309
+      Text "Where the Hebrew text has Yahweh, traditionally transliterated as Jehovah, this translation employs "@111..211
+      Char nd@211..225
+        Text "Lord"@216..220
+      Text " with capital letters, following a usage which is widespread in English versions."@225..306
+  Text " God made the universe,"@309..333
+  VerseEnd 1
+  Text " "
+  VerseStart 5@333..337
+  Text "there were no plants on the earth and no seeds had sprouted, because he had not sent any rain, and there was no one to cultivate the land;"@338..477
+  VerseEnd 5
+  Text " "
+  VerseStart 14@477..482
+  Text "That is why "@483..495
+  Char bk@495..543
+    Text "The Book of the "@499..515
+    Char nd@515..529
+      Text "Lord"@520..524
+    Text "'s Battles"@529..539
+  Text " speaks of “...the town of Waheb in the area of Suphah, and the valleys; the Arnon River,"@543..635
+  VerseEnd 14
+  Text " "
+  VerseStart 15@635..640
+  Text "and the slope of the valleys that extend to the town of Ar and toward the border of Moab.”"@641..734
+  VerseEnd 15
+ChapterEnd 1

@@ -1,0 +1,7 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n"
+---
+Book GEN "" @0..7
+--- diagnostics
+error[empty-book] @8..8: book contains only an `\id` line

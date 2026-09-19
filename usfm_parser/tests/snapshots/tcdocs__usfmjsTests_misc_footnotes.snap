@@ -1,0 +1,48 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n\\c 1\n\\p\n\\v 50 \\f + \\ft Some modern versions have \\fqa and in the ruins of the rich, lambs will graze \\ft . \\f*\n\\v 11 \\f + \\fr 18:11 \\ft  Some later manuscripts add, For the Son of Mana has come to save the lost.\\f*\n\\v 28 \\wj But do not allow yourselves to be called ‘Rabbi,’ for you have only one teacher, and you yourselves are all [neut:brothers and sisters./masc:brothers.]\\wj*\n\\v 34 \\f + \\fr 23:14 \\ft  Some later manuscripts add: Alas for you teachers of the law and Pharisees, hypocrites! You devour widows' property, and pray long prayers just for show! This is why you will receive a more severe punishment.\\f*\n\\v 49 But the rest said, “Wait and let us see if Elijah is coming to save him.”\\f + \\fr 27:49 \\ft  Some later manuscripts add: However another man took a spear, and pierced his side; and water and blood flowed from it.\\f*\n"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..857
+  VerseStart 50@16..21
+  Note f caller=+@22..118
+    Char ft@27..57
+      Text "Some modern versions have "@31..57
+    Char fqa@57..109
+      Text "and in the ruins of the rich, lambs will graze "@62..109
+    Char ft@109..118
+      Text ". "@113..115
+  VerseEnd 50
+  Text " "
+  VerseStart 11@119..124
+  Note f caller=+@125..222
+    Char fr@130..140
+      Text "18:11 "@134..140
+    Char ft@140..222
+      Text "Some later manuscripts add, For the Son of Mana has come to save the lost."@145..219
+  VerseEnd 11
+  Text " "
+  VerseStart 28@223..228
+  Char wj@229..392
+    Text "But do not allow yourselves to be called ‘Rabbi,’ for you have only one teacher, and you yourselves are all [neut:brothers and sisters./masc:brothers.]"@233..388
+  VerseEnd 28
+  Text " "
+  VerseStart 34@393..398
+  Note f caller=+@399..630
+    Char fr@404..414
+      Text "23:14 "@408..414
+    Char ft@414..630
+      Text "Some later manuscripts add: Alas for you teachers of the law and Pharisees, hypocrites! You devour widows' property, and pray long prayers just for show! This is why you will receive a more severe punishment."@419..627
+  VerseEnd 34
+  Text " "
+  VerseStart 49@631..636
+  Text "But the rest said, “Wait and let us see if Elijah is coming to save him.”"@637..714
+  Note f caller=+@714..856
+    Char fr@719..729
+      Text "27:49 "@723..729
+    Char ft@729..856
+      Text "Some later manuscripts add: However another man took a spear, and pierced his side; and water and blood flowed from it."@734..853
+  VerseEnd 49
+ChapterEnd 1

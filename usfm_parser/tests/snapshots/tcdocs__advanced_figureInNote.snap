@@ -1,0 +1,19 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id MRK\n\\c 1\n\\p\n\\v 1 the first verse\\f - \\fr 1 \\ft note text\\fig caption|src=\"file.jpg\" size=\"col\" ref=\"GEN 1:1\"\\fig* more text\\f*\n"
+---
+Book MRK "" @0..7
+ChapterStart 1@8..12
+Para p@13..131
+  VerseStart 1@16..20
+  Text "the first verse"@21..36
+  Note f caller=-@36..130
+    Char fr@41..47
+      Text "1 "@45..47
+    Char ft@47..130
+      Text "note text"@51..60
+      Char fig@60..117 src="file.jpg" size="col" ref="GEN 1:1"
+        Text "caption"@65..72
+      Text " more text"@117..127
+  VerseEnd 1
+ChapterEnd 1

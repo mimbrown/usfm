@@ -1,0 +1,18 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 a \\zaln-s |x-strong=\"G1\"\\* b \\zaln-e\\* c"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..61
+  VerseStart 1@16..20
+  Text "a "@21..23
+  Milestone zaln-s@23..47 x-strong="G1"
+  Text " b "@47..50
+  Milestone zaln-e@50..59
+  Text " c"@59..61
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+info[unknown-custom-milestone] @23..30: custom milestone `\zaln-s` is not in the stylesheet
+info[unknown-custom-milestone] @50..57: custom milestone `\zaln-e` is not in the stylesheet

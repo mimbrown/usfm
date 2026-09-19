@@ -1,0 +1,7 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN Genesis\n"
+---
+Book GEN "Genesis" @0..15
+--- diagnostics
+error[empty-book] @16..16: book contains only an `\id` line

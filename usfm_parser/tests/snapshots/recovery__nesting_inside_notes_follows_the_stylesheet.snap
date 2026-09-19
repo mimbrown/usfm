@@ -1,0 +1,23 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 a\\f + \\ft see \\xt Gen 1\\xt* or \\fqa quote\\fqa*\\f* b"
+snapshot_kind: text
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..72
+  VerseStart 1@16..20
+  Text "a"@21..22
+  Note f caller=+@22..70
+    Char ft@27..52
+      Text "see "@31..35
+      Char xt@35..48
+        Text "Gen 1"@39..44
+      Text " or "@48..52
+    Char fqa@52..67
+      Text "quote"@57..62
+  Text " b"@70..72
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+info[character-style-nested-without-plus] @35..38: `\xt` is nested without `+`; treated as `\+xt`

@@ -1,0 +1,17 @@
+---
+source: usfm_parser/tests/snapshot.rs
+description: "\\id GEN\n\\c 1\n\\p\n\\v 1 the first verse\n\\v 2 the second verse \\w gracious|grace\\w*"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..79
+  VerseStart 1@16..20
+  Text "the first verse"@21..37
+  VerseEnd 1
+  Text " "
+  VerseStart 2@37..41
+  Text "the second verse "@42..59
+  Char w@59..79 "grace"
+    Text "gracious"@62..70
+  VerseEnd 2
+ChapterEnd 1
