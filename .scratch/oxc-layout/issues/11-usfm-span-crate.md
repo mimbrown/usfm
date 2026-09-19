@@ -1,6 +1,6 @@
 # 11. `usfm_span`: the first leaf crate
 
-Status: ready-for-agent
+Status: resolved
 Milestone: M3
 
 `usfm_ast/src/span.rs` (736 lines: `Span`, `SPAN`, the oxc-derived helpers,
@@ -23,3 +23,15 @@ order in the ADR (`span <- style, ast <- diagnostics <- parser`).
 Done when the workspace builds, `cargo test -p usfm_span` runs the doc tests,
 the gate is green, and `docs/benchmarks.md` numbers are unaffected (the move is
 type-level only; no bench rerun needed, say so in the answer).
+
+## Answer
+
+Landed via PR #14 (2026-09-19). `usfm_span` is the leaf crate: `span.rs`
+moved by `git mv` with its oxc leftovers deleted, and `LineIndex` (line
+starts recorded once, binary search per lookup, columns in chars, CRLF is one
+break, offsets clamp and never panic inside a multi-byte character) with an
+oracle test against the old per-call arithmetic. `usfm_ast::span` re-exports
+it so no caller changed; `diagnostics::line_col` delegates to it and the CLI
+builds one index per file. All 19 `ignore`d doc examples now run (21 doc
+tests with the two on `LineIndex`); no other ignored doc test exists in the
+workspace. Type-level move, no bench rerun.

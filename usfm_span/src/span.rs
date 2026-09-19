@@ -4,14 +4,6 @@ use std::{
     ops::{Index, IndexMut, Range},
 };
 
-// use miette::{LabeledSpan, SourceOffset, SourceSpan};
-// #[cfg(feature = "serialize")]
-// use serde::{Serialize, Serializer as SerdeSerializer, ser::SerializeMap};
-
-// use oxc_allocator::{Allocator, CloneIn};
-// use oxc_ast_macros::ast;
-// use oxc_estree::ESTree;
-
 /// An empty span.
 ///
 /// Should be used for newly created new AST nodes.
@@ -21,8 +13,8 @@ pub const SPAN: Span = Span::new(0, 0);
 ///
 /// It is a logical error for `end` to be less than `start`.
 ///
-/// ```ignore
-/// # use oxc_span::Span;
+/// ```
+/// # use usfm_span::Span;
 /// let text = "foo bar baz";
 /// let span = Span::new(4, 7);
 /// assert_eq!(&text[span], "bar");
@@ -39,8 +31,8 @@ pub const SPAN: Span = Span::new(0, 0);
 /// cases. If you want to create a span starting at some point of a certain
 /// length, you can use [`Span::sized`].
 ///
-/// ```ignore
-/// # use oxc_span::Span;
+/// ```
+/// # use usfm_span::Span;
 /// let a = Span::new(5, 10);  // Start and end offsets
 /// let b = Span::sized(5, 5); // Start offset and size
 /// assert_eq!(a, b);
@@ -51,8 +43,8 @@ pub const SPAN: Span = Span::new(0, 0);
 /// one of the [`expand`] or [`shrink`] methods. Each of these create a new span
 /// without modifying the original.
 ///
-/// ```ignore
-/// # use oxc_span::Span;
+/// ```
+/// # use usfm_span::Span;
 /// let s = Span::new(5, 10);
 /// assert_eq!(s.shrink(2), Span::new(7, 8));
 /// assert_eq!(s.shrink(2), s.shrink_left(2).shrink_right(2));
@@ -62,9 +54,8 @@ pub const SPAN: Span = Span::new(0, 0);
 /// ```
 ///
 /// ## Comparison
-/// [`Span`] has a normal implementation of [`PartialEq`]. If you want to compare two
-/// AST nodes without considering their locations (e.g. to see if they have the
-/// same content), use [`ContentEq`] instead.
+/// [`Span`] has a normal implementation of [`PartialEq`], so two nodes with
+/// equal content but different positions are not equal.
 ///
 /// ## Implementation Notes
 /// See the [`text-size`](https://docs.rs/text-size) crate for details.
@@ -72,7 +63,6 @@ pub const SPAN: Span = Span::new(0, 0);
 ///
 /// [`expand`]: Span::expand
 /// [`shrink`]: Span::shrink
-/// [`ContentEq`]: crate::ContentEq
 #[derive(Default, Clone, Copy, Eq, PartialOrd, Ord)]
 pub struct Span {
     /// The zero-based start offset of the span
@@ -81,7 +71,6 @@ pub struct Span {
     /// the span is empty, but should not be less than it.
     pub end: u32,
     /// Align `Span` on 8 on 64-bit platforms
-    // #[estree(skip)]
     _align: PointerAlign,
 }
 
@@ -105,8 +94,8 @@ impl Span {
     /// Create a new empty [`Span`] that starts and ends at an offset position.
     ///
     /// # Examples
-    /// ```ignore
-    /// use oxc_span::Span;
+    /// ```
+    /// use usfm_span::Span;
     ///
     /// let fifth = Span::empty(5);
     /// assert!(fifth.is_empty());
@@ -120,8 +109,8 @@ impl Span {
     /// Create a new [`Span`] starting at `start` and covering `size` bytes.
     ///
     /// # Example
-    /// ```ignore
-    /// use oxc_span::Span;
+    /// ```
+    /// use usfm_span::Span;
     ///
     /// let span = Span::sized(2, 4);
     /// assert_eq!(span.size(), 4);
@@ -134,8 +123,8 @@ impl Span {
     /// Get the number of bytes covered by the [`Span`].
     ///
     /// # Example
-    /// ```ignore
-    /// use oxc_span::Span;
+    /// ```
+    /// use usfm_span::Span;
     ///
     /// assert_eq!(Span::new(1, 1).size(), 0);
     /// assert_eq!(Span::new(0, 5).size(), 5);
@@ -149,8 +138,8 @@ impl Span {
     /// Returns `true` if `self` covers a range of zero length.
     ///
     /// # Example
-    /// ```ignore
-    /// use oxc_span::Span;
+    /// ```
+    /// use usfm_span::Span;
     ///
     /// assert!(Span::new(0, 0).is_empty());
     /// assert!(Span::new(5, 5).is_empty());
@@ -165,8 +154,8 @@ impl Span {
     /// i.e. `SPAN` which is used for generated nodes which are not in source code.
     ///
     /// # Example
-    /// ```ignore
-    /// use oxc_span::{Span, SPAN};
+    /// ```
+    /// use usfm_span::{Span, SPAN};
     ///
     /// assert!(SPAN.is_unspanned());
     /// assert!(!Span::new(0, 5).is_unspanned());
@@ -184,8 +173,8 @@ impl Span {
     ///
     /// # Examples
     ///
-    /// ```ignore
-    /// # use oxc_span::Span;
+    /// ```
+    /// # use usfm_span::Span;
     /// let span = Span::new(5, 10);
     ///
     /// assert!(span.contains_inclusive(span)); // always true for itself
@@ -204,8 +193,8 @@ impl Span {
     /// Create a [`Span`] covering the maximum range of two [`Span`]s.
     ///
     /// # Example
-    /// ```ignore
-    /// use oxc_span::Span;
+    /// ```
+    /// use usfm_span::Span;
     ///
     /// let span1 = Span::new(0, 5);
     /// let span2 = Span::new(3, 8);
@@ -223,8 +212,8 @@ impl Span {
     /// See [`expand_left`] and [`expand_right`] for more info.
     ///
     /// # Example
-    /// ```ignore
-    /// use oxc_span::Span;
+    /// ```
+    /// use usfm_span::Span;
     ///
     /// let span = Span::new(3, 5);
     /// assert_eq!(span.expand(1), Span::new(2, 6));
@@ -252,8 +241,8 @@ impl Span {
     /// See [`shrink_left`] and [`shrink_right`] for more info.
     ///
     /// # Example
-    /// ```ignore
-    /// use oxc_span::Span;
+    /// ```
+    /// use usfm_span::Span;
     /// let span = Span::new(5, 10);
     /// assert_eq!(span.shrink(2), Span::new(7, 8));
     /// ```
@@ -273,8 +262,8 @@ impl Span {
     ///
     /// # Example
     ///
-    /// ```ignore
-    /// use oxc_span::Span;
+    /// ```
+    /// use usfm_span::Span;
     ///
     /// let a = Span::new(5, 10);
     /// assert_eq!(a.expand_left(5), Span::new(0, 10));
@@ -285,8 +274,8 @@ impl Span {
     /// The leftmost bound of the span is clamped to 0. It is safe to call this
     /// method with a value larger than the start position.
     ///
-    /// ```ignore
-    /// use oxc_span::Span;
+    /// ```
+    /// use usfm_span::Span;
     ///
     /// let a = Span::new(0, 5);
     /// assert_eq!(a.expand_left(5), Span::new(0, 5));
@@ -304,8 +293,8 @@ impl Span {
     ///
     /// # Example
     ///
-    /// ```ignore
-    /// use oxc_span::Span;
+    /// ```
+    /// use usfm_span::Span;
     ///
     /// let a = Span::new(5, 10);
     /// let shrunk = a.shrink_left(5);
@@ -330,8 +319,8 @@ impl Span {
     ///
     /// # Example
     ///
-    /// ```ignore
-    /// use oxc_span::Span;
+    /// ```
+    /// use usfm_span::Span;
     ///
     /// let a = Span::new(5, 10);
     /// assert_eq!(a.expand_right(5), Span::new(5, 15));
@@ -342,8 +331,8 @@ impl Span {
     /// The rightmost bound of the span is clamped to `u32::MAX`. It is safe to
     /// call this method with a value larger than the end position.
     ///
-    /// ```ignore
-    /// use oxc_span::Span;
+    /// ```
+    /// use usfm_span::Span;
     ///
     /// let a = Span::new(0, u32::MAX);
     /// assert_eq!(a.expand_right(5), Span::new(0, u32::MAX));
@@ -361,8 +350,8 @@ impl Span {
     ///
     /// # Example
     ///
-    /// ```ignore
-    /// use oxc_span::Span;
+    /// ```
+    /// use usfm_span::Span;
     ///
     /// let a = Span::new(5, 10);
     /// let shrunk = a.shrink_right(5);
@@ -384,8 +373,8 @@ impl Span {
     /// Get a snippet of text from a source string that the [`Span`] covers.
     ///
     /// # Example
-    /// ```ignore
-    /// use oxc_span::Span;
+    /// ```
+    /// use usfm_span::Span;
     ///
     /// let source = "function add (a, b) { return a + b; }";
     /// let name_span = Span::new(9, 12);
@@ -396,20 +385,6 @@ impl Span {
         &source_text[self.start as usize..self.end as usize]
     }
 
-    // /// Create a [`LabeledSpan`] covering this [`Span`] with the given label.
-    // ///
-    // /// Use [`Span::primary_label`] if this is the primary span for the diagnostic.
-    // #[must_use]
-    // pub fn label<S: Into<String>>(self, label: S) -> LabeledSpan {
-    //     LabeledSpan::new_with_span(Some(label.into()), self)
-    // }
-
-    // /// Creates a primary [`LabeledSpan`] covering this [`Span`] with the given label.
-    // #[must_use]
-    // pub fn primary_label<S: Into<String>>(self, label: S) -> LabeledSpan {
-    //     LabeledSpan::new_primary_with_span(Some(label.into()), self)
-    // }
-
     /// Convert [`Span`] to a single `u64`.
     ///
     /// On 64-bit platforms, `Span` is aligned on 8, so equivalent to a `u64`.
@@ -418,7 +393,8 @@ impl Span {
     ///
     /// Do not use this on 32-bit platforms as it's likely to be less efficient.
     ///
-    /// Note: `#[ast]` macro adds `#[repr(C)]` to the struct, so field order is guaranteed.
+    /// The conversion reads the two fields by value, so it does not depend on
+    /// the struct's layout.
     #[expect(clippy::inline_always)] // Because this is a no-op on 64-bit platforms.
     #[inline(always)]
     const fn as_u64(self) -> u64 {
@@ -467,18 +443,6 @@ impl From<Range<u32>> for Span {
         Self::new(range.start, range.end)
     }
 }
-
-// impl From<Span> for SourceSpan {
-//     fn from(val: Span) -> Self {
-//         Self::new(SourceOffset::from(val.start as usize), val.size() as usize)
-//     }
-// }
-
-// impl From<Span> for LabeledSpan {
-//     fn from(val: Span) -> Self {
-//         LabeledSpan::underline(val)
-//     }
-// }
 
 // On 64-bit platforms, compare `Span`s as single `u64`s, which is faster when used with `&Span` refs.
 // https://godbolt.org/z/sEf9MGvsr
@@ -540,25 +504,6 @@ impl GetSpanMut for Span {
         self
     }
 }
-
-// impl<'a> CloneIn<'a> for Span {
-//     type Cloned = Self;
-
-//     #[inline]
-//     fn clone_in(&self, _: &'a Allocator) -> Self {
-//         *self
-//     }
-// }
-
-// #[cfg(feature = "serialize")]
-// impl Serialize for Span {
-//     fn serialize<S: SerdeSerializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-//         let mut map = serializer.serialize_map(None)?;
-//         map.serialize_entry("start", &self.start)?;
-//         map.serialize_entry("end", &self.end)?;
-//         map.end()
-//     }
-// }
 
 /// Zero-sized type which has pointer alignment (8 on 64-bit, 4 on 32-bit).
 #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -697,7 +642,9 @@ mod test {
 mod doctests {
     use super::Span;
 
-    /// Tests from [`Span`] docs, since rustdoc test runner is disabled
+    /// The examples on [`Span`] itself. They run as doc tests too (ticket 11
+    /// unignored them); they are kept here because Miri runs `--lib` and never
+    /// the doc tests.
     #[test]
     fn doctest() {
         // 1

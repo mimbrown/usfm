@@ -45,8 +45,11 @@ run() {
   cargo +nightly miri test "$@"
 }
 
+# `Span` and `LineIndex`: byte offsets sliced out of a `&str`.          ~1 s
+run -p usfm_span --lib
+
 # `string_parser` (through `number`), `cursor`, the visitors, `reference`,
-# `text`, `span`.                                                      ~9 s
+# `text`.                                                              ~9 s
 run -p usfm_ast --lib
 
 # The lexer's own unit tests, including `lexer::source`, plus the parser,

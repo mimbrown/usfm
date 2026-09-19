@@ -9,7 +9,8 @@ use std::path::{Path, PathBuf, absolute};
 use std::sync::{Arc, LazyLock, mpsc};
 use usfm_ast::{Block, Document, Inline};
 use usfm_parser::context::Context;
-use usfm_parser::diagnostics::{ParseResult, Severity, line_col};
+use usfm_parser::diagnostics::{ParseResult, Severity};
+use usfm_parser::lexer::span::LineIndex;
 use usfm_parser::serialize_html::HtmlElement;
 use usfm_parser::{
     DEFAULT_STYLESHEET,
@@ -347,8 +348,11 @@ fn report_diagnostics(
     result: &ParseResult,
     strict: bool,
 ) -> Result<(), String> {
+    // One index for the whole file: the alternative is a scan from the start
+    // of the source per diagnostic.
+    let index = LineIndex::new(source);
     for diagnostic in &result.diagnostics {
-        let (line, col) = line_col(source, diagnostic.span.start);
+        let (line, col) = index.line_col(diagnostic.span.start);
         eprintln!(
             "{label}:{line}:{col}: {}[{}]: {}",
             diagnostic.severity, diagnostic.code, diagnostic.message
