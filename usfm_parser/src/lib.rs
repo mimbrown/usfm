@@ -35,13 +35,17 @@ mod parser_parse {
 
     /// `UniquePromise` is a way to use the type system to enforce the invariant that only
     /// a single `ParserImpl`, `Lexer` and `lexer::Source` can exist at any time on a thread.
-    /// This constraint is required to guarantee the soundness of some methods of these types
-    /// e.g. `Source::set_position`.
     ///
     /// `ParserImpl::new`, `Lexer::new` and `lexer::Source::new` all require a `UniquePromise`
     /// to be provided to them. `UniquePromise::new` is not visible outside this module, so only
     /// `Parser::parse` can create one, and it only calls `ParserImpl::new` once.
     /// This enforces the invariant throughout the entire parser.
+    ///
+    /// It used to be load-bearing for soundness: a `SourcePosition` was a raw pointer, and
+    /// `Source::set_position` was safe only because the promise guaranteed the position had
+    /// come from the one `Source` on this thread. Ticket 05 made `SourcePosition` an offset,
+    /// so the worst a foreign position can now do is panic. What is left is a structural
+    /// guarantee: one parse at a time, no accidental second lexer over the same text.
     ///
     /// `UniquePromise` is a zero-sized type and has no runtime cost. It's purely for the type-checker.
     ///
@@ -57,7 +61,7 @@ mod parser_parse {
 
         /// Backdoor for tests/benchmarks to create a `UniquePromise` (see above).
         /// This function must NOT be exposed outside of tests and benchmarks,
-        /// as it allows circumventing safety invariants of the parser.
+        /// as it allows circumventing the one-parse-at-a-time invariant.
         #[cfg(any(test, feature = "benchmarking"))]
         pub fn new_for_tests_and_benchmarks() -> Self {
             Self(())

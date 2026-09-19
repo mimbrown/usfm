@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, slice, str};
+use std::marker::PhantomData;
 
 use crate::{MAX_LEN, UniquePromise};
 
@@ -12,58 +12,53 @@ use crate::{MAX_LEN, UniquePromise};
 ///
 /// `Source` provides:
 ///
-/// * Safe API for consuming source char-by-char (`Source::next_char`, `Source::peek_char`).
-/// * Safe API for peeking next source byte (`Source::peek_byte`).
-/// * Unsafe API for advancing over a known ASCII byte (`Source::advance_if_ascii_eq`).
-/// * Mostly-safe API for rewinding to a previous position in source
+/// * API for consuming source char-by-char (`Source::next_char`, `Source::peek_char`).
+/// * API for peeking the next source byte (`Source::peek_byte`) or two
+///   (`Source::peek_2_bytes`).
+/// * API for advancing over a known ASCII byte (`Source::advance_if_ascii_eq`).
+/// * API for rewinding to a previous position in source
 ///   (`Source::position`, `Source::set_position`).
 ///
 /// # Composition of `Source`
 ///
-/// * `start` is pointer to start of source text.
-/// * `end` is pointer to end of source text.
-/// * `ptr` is cursor for current position in source text.
+/// * `text` is the whole source text.
+/// * `offset` is the cursor: a byte offset into `text`.
 ///
 /// # Invariants of `Source`
 ///
-/// 1. `start` <= `end`
-/// 2. The region of memory bounded between `start` and `end` must be initialized,
-///    a single allocation, and contain the bytes of a valid UTF-8 string.
-/// 3. `ptr` must always be >= `start` and <= `end`.
-///    i.e. cursor always within bounds of source text `&str`, or 1 byte after last byte
+/// 1. `offset` <= `text.len()`.
+///    i.e. cursor always within bounds of source text `&str`, or 1 byte after the last byte
 ///    of source text (positioned on EOF).
-/// 4. `ptr` must always point to a UTF-8 character boundary, or EOF.
-///    i.e. pointing to *1st* byte of a UTF-8 character.
+/// 2. `offset` is always on a UTF-8 character boundary, or EOF.
+///    i.e. pointing at the *1st* byte of a UTF-8 character.
 ///
-/// These invariants are the same as `std::str::Chars`, and all four must be upheld at all
-/// times: `Source` has no API that steps into the middle of a UTF-8 character.
+/// Both invariants are enforced by the compiler rather than by this type: every read goes
+/// through a slice index or `slice::get`, so a violation is a panic, not undefined behaviour.
+/// `Source` still upholds them so that no index ever panics: `Source::next_char` advances by
+/// `char::len_utf8`, and `Source::advance_if_ascii_eq` only advances over a byte it has
+/// checked is ASCII.
 ///
-/// Invariants (1) and (2) are enforced by initializing `start` and `end` from a valid `&str`,
-/// and they are never modified after initialization.
-///
-/// Safe methods of `Source` enforce invariant (3) i.e. they do not allow reading past EOF.
-/// Unsafe methods e.g. `Source::peek_byte_unchecked` require caller to uphold this invariant.
-///
-/// Invariant (4) is the most difficult to satisfy.
-/// `Source::next_char` relies on source text being valid UTF-8 to provide a safe API which
-/// upholds this invariant, and `Source::advance_if_ascii_eq` only ever advances over a byte
-/// it has checked is ASCII.
+/// This type was ported from oxc's lexer, which holds three raw pointers and reads through
+/// them. Ticket 05 replaced the pointers with an offset after measuring: the offset version
+/// lexes the whole corpus as fast as the pointer version did (153.7 MiB/s against
+/// 152.4–153.5), so the 21 `unsafe` blocks and `unsafe fn`s this file used to hold did not
+/// earn their place. `docs/benchmarks.md` has the runs, and the warning that goes with them:
+/// a `lex` number measured on a whole binary carries ±5–8% of codegen-unit placement, so
+/// compare this file's cost across an edit only with several binaries interleaved.
 pub(super) struct Source<'a> {
-    /// Pointer to start of source string. Never altered after initialization.
-    start: *const u8,
-    /// Pointer to end of source string. Never altered after initialization.
-    end: *const u8,
-    /// Pointer to current position in source string
-    ptr: *const u8,
-    /// Marker for immutable borrow of source string
-    _marker: PhantomData<&'a str>,
+    /// The whole source string. Never altered after initialization.
+    text: &'a str,
+    /// Current position in the source string, as a byte offset into `text`.
+    offset: usize,
 }
 
 impl<'a> Source<'a> {
     /// Create `Source` from `&str`.
     ///
-    /// Requiring a `UniquePromise` to be provided guarantees only 1 `Source` can exist
-    /// on a single thread at one time.
+    /// `UniquePromise` is no longer load-bearing for soundness — it was what guaranteed
+    /// a `SourcePosition` could only come from the one `Source` on this thread, back when
+    /// a `SourcePosition` was a raw pointer. It is kept because it is the parser's public
+    /// entry-token for building a `Lexer` (see `crate::UniquePromise`).
     #[expect(unused_variables, clippy::needless_pass_by_value)]
     pub(super) fn new(mut source_text: &'a str, unique: UniquePromise) -> Self {
         // If source text exceeds size limit, substitute a short source text which will fail to parse.
@@ -72,150 +67,68 @@ impl<'a> Source<'a> {
             source_text = "\0";
         }
 
-        let start = source_text.as_ptr();
-        // SAFETY: Adding `source_text.len()` to the starting pointer gives a pointer
-        // at the end of `source_text`. `end` will never be dereferenced, only checked
-        // for direct pointer equality with `ptr` to check if at end of file.
-        let end = unsafe { start.add(source_text.len()) };
-
         Self {
-            start,
-            end,
-            ptr: start,
-            _marker: PhantomData,
+            text: source_text,
+            offset: 0,
         }
     }
 
     /// Get remaining source text as `&str`.
     #[inline]
     pub(super) fn remaining(&self) -> &'a str {
-        // SAFETY:
-        // Invariant of `Source` is that `ptr` is always <= `end`, and is on a UTF-8 char boundary.
-        // `end` is pointer to end of original `&str`, so be definition a UTF-8 char boundary.
-        unsafe {
-            self.str_between_positions_unchecked(
-                SourcePosition::new(self.ptr),
-                SourcePosition::new(self.end),
-            )
-        }
-    }
-
-    /// Return whether at end of source.
-    #[inline]
-    pub(super) fn is_eof(&self) -> bool {
-        self.ptr == self.end
+        // Invariants of `Source`: `offset` is in bounds and on a UTF-8 character boundary,
+        // so this index cannot panic.
+        &self.text[self.offset..]
     }
 
     /// Get current position.
     ///
-    /// The `SourcePosition` returned is guaranteed to be within bounds of `&str` that `Source`
-    /// was created from, and on a UTF-8 character boundary, so can be used by caller
-    /// to later move current position of this `Source` using `Source::set_position`.
+    /// The `SourcePosition` returned is guaranteed to be within bounds of the `&str` that
+    /// `Source` was created from, and on a UTF-8 character boundary, so can be used by the
+    /// caller to later move the current position of this `Source` using `Source::set_position`.
     ///
     /// `SourcePosition` lives as long as the source text `&str` that `Source` was created from.
     #[inline]
     pub(super) fn position(&self) -> SourcePosition<'a> {
-        // SAFETY: Creating a `SourcePosition` from current position of `Source` is always valid,
-        // if caller has upheld safety conditions of other unsafe methods of this type.
-        unsafe { SourcePosition::new(self.ptr) }
+        SourcePosition {
+            offset: self.offset,
+            _marker: PhantomData,
+        }
     }
 
     /// Move current position.
+    ///
+    /// `pos` must have come from this `Source`. If it came from a longer one, the
+    /// `debug_assert`s below catch it in tests and the next read panics in release —
+    /// neither is undefined behaviour.
     #[inline]
     pub(super) fn set_position(&mut self, pos: SourcePosition<'a>) {
-        // `SourcePosition` always upholds the invariants of `Source`, as long as it's created
-        // from this `Source`. `SourcePosition`s can only be created from a `Source`.
-        // `Source::new` takes a `UniquePromise`, which guarantees that it's the only `Source`
-        // in existence on this thread. `Source` is not `Sync` or `Send`, so no possibility another
-        // `Source` originated on another thread can "jump" onto this one.
-        // This is sufficient to guarantee that any `SourcePosition` that parser/lexer holds must be
-        // from this `Source`.
-        // This guarantee is what allows this function to be safe.
-
-        // SAFETY: `SourcePosition::read`'s contract is upheld by:
-        // * The preceding checks that `pos.ptr` >= `self.start` and < `self.end`.
-        // * `Source`'s invariants guarantee that `self.start` - `self.end` contains allocated memory.
-        // * `Source::new` takes an immutable ref `&str`, guaranteeing that the memory `pos.ptr`
-        //   addresses cannot be aliased by a `&mut` ref as long as `Source` exists.
-        // * `SourcePosition` can only live as long as the `&str` underlying `Source`.
-        debug_assert!(
-            pos.ptr >= self.start
-                && pos.ptr <= self.end
-                // SAFETY: See above
-                && (pos.ptr == self.end || !is_utf8_cont_byte(unsafe { pos.read() }))
-        );
-        self.ptr = pos.ptr;
+        debug_assert!(pos.offset <= self.text.len());
+        debug_assert!(self.text.is_char_boundary(pos.offset));
+        self.offset = pos.offset;
     }
 
     /// Advance `Source`'s cursor by one byte if it is equal to the given ASCII value.
     ///
-    /// # SAFETY
-    ///
-    /// Caller must ensure that `ascii_byte` is a valid ASCII character.
+    /// `ascii_byte` must be ASCII: advancing one byte past a non-ASCII byte would leave the
+    /// cursor inside a UTF-8 character, and the next `remaining()` would panic. The
+    /// `debug_assert` is what holds callers to it.
     #[inline]
-    pub(super) unsafe fn advance_if_ascii_eq(&mut self, ascii_byte: u8) -> bool {
+    pub(super) fn advance_if_ascii_eq(&mut self, ascii_byte: u8) -> bool {
         debug_assert!(ascii_byte.is_ascii());
         let matched = self.peek_byte() == Some(ascii_byte);
         if matched {
-            // SAFETY: next byte exists and is a valid ASCII char (and thus UTF-8
-            // char boundary).
-            self.ptr = unsafe { self.ptr.add(1) };
+            self.offset += 1;
         }
         matched
     }
 
-    /// Get string slice of source between 2 `SourcePosition`s, without checks.
-    ///
-    /// # SAFETY
-    /// `start` must not be after `end`.
-    #[inline]
-    pub(super) unsafe fn str_between_positions_unchecked(
-        &self,
-        start: SourcePosition<'a>,
-        end: SourcePosition<'a>,
-    ) -> &'a str {
-        // Check `start` is not after `end`
-        debug_assert!(start.ptr <= end.ptr);
-        // Check `start` and `end` are within bounds of `Source`
-        debug_assert!(start.ptr >= self.start);
-        debug_assert!(end.ptr <= self.end);
-        // Check `start` and `end` are on UTF-8 character boundaries.
-        // SAFETY: Above assertions ensure `start` and `end` are valid to read from if not at EOF.
-        unsafe {
-            debug_assert!(start.ptr == self.end || !is_utf8_cont_byte(start.read()));
-            debug_assert!(end.ptr == self.end || !is_utf8_cont_byte(end.read()));
-        }
-
-        // SAFETY: Caller guarantees `start` is not after `end`.
-        // `SourcePosition`s can only be created from a `Source`.
-        // `Source::new` takes a `UniquePromise`, which guarantees that it's the only `Source`
-        // in existence on this thread. `Source` is not `Sync` or `Send`, so no possibility another
-        // `Source` originated on another thread can "jump" onto this one.
-        // This is sufficient to guarantee that any `SourcePosition` that parser/lexer holds must be
-        // from this `Source`, therefore `start.ptr` and `end.ptr` must both be within the same
-        // allocation, and derived from the same original pointer.
-        // Invariants of `Source` and `SourcePosition` types guarantee that both are positioned
-        // on UTF-8 character boundaries. So slicing source text between these 2 points will always
-        // yield a valid UTF-8 string.
-        unsafe {
-            let len = end.addr() - start.addr();
-            let slice = slice::from_raw_parts(start.ptr, len);
-            std::str::from_utf8_unchecked(slice)
-        }
-    }
-
     /// Get current position in source, relative to start of source.
-    #[inline]
-    pub(crate) fn offset(&self) -> u32 {
-        self.offset_of(self.position())
-    }
-
-    /// Get offset of `pos`.
     #[expect(clippy::cast_possible_truncation)]
     #[inline]
-    pub(super) fn offset_of(&self, pos: SourcePosition<'a>) -> u32 {
-        // Cannot overflow `u32` because of `MAX_LEN` check in `Source::new`
-        (pos.addr() - self.start as usize) as u32
+    pub(crate) fn offset(&self) -> u32 {
+        // Cannot overflow `u32` because of the `MAX_LEN` check in `Source::new`.
+        self.offset as u32
     }
 
     /// Get next char of source, and advance position to after it.
@@ -224,25 +137,16 @@ impl<'a> Source<'a> {
         // Check not at EOF and handle ASCII bytes
         let byte = self.peek_byte()?;
         if byte.is_ascii() {
-            // SAFETY: We already exited if at EOF, so `ptr < end`.
-            // So incrementing `ptr` cannot result in `ptr > end`.
-            // Current byte is ASCII, so incremented `ptr` must be on a UTF-8 character boundary.
-            unsafe { self.ptr = self.ptr.add(1) };
+            // Current byte is ASCII, so the incremented offset is on a UTF-8 character
+            // boundary, and is at most `text.len()`.
+            self.offset += 1;
             return Some(byte as char);
         }
 
-        // Multi-byte Unicode character.
-        // Check invariant that `ptr` is on a UTF-8 character boundary.
-        debug_assert!(!is_utf8_cont_byte(byte));
-
-        // Create a `Chars` iterator, get next char from it, and then update `self.ptr`
-        // to match `Chars` iterator's updated pointer afterwards.
-        // `Chars` iterator upholds same invariants as `Source`, so its pointer is guaranteed
-        // to be valid as `self.ptr`.
-        let mut chars = self.remaining().chars();
-        // SAFETY: We know that there's a byte to be consumed, so `chars.next()` must return `Some(_)`
-        let c = unsafe { chars.next().unwrap_unchecked() };
-        self.ptr = chars.as_str().as_ptr();
+        // Multi-byte Unicode character. `remaining()` starts on a character boundary, so
+        // `chars().next()` yields the whole character and `len_utf8` lands on the next one.
+        let c = self.remaining().chars().next()?;
+        self.offset += c.len_utf8();
         Some(c)
     }
 
@@ -256,153 +160,129 @@ impl<'a> Source<'a> {
         }
 
         // Multi-byte Unicode character.
-        // Check invariant that `ptr` is on a UTF-8 character boundary.
-        debug_assert!(!is_utf8_cont_byte(byte));
-
-        // Create a `Chars` iterator, and get next char from it
-        let mut chars = self.remaining().chars();
-        // SAFETY: We know that there's a byte to be consumed, so `chars.next()` must return `Some(_)`.
-        // Could just return `chars.next()` here, but making it clear to compiler that this branch
-        // always returns `Some(_)` may help it optimize the caller. Compiler seems to have difficulty
-        // "seeing into" `Chars` iterator and making deductions.
-        let c = unsafe { chars.next().unwrap_unchecked() };
-        Some(c)
+        self.remaining().chars().next()
     }
 
     /// Peek next byte of source without consuming it.
     #[inline]
     pub(super) fn peek_byte(&self) -> Option<u8> {
-        #[expect(clippy::if_not_else)] // Hot path first
-        if !self.is_eof() {
-            // SAFETY: Safe to read from `ptr` as we just checked it's not out of bounds
-            Some(unsafe { self.peek_byte_unchecked() })
-        } else {
-            None
-        }
+        self.text.as_bytes().get(self.offset).copied()
     }
 
     /// Peek next two bytes of source without consuming them.
     #[inline]
     pub(super) fn peek_2_bytes(&self) -> Option<[u8; 2]> {
-        // `end` is always >= `ptr` so `end - ptr` cannot wrap around.
-        // No need to use checked/saturating subtraction here.
-        if (self.end as usize) - (self.ptr as usize) >= 2 {
-            // SAFETY: The check above ensures that there are at least 2 bytes to
-            // read from `self.ptr` without reading past `self.end`
-            let bytes = unsafe { self.position().read2() };
-            Some(bytes)
+        let bytes = self.text.as_bytes();
+        // `offset` is always <= `bytes.len()`, so `offset + 2` cannot wrap.
+        if self.offset + 2 <= bytes.len() {
+            Some([bytes[self.offset], bytes[self.offset + 1]])
         } else {
             None
         }
     }
-
-    /// Peek next byte of source without consuming it, without EOF bounds-check.
-    ///
-    /// # SAFETY
-    /// Caller must ensure `Source` is not at end of file.
-    #[inline]
-    pub(super) unsafe fn peek_byte_unchecked(&self) -> u8 {
-        debug_assert!(self.ptr >= self.start && self.ptr < self.end);
-
-        // SAFETY: Caller guarantees `ptr` is before `end` (i.e. not at end of file).
-        // Methods of this type provide no way to allow `ptr` to be before `start`.
-        // `Source`'s invariants guarantee that `self.start` - `self.end` contains allocated memory.
-        // `Source::new` takes an immutable ref `&str`, guaranteeing that the memory `self.ptr`
-        // addresses cannot be aliased by a `&mut` ref as long as `Source` exists.
-        unsafe { self.position().read() }
-    }
 }
 
-/// Wrapper around a pointer to a position in `Source`.
+/// A position in the `Source` that created it, as a byte offset.
 ///
-/// # SAFETY
-/// `SourcePosition` must always be on a UTF-8 character boundary,
-/// and within bounds of the `Source` that created it.
+/// A `SourcePosition` is always on a UTF-8 character boundary and within bounds of the
+/// `Source` that created it (or one byte past its end, at EOF), because the only way to make
+/// one is `Source::position`.
 #[derive(Debug, Clone, Copy)]
 pub struct SourcePosition<'a> {
-    ptr: *const u8,
-    _marker: PhantomData<&'a u8>,
+    offset: usize,
+    _marker: PhantomData<&'a str>,
 }
 
-impl SourcePosition<'_> {
-    /// Create a new `SourcePosition` from a pointer.
-    ///
-    /// # SAFETY
-    /// * Pointer must obey all the same invariants as `Source::ptr`.
-    /// * It must be created from a `Source`.
-    /// * It must be in bounds of the source text `&str` the `Source` is created from,
-    ///   or 1 byte after the end of the source text (i.e. positioned at EOF).
-    /// * It must be positioned on a UTF-8 character boundary (or EOF).
-    #[inline]
-    pub(super) unsafe fn new(ptr: *const u8) -> Self {
-        Self {
-            ptr,
-            _marker: PhantomData,
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn source(text: &str) -> Source<'_> {
+        Source::new(text, UniquePromise::new_for_tests_and_benchmarks())
+    }
+
+    #[test]
+    fn walks_multi_byte_characters_whole() {
+        // Every `next_char` must land on the next character boundary; a cursor left
+        // inside a character would make `remaining()` panic (and, before ticket 05,
+        // would have been undefined behaviour).
+        let text = "a\u{a0}é漢\u{1f600}z";
+        let mut source = source(text);
+        let mut seen = String::new();
+        while let Some(c) = source.next_char() {
+            seen.push(c);
+            // `remaining()` re-slices `text` at the cursor, which panics off a boundary.
+            assert!(text.ends_with(source.remaining()));
         }
+        assert_eq!(seen, text);
+        assert!(source.remaining().is_empty());
+        assert_eq!(source.offset() as usize, text.len());
     }
 
-    /// Get memory address of `SourcePosition` as a `usize`.
-    #[inline]
-    pub(super) fn addr(self) -> usize {
-        self.ptr as usize
-    }
-
-    /// Read byte from this `SourcePosition`.
-    ///
-    /// # SAFETY
-    /// Caller must ensure `SourcePosition` is not at end of source text.
-    ///
-    /// # Implementation details
-    ///
-    /// Using `as_ref()` for reading is copied from `core::slice::iter::next`.
-    /// https://doc.rust-lang.org/src/core/slice/iter.rs.html#132
-    /// https://doc.rust-lang.org/src/core/slice/iter/macros.rs.html#156-168
-    ///
-    /// Using `ptr.as_ref().unwrap_unchecked()` instead of `*ptr` or `ptr.read()` produces
-    /// a 7% speed-up on Lexer benchmarks.
-    /// Presumably this is because it tells the compiler it can rely on the memory being immutable,
-    /// because if a `&mut` reference existed, that would violate Rust's aliasing rules.
-    #[inline]
-    pub(super) unsafe fn read(self) -> u8 {
-        debug_assert!(!self.ptr.is_null());
-
-        // SAFETY:
-        // Caller guarantees `self` is not at end of source text.
-        // `Source` is created from a valid `&str`, so points to allocated, initialized memory.
-        // `Source` conceptually holds the source text `&str`, which guarantees no mutable references
-        // to the same memory can exist, as that would violate Rust's aliasing rules.
-        // Pointer is "dereferenceable" by definition as a `u8` is 1 byte and cannot span multiple objects.
-        // Alignment is not relevant as `u8` is aligned on 1 (i.e. no alignment requirements).
-        unsafe { *self.ptr.as_ref().unwrap_unchecked() }
-    }
-
-    /// Read 2 bytes from this `SourcePosition`.
-    ///
-    /// # SAFETY
-    /// Caller must ensure `SourcePosition` is no later than 2 bytes before end of source text.
-    /// i.e. if source length is 10, `self` must be on position 8 max.
-    #[inline]
-    pub(super) unsafe fn read2(self) -> [u8; 2] {
-        debug_assert!(!self.ptr.is_null());
-
-        // SAFETY:
-        // Caller guarantees `self` is not at no later than 2 bytes before end of source text.
-        // `Source` is created from a valid `&str`, so points to allocated, initialized memory.
-        // `Source` conceptually holds the source text `&str`, which guarantees no mutable references
-        // to the same memory can exist, as that would violate Rust's aliasing rules.
-        // Pointer is "dereferenceable" by definition as a `u8` is 1 byte and cannot span multiple objects.
-        // Alignment is not relevant as `u8` is aligned on 1 (i.e. no alignment requirements).
-        #[expect(clippy::ptr_as_ptr)]
-        unsafe {
-            let p = self.ptr as *const [u8; 2];
-            *p.as_ref().unwrap_unchecked()
+    #[test]
+    fn peek_does_not_move_and_matches_next() {
+        let text = "\\p é//x";
+        let mut source = source(text);
+        while let Some(peeked) = source.peek_char() {
+            let offset = source.offset();
+            assert_eq!(source.peek_char(), Some(peeked));
+            assert_eq!(source.offset(), offset);
+            assert_eq!(source.next_char(), Some(peeked));
         }
+        assert_eq!(source.peek_byte(), None);
+        assert_eq!(source.peek_2_bytes(), None);
     }
-}
 
-/// Return if byte is a UTF-8 continuation byte.
-#[inline]
-const fn is_utf8_cont_byte(byte: u8) -> bool {
-    // 0x80 - 0xBF are continuation bytes i.e. not 1st byte of a UTF-8 character sequence
-    byte >= 0x80 && byte < 0xC0
+    #[test]
+    fn peek_2_bytes_stops_one_byte_short_of_the_end() {
+        let mut source = source("ab");
+        assert_eq!(source.peek_2_bytes(), Some(*b"ab"));
+        source.next_char();
+        // One byte left: reading two would run past the end.
+        assert_eq!(source.peek_2_bytes(), None);
+        assert_eq!(source.peek_byte(), Some(b'b'));
+    }
+
+    #[test]
+    fn advance_if_ascii_eq_only_moves_on_a_match() {
+        let mut source = source("*x");
+        assert!(!source.advance_if_ascii_eq(b'x'));
+        assert_eq!(source.offset(), 0);
+        assert!(source.advance_if_ascii_eq(b'*'));
+        assert_eq!(source.offset(), 1);
+        // At EOF it must not move either.
+        source.next_char();
+        assert!(source.remaining().is_empty());
+        assert!(!source.advance_if_ascii_eq(b'x'));
+        assert_eq!(source.offset(), 2);
+    }
+
+    #[test]
+    fn positions_round_trip_across_multi_byte_text() {
+        let text = "é漢x";
+        let mut source = source(text);
+        let start = source.position();
+        source.next_char();
+        let after_first = source.position();
+        source.next_char();
+        source.next_char();
+        assert!(source.remaining().is_empty());
+        source.set_position(start);
+        assert_eq!(source.remaining(), text);
+        source.set_position(after_first);
+        assert_eq!(source.remaining(), "漢x");
+        assert_eq!(source.offset(), 2);
+    }
+
+    #[test]
+    fn the_substitute_for_an_overlong_source_reads_as_one_character() {
+        // `Source::new` swaps a source past `MAX_LEN` for `"\0"`, which the parser
+        // rejects. `MAX_LEN` is too large to allocate in a test, so what is checked
+        // here is the substitute text itself: the cursor must walk it like any other.
+        let mut source = source("\0");
+        assert_eq!(source.remaining(), "\0");
+        assert_eq!(source.peek_byte(), Some(0));
+        assert_eq!(source.next_char(), Some('\0'));
+        assert!(source.remaining().is_empty());
+    }
 }

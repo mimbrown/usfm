@@ -141,9 +141,9 @@ fn consume_name(source: &mut Source) -> usize {
         if !is_name_byte(byte) {
             break;
         }
-        // SAFETY: `is_name_byte` only accepts ASCII, so advancing one byte
-        // keeps the cursor on a UTF-8 boundary.
-        unsafe { source.advance_if_ascii_eq(byte) };
+        // `is_name_byte` only accepts ASCII, so advancing one byte keeps the
+        // cursor on a UTF-8 boundary.
+        source.advance_if_ascii_eq(byte);
         count += 1;
     }
     count
@@ -165,8 +165,7 @@ fn lex_after_backslash(source: &mut Source) -> Kind {
             if consume_name(source) == 0 {
                 return Kind::Backslash;
             }
-            // SAFETY: `*` is ASCII.
-            let closing = unsafe { source.advance_if_ascii_eq(b'*') };
+            let closing = source.advance_if_ascii_eq(b'*');
             Kind::Marker {
                 nested: true,
                 closing,
@@ -174,8 +173,7 @@ fn lex_after_backslash(source: &mut Source) -> Kind {
         }
         Some(byte) if is_name_byte(byte) => {
             consume_name(source);
-            // SAFETY: `*` is ASCII.
-            let closing = unsafe { source.advance_if_ascii_eq(b'*') };
+            let closing = source.advance_if_ascii_eq(b'*');
             Kind::Marker {
                 nested: false,
                 closing,
@@ -220,7 +218,7 @@ fn read_token(source: &mut Source) -> Token {
             Kind::OptBreak
         }
         _ => {
-            // SAFETY: not at EOF (peeked a byte above).
+            // Not at EOF: a byte was peeked above.
             let first = source.next_char().unwrap();
             // Only ASCII whitespace is USFM whitespace. A no-break space
             // (U+00A0), an ideographic space (U+3000) and the like are

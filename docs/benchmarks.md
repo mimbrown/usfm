@@ -142,6 +142,110 @@ book's worth of chapters and verses wrapped in milestone markup.
 | note-heavy | 548.5 | 566.0 | 545.6 | **548.5** | 3.7% |
 | whole-corpus | 227.7 | 249.0 | 248.0 | **248.0** | 8.6% |
 
+## After ticket 05
+
+Ticket 05 (Miri on the unsafe code, 2026-09-19) rewrote the lexer's `Source` and
+took 26 of the workspace's 27 `unsafe` uses out, so the numbers above no longer
+describe the code in the tree. **These are the numbers M3 compares against.**
+
+### `unsafe` before and after
+
+| File | Before | After |
+| --- | ---: | ---: |
+| `usfm_parser/src/lexer/source.rs` | 21 (15 blocks, 6 `unsafe fn`) | 0 |
+| `usfm_parser/src/lexer/mod.rs` | 3 | 0 |
+| `usfm_ast/src/string_parser.rs` | 2 | 0 |
+| `usfm_parser/src/cursor.rs` | 1 | **1** |
+| **Total** | **27** | **1** |
+
+`Source` now holds `&'a str` plus a `usize` offset instead of three raw
+pointers, and `SourcePosition` is an offset instead of a pointer. The one that
+stayed is `ParserImpl::src` — `str::get_unchecked` over a token span — with a
+`debug_assert` of the invariant that every test build and `scripts/miri.sh`
+check. Miri itself found nothing to fix.
+
+### Before and after, whole binaries
+
+Five rounds, alternating the two binaries within each round (`bench-unsafe`,
+built from `991d902`, and `bench-final`, built from this tree) so that a drift
+in the machine hits both equally. Same VM, toolchain and profile as the
+baseline above. Cells are criterion's point estimate per round; **median** of
+the five.
+
+| Id | Before (median of 5) | After (median of 5) | Δ |
+| --- | ---: | ---: | ---: |
+| `lex/plain` | 136.9 | 127.0 | −7.3% |
+| `lex/attributes-heavy` | 152.9 | 149.9 | −2.0% |
+| `lex/alignment-heavy` | 181.2 | 178.2 | −1.7% |
+| `lex/note-heavy` | 140.4 | 128.8 | −8.3% |
+| **`lex/whole-corpus`** | **152.9** | **146.6** | **−4.2%** |
+| `parse/plain` | 67.2 | 65.0 | −3.2% |
+| `parse/attributes-heavy` | 31.2 | 31.4 | +0.4% |
+| `parse/alignment-heavy` | 63.1 | 64.9 | +3.0% |
+| `parse/note-heavy` | 48.5 | 47.1 | −2.8% |
+| **`parse/whole-corpus`** | **49.1** | **50.1** | **+2.0%** |
+
+### What the `lex` row does *not* mean
+
+The `lex` loss is **not** attributable to the `Source` rewrite, and reading it
+as one would send M3 chasing the wrong thing. `lex` never calls
+`ParserImpl::src`, yet three binaries whose lexer sources are byte-identical —
+the same offset-based `Source` — and which differ only in the body of `src` lex
+`plain` at 138.7, 127.8 and 123.8 MiB/s, and the whole corpus at 153.7, 146.6
+and 143.0. Those numbers are stable across rounds; it is the binaries that
+differ, not the runs. The `usfm_parser` rlib is built with the default 16
+codegen units and no LTO, so editing any function in the crate re-partitions and
+re-places the rest, and the lexer's hot loop moves with it. **Whole-binary `lex`
+numbers on this machine carry a stable ±5–8% that has nothing to do with the
+code being measured.**
+
+So: the pointer-based `Source` measured 152.4, 152.9 and 153.5 MiB/s on
+`lex/whole-corpus` across the three interleaved sets, and the offset-based one
+measured 153.7 in the binary that happened to be laid out well. The rewrite can
+lex at least as fast as the pointers did, and the committed binary's 146.6 is
+placement. That is the answer to "did removing the lexer's 21 `unsafe` uses cost
+anything": no.
+
+The lesson for M3, which moves every one of these functions into new crates:
+**compare `lex` across a crate split only with LTO on or codegen-units set to
+1**, or the split's own placement churn will read as a regression.
+
+### Why `ParserImpl::src` kept its `unsafe`
+
+Two comparisons where everything else is held fixed: same offset `Source`, same
+everything but the body of `src`, binaries interleaved round by round.
+
+**A. `&self.source_text[a..b]` against `get_unchecked`** — eight rounds each,
+no `debug_assert` in either. Medians:
+
+| Id | `get_unchecked` | safe indexing | Cost of safe |
+| --- | ---: | ---: | ---: |
+| `parse/plain` | 65.6 | 62.4 | −4.8% |
+| `parse/attributes-heavy` | 32.9 | 32.3 | −1.9% |
+| `parse/alignment-heavy` | 65.7 | 64.8 | −1.4% |
+| `parse/note-heavy` | 47.4 | 46.1 | −2.6% |
+| **`parse/whole-corpus`** | **50.5** | **49.4** | **−2.3%** |
+
+**B. `self.source_text.get(a..b).unwrap_or("")` against `get_unchecked`** —
+three rounds each, both with the `debug_assert` the committed version carries.
+Medians:
+
+| Id | `get_unchecked` | safe `get` | Cost of safe |
+| --- | ---: | ---: | ---: |
+| `parse/plain` | 64.8 | 62.3 | −3.8% |
+| `parse/attributes-heavy` | 32.6 | 31.3 | −3.9% |
+| `parse/alignment-heavy` | 65.2 | 62.9 | −3.5% |
+| `parse/note-heavy` | 47.1 | 45.3 | −3.8% |
+| **`parse/whole-corpus`** | **49.9** | **48.2** | **−3.5%** |
+
+Every `parse` class is slower in both, `plain` — the 5.2 MB of real Bible text —
+by 3.8–4.8%, and `whole-corpus` by 2.3–3.5%. `get` is no cheaper than indexing:
+both pay the same two `is_char_boundary` checks per call, on a function called
+for every word, every marker name and every attribute. That is over the 2% the
+ADR asks of an `unsafe` block, so it stayed — with a `debug_assert` that makes
+every test run and every Miri run check the invariant the `SAFETY` comment
+claims.
+
 ## Reading a regression
 
 The VM is a shared 4-vCPU cloud instance, so the numbers move on their own.
@@ -166,3 +270,13 @@ be read as:
 Criterion prints its own change-since-last-run line when `target/criterion`
 holds a previous run, which is the cheapest way to see a regression: run the
 old commit, then the new one, on the same machine in the same sitting.
+
+Ticket 05 added one more rule, learned the hard way (see "What the `lex` row
+does *not* mean"): **build both binaries first, then alternate them round by
+round.** `cargo bench` three times on the old code and three times on the new
+code measures the half-hour between the two as much as the change — over one
+sitting the same binary drifted 4% — and a single binary's numbers for a
+benchmark it does not exercise can still move 8% from codegen-unit placement.
+`cargo bench -p usfm_benchmark --no-run` prints the bench executable's path; it
+is relocatable (the corpus path is absolute), so copy it somewhere, rebuild,
+copy the other, and run them turn about with `--bench <filter>`.

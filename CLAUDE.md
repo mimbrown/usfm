@@ -59,7 +59,13 @@ tcdocs status (260 tests, 2026-09-12):
   gates tcdocs on `tests/tcdocs-baseline.txt`, the list of known failures
   (currently empty). It fails on a regression *and* on a stale entry, so when
   you fix a tcdocs case, remove it from the baseline (or regenerate with
-  `--write-baseline`) in the same commit.
+  `--write-baseline`) in the same commit. Last in the gate is `scripts/miri.sh`
+  (ticket 05): `cargo +nightly miri test` over `usfm_ast`'s lib, the parser lib
+  and the `whitespace`, `attributes`, `usx_text`, `verse_ends`, `spans` and
+  (11 of 76) `recovery` suites, about 3 min 50 s. It needs a nightly toolchain
+  with `miri` and `rust-src`, which CI installs in its own step and
+  `scripts/session-start.sh` installs on a fresh VM; `rust-toolchain.toml`
+  stays pinned at 1.98.0 for everything else.
 
 **Traversal API (Phase 3, complete 2026-09-12)** lives in `usfm_ast`:
 `visit::Visit` / `visit_mut::VisitMut` (generated from one macro, same method

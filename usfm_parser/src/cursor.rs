@@ -23,14 +23,39 @@ impl<'a> ParserImpl<'a> {
     }
 
     /// Source text covered by `span`.
+    ///
+    /// The one `unsafe` left in the workspace. Ticket 05 replaced the other 26
+    /// after measuring that they cost nothing; this one is on the parser's
+    /// hottest path — every word, every marker name, every attribute — and it
+    /// is the only one the benchmark defends. Making it safe costs **2.3–3.5%
+    /// on `parse/whole-corpus` and 3.8–4.8% on `parse/plain`**, whether it is
+    /// written `&self.source_text[a..b]` or
+    /// `self.source_text.get(a..b).unwrap_or("")`: both pay two
+    /// `is_char_boundary` checks per call. Eight interleaved rounds of the first
+    /// pair, three of the second; see `docs/benchmarks.md`. That is over the 2%
+    /// the ADR asks for, so it stays.
+    ///
+    /// What pays for it is the `debug_assert` below, not a comment: it is on in
+    /// every test build, so the whole unit and integration suite — and
+    /// `scripts/miri.sh` on top of it — checks the invariant on every call.
+    /// Miri would catch a read past the end of the source on its own, but not a
+    /// slice that splits a UTF-8 character, which is why the boundaries are
+    /// asserted here rather than left to Miri.
     pub(crate) fn src(&self, span: Span) -> &'a str {
-        // SAFETY: the lexer guarantees token spans are in bounds and on
-        // UTF-8 character boundaries, and every span passed here is a token
-        // span or a sub-range of one at ASCII boundaries.
-        unsafe {
-            self.source_text
-                .get_unchecked(span.start as usize..span.end as usize)
-        }
+        let (start, end) = (span.start as usize, span.end as usize);
+        debug_assert!(
+            start <= end
+                && end <= self.source_text.len()
+                && self.source_text.is_char_boundary(start)
+                && self.source_text.is_char_boundary(end),
+            "span {span:?} is not a character-aligned range of the source"
+        );
+        // SAFETY: `span` is a token span the lexer produced, or a sub-range of
+        // one cut at bytes the lexer has checked are ASCII (`Token::name_span`
+        // trims `\`, `+` and `*`). The lexer's `Source` only ever moves its
+        // cursor by `char::len_utf8` or over a byte it has checked is ASCII, so
+        // both ends are within `source_text` and on UTF-8 character boundaries.
+        unsafe { self.source_text.get_unchecked(start..end) }
     }
 
     /// For a `Marker` token, the marker name without `\`, `+`, or `*`.

@@ -465,8 +465,18 @@ over the Phase 0 leftovers and the cross-cutting fuzzing, Miri and benchmark ite
 - [ ] **Malformed corpus.** Directory of real-world broken files (with permission)
       plus the synthetic ones from the assessment. Snapshot the diagnostics and
       recovered tree.
-- [ ] **Miri** on the lexer's `Source` and `string_parser.rs` unsafe blocks. The
-      lexer is well-annotated but nothing verifies the annotations.
+- [x] **Miri** on the lexer's `Source` and `string_parser.rs` unsafe blocks. The
+      lexer was well-annotated but nothing verified the annotations. Done
+      2026-09-19 by `.scratch/oxc-layout/issues/05-miri.md`: Miri found nothing,
+      and the measurement that went with it showed 26 of the 27 `unsafe` uses
+      did not earn their place, so they were replaced with safe code (`Source`
+      now holds an offset, not three raw pointers, and lexes at the same speed).
+      The one that stayed is `ParserImpl::src` in `usfm_parser/src/cursor.rs`,
+      worth 2.3–4.8% on `parse`; it carries a `debug_assert` of its invariant, which
+      every test build and `scripts/miri.sh` then check. `scripts/miri.sh` runs
+      the lexer, parser and `string_parser` suites and is part of
+      `scripts/gate.sh` and CI, so a reintroduced `unsafe` block is checked from
+      the day it lands.
 - [ ] **Benchmarks.** `criterion` benches for parse, parse + USX, parse + JSON on the
       three large IRV files. Fail CI on a 20% regression. Current baseline: ~10 ms
       for 586 KB in release.
