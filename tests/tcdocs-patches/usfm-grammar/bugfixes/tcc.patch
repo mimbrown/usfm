@@ -1,0 +1,23 @@
+Accepted deviation: verse-end placement in a table.
+
+usfm-grammar ends a verse after the last `<cell>` of the row, as a child of
+`<row>`. tcdocs puts the end milestone at the last content position instead,
+inside the cell: `usfmjsTests/usfmBodyTestD/origin.xml` and
+`paratextTests/MissingColumnInTable/origin.xml` both write
+`<verse eid="..." /></cell>`, and that is the rule the parser follows
+(hardening plan D4; `usfm_parser/tests/verse_ends.rs`). Both shapes are valid
+against `usx.rnc`, whose `row` admits `(Verse | TableContent)+`, so this moves
+the reference onto tcdocs' shape.
+
+--- origin.xml
++++ origin.xml
+@@ -31,8 +31,7 @@
+     </row>
+     <row style="tr">
+       <cell style="tcr1-2" align="end">Total: </cell>
+-      <cell style="tcc3" align="center">186,400</cell>
+-      <verse eid="NUM 2:3-9"/>
++      <cell style="tcc3" align="center">186,400<verse eid="NUM 2:3-9"/></cell>
+     </row>
+   </table>
+   <chapter eid="NUM 2"/>

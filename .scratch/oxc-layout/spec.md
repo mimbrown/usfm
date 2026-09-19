@@ -8,7 +8,8 @@ one before it closes, because each one's findings shape the next. Milestones 1
 and 2 are ticketed in `issues/`.
 
 Invariant for every milestone: the unit and integration suites pass and the
-tcdocs gate stays at 215 / 0 failed / empty baseline.
+conformance gate stays at tcdocs 215 / 0 failed plus the vendored
+usfm-grammar root at 16 / 0 (ticket 08), empty baseline.
 
 ## M1. Workspace builds clean
 

@@ -1,6 +1,6 @@
-//! CLI for running USFM parser tests against tcdocs suite
+//! CLI for running the USFM parser's conformance suites: the tcdocs test
+//! suite and the vendored usfm-grammar fixtures (`ROOTS` in `lib.rs`).
 
-use std::path::Path;
 use usfm_tests::*;
 
 fn main() {
@@ -69,7 +69,11 @@ fn main() {
 /// compared against, all after the harness's normalisation. This is the
 /// view to work from when writing a patch in `tests/tcdocs-patches`.
 fn show_test(name: &str) {
-    let path = Path::new(TCDOCS_ROOT).join(name);
+    let Some(path) = path_for_name(name) else {
+        eprintln!("Cannot find test {}", name);
+        eprintln!("Use --list to list test names");
+        std::process::exit(1);
+    };
     let Ok(test) = TestCase::load(&path) else {
         eprintln!("Cannot load test {}", name);
         std::process::exit(1);
@@ -93,11 +97,11 @@ fn show_test(name: &str) {
     for diagnostic in &diagnostics {
         println!("  {}", diagnostic);
     }
-    normalize_tree(&mut actual);
+    test.normalize_for_comparison(&mut actual);
     println!("\nACTUAL:\n{}", actual);
     match test.read_expected_usx() {
         Ok(mut expected) => {
-            normalize_tree(&mut expected);
+            test.normalize_for_comparison(&mut expected);
             println!("\nEXPECTED:\n{}", expected);
             match compare_xml(&actual, &expected) {
                 Ok(()) => println!("\nMATCH"),
@@ -132,12 +136,14 @@ Options:
                             USX after normalisation (e.g. --show basic/minimal)
 
 Arguments:
-    CATEGORY        Run tests for a specific category (e.g., basic, mandatory)
+    CATEGORY        Run tests for a specific category (e.g., basic, mandatory,
+                    usfm-grammar/bugfixes), or any prefix of a test name
 
 Examples:
-    cargo run --package usfm_tests              # Run all tests
-    cargo run --package usfm_tests basic        # Run basic tests only
-    cargo run --package usfm_tests --categories # List categories
+    cargo run --package usfm_tests                       # Run all tests
+    cargo run --package usfm_tests basic                 # Run basic tests only
+    cargo run --package usfm_tests usfm-grammar/bugfixes # Run the vendored cases
+    cargo run --package usfm_tests --categories          # List categories
     cargo run --package usfm_tests -- --baseline tests/tcdocs-baseline.txt
 "#
     );
@@ -167,9 +173,11 @@ fn list_categories() {
 }
 
 /// A run with no tests must not report success: with the `tcdocs` submodule
-/// missing, discovery finds nothing and the summary would read 100%.
+/// missing, discovery finds nothing there and the summary would read 100% off
+/// the vendored fixtures alone. So the tcdocs root is required to be non-empty,
+/// not just the run as a whole.
 fn require_tests(tests: &[TestCase]) {
-    if tests.is_empty() {
+    if tests.is_empty() || !tests.iter().any(|t| t.path.starts_with(TCDOCS_ROOT)) {
         eprintln!("No test cases found under {}", TCDOCS_ROOT);
         eprintln!("Run `git submodule update --init tcdocs` and try again");
         std::process::exit(1);
@@ -177,16 +185,19 @@ fn require_tests(tests: &[TestCase]) {
 }
 
 fn run_category(category: &str) {
-    let path = Path::new(TCDOCS_ROOT).join(category);
-    if !path.exists() {
+    let all_tests = discover_tests();
+    require_tests(&all_tests);
+    let tests: Vec<TestCase> = filter_by_category(&all_tests, category)
+        .into_iter()
+        .cloned()
+        .collect();
+    if tests.is_empty() {
         eprintln!("Category not found: {}", category);
         eprintln!("Use --categories to list available categories");
         std::process::exit(1);
     }
 
     println!("Running tests for category: {}\n", category);
-    let tests = discover_tests_in(&path);
-    require_tests(&tests);
     let summary = run_tests(&tests);
     println!("{}", summary);
 

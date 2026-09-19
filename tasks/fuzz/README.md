@@ -61,11 +61,18 @@ sitting goes to `findings/` with a note, so it is not lost.
 
 ## Seeds
 
-`./seed.sh` copies the tcdocs inputs (`tcdocs/tests/*/*/origin.usfm`) into
-`corpus/parse_lossy/` and `corpus/parse_utf8/`, named after the test they came
-from. It is idempotent, and it truncates a seed longer than `-max_len` to the
-last whole line that fits, which is what libFuzzer would do with it anyway.
-Run `git submodule update --init tcdocs` first.
+`./seed.sh` copies the conformance inputs into `corpus/parse_lossy/` and
+`corpus/parse_utf8/`, named after the test they came from:
+
+- the tcdocs inputs (`tcdocs/tests/*/*/origin.usfm`), as `<category>__<case>.usfm`;
+- the vendored usfm-grammar fixtures
+  (`tests/fixtures/usfm-grammar/{autofix/*,bugfixes/*/origin.usfm}`), as
+  `usfm-grammar__<dir>__<name>.usfm`. The `autofix` inputs are deliberately
+  malformed, which is what makes them worth seeding.
+
+It is idempotent, and it truncates a seed longer than `-max_len` to the last
+whole line that fits, which is what libFuzzer would do with it anyway. Run
+`git submodule update --init tcdocs` first.
 
 The seeds are committed. libFuzzer also *writes* to the corpus directory as it
 finds new coverage, so after a run `corpus/` holds more than the seeds;

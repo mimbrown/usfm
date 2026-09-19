@@ -10,6 +10,14 @@ derives from the following, which keep their own terms.
   named `tcdocs__*` and the diffs in `tests/tcdocs-patches/` quote its test inputs
   and are derived from it under CC BY 4.0. Scripture excerpts inside those inputs
   belong to their respective publishers.
+- **usfm-grammar test fixtures** (`tests/fixtures/usfm-grammar/`, from
+  https://github.com/Bridgeconn/usfm-grammar at commit
+  `4ee1b91c9b725f7f5be3654805ab6447b111da58`, fetched 2026-09-19). Copyright ©
+  2021 Bridge Connectivity Solutions, MIT; the licence text is copied verbatim
+  to `tests/fixtures/usfm-grammar/LICENSE`. Only its `tests/autofix/` and
+  `tests/bugfixes/` directories are vendored. The fuzz seeds named
+  `usfm-grammar__*` in `tasks/fuzz/corpus/` are copies of those inputs.
+  Scripture excerpts inside those inputs belong to their respective publishers.
 - **World English Bible** (`tasks/benchmark/corpus/web/`), the benchmark
   corpus. The WEB is in the **public domain**: no copyright, no attribution
   requirement, no restriction on redistribution. It is eBible.org's edition,
