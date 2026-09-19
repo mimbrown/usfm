@@ -32,8 +32,8 @@
 //!   information is `"attributes"`: a `\w` with no `|` at all has no
 //!   `"attributes"` key, and a bare `\w word|\w*` has `"attributes": []`,
 //!   which is the distinction `Char::attributes` draws (`Option<Attributes>`).
-//!   A milestone always has the key, because its attribute list is not
-//!   optional in the AST.
+//!   A milestone draws it the same way since ticket 20: `\ts-s\*` has no
+//!   `"attributes"` key and `\ts-s |\*` has `"attributes": []`.
 //! * **A number that USFM writes as text stays text.** `"number"` is `"1"`,
 //!   `"3-5"`, `"1,3\u{200f}-5"` — a verse number is a list of ranges, so it
 //!   could not be a JSON number, and a chapter number is written the same way
@@ -350,12 +350,12 @@ impl JsonWriter<'_> {
     fn milestone(&self, milestone: &Milestone<'_>) -> Value {
         let mut map = node("milestone", milestone.span);
         set(&mut map, "style", self.marker(milestone.style));
-        // Not optional in the AST: a milestone with no attributes has an empty
-        // list, so the key is always there.
-        set(
+        // `Some` with no pairs is a bare `|` (`\ts-s |\*`), which is not no
+        // `|` at all, so the key is absent for a milestone written without one.
+        set_optional(
             &mut map,
             "attributes",
-            attributes_value(&milestone.attributes),
+            milestone.attributes.as_ref().map(attributes_value),
         );
         Value::Object(map)
     }

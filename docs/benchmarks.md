@@ -555,6 +555,21 @@ cost far less than the first one did. A future run that finds the gap widening
 past ~10% on whole-corpus means a check is doing real work per node and wants
 its own line in this file.
 
+**After ticket 20** (placement and the attribute checks moved across), same
+sitting, three rounds turn about: whole-corpus **45.58** MiB/s against `parse`
+at **52.05** — the gap is 12.4%, past the ~10% this section said to watch for,
+and the cause is the attribute checks rather than the placement stack. Removing
+only `check_attributes` from the walk puts it back at 50.0 MiB/s, and the split
+by class says the same: `plain`, which has almost no attribute lists, is 65.2
+against 66.1 (1.4%), while `attributes-heavy` is 30.5 against 36.1 (15.4%).
+Most of that is not the checking but the *reading*: taking the per-pair loop
+out and leaving only "is the list empty, has it an unnamed value" recovers
+barely 1 MiB/s, so what it costs is a second pass over attribute lists that the
+parser used to check while they were still in cache. `parse` itself gained the
+same work back (52.05 against 49.01 in the run above, on a VM that also drifted
+up). This is the price of the split, not a check doing something silly per
+node, and it is paid only by documents that are mostly attributes.
+
 ## Reading a regression
 
 The VM is a shared 4-vCPU cloud instance, so the numbers move on their own.

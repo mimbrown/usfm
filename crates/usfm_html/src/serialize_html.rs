@@ -297,7 +297,7 @@ impl<'a> ToHtml for Milestone<'a> {
         f.write_str(marker)?;
         f.write_str("\"")?;
 
-        for attr in &self.attributes.pairs {
+        for attr in self.pairs() {
             // A name that is not a valid XML/HTML attribute name cannot be
             // written as one; the USX writer drops such a pair too
             // (`usfm_ast::is_valid_attribute_name`), and the source it came

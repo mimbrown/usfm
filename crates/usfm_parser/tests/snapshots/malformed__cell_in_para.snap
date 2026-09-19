@@ -1,7 +1,6 @@
 ---
-source: usfm_parser/tests/snapshot.rs
+source: crates/usfm_parser/tests/snapshot.rs
 description: "\\id GEN\n\\c 1\n\\p \\v 1 \\tc1 cell marker in para\n"
-snapshot_kind: text
 ---
 Book GEN "" @0..7
 ChapterStart 1@8..12
@@ -12,5 +11,4 @@ Para p@13..46
   VerseEnd 1
 ChapterEnd 1
 --- diagnostics
-info[marker-not-listed-here] @21..25: `\tc1` is not listed as occurring under `\p`
 warning[character-style-not-closed] @21..25: `\tc1` was still open at end of input

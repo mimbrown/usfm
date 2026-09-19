@@ -16,16 +16,23 @@
 
 mod common;
 
-use usfm::diagnostics::Code;
+use usfm::diagnostics::{Code, Severity};
 
 /// Snapshot named `checks__<code>`.
 fn check(code: Code, source: &str) {
     check_named(code, code.as_str().replace('-', "_"), source);
 }
 
-/// `recovery.rs`'s `check_variant` (a second case of one code, snapshotted as
-/// `checks__<code>__<variant>`) has no caller yet and so is not written here;
-/// ticket 20's checks are what bring it over.
+/// Snapshot named `checks__<code>__<variant>`, for additional cases of the
+/// same code. The twin of `recovery.rs`'s function of the same name.
+fn check_variant(code: Code, variant: &str, source: &str) {
+    check_named(
+        code,
+        format!("{}__{variant}", code.as_str().replace('-', "_")),
+        source,
+    );
+}
+
 fn check_named(code: Code, name: String, source: &str) {
     let codes = common::codes(source);
     assert!(
@@ -80,6 +87,183 @@ fn a_listed_book_code_is_silent() {
     assert_eq!(
         common::codes("\\id GEN Genesis\n\\c 1\n\\p \\v 1 a"),
         Vec::<Code>::new()
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Placement: `OccursUnder` from the stylesheet against the marker the style
+// actually sits under. Moved here from `recovery.rs` by ticket 20 with their
+// inputs unchanged; the spans in the snapshots widened from the opening
+// marker to the whole node, which is the span the tree carries.
+// ---------------------------------------------------------------------------
+
+/// `\xq` may only occur under `\x`; in a paragraph it is reported and kept.
+#[test]
+fn marker_not_allowed_here() {
+    let source = "\\id GEN\n\\c 1\n\\p \\v 1 a \\xq quote\\xq* b";
+    assert_eq!(
+        common::parser_codes(source),
+        Vec::<Code>::new(),
+        "the style is parsed where it is, so the parser says nothing"
+    );
+    check(Code::MarkerNotAllowedHere, source);
+}
+
+/// `\f` under `\cl` is not in the stylesheet's list, but Paratext accepts
+/// it, so it only informs.
+#[test]
+fn marker_not_listed_here() {
+    check(
+        Code::MarkerNotListedHere,
+        "\\id GEN\n\\c 1\n\\cl Chapter One\\f + \\ft note\\f*\n\\p \\v 1 a",
+    );
+}
+
+/// A note's parent is its paragraph, whatever character style is open
+/// around it, and note text markers occur under the note: all silent.
+#[test]
+fn placement_looks_through_character_styles_for_notes() {
+    let source = "\\id GEN\n\\c 1\n\\p \\v 1 \\wj a \\x + \\xo 1.1 \\xt Gen 1\\x* b\\wj*";
+    assert_eq!(common::codes(source), Vec::<Code>::new());
+}
+
+/// Content on the line after `\esbe` goes into an implicit `\p`, and that is
+/// the parent a character style in it is checked against — not `\esbe`, which
+/// lists no children at all and would report every style in the file. In the
+/// tree the implicit paragraph is an ordinary `Para p`, so the rule needs no
+/// special case here; the twin in `recovery.rs` snapshots the same input for
+/// `content-outside-paragraph`.
+#[test]
+fn placement_after_a_sidebar_end_marker_is_against_the_implicit_paragraph() {
+    let source = "\\id GEN\n\\c 1\n\\esb\n\\ms Title\n\\p inside\n\\esbe\n\\v 1 a \\w three|lemma\\w*.";
+    assert_eq!(
+        common::codes(source),
+        vec![Code::ContentOutsideParagraph],
+        "`\\w` occurs under `\\p`, so nothing is added to the parser's one diagnostic"
+    );
+}
+
+/// Inside a table cell nothing is placement-checked: the cell markers are in
+/// no `OccursUnder` list, so every style in every table would be reported.
+#[test]
+fn placement_is_not_checked_inside_a_table_cell() {
+    let source = "\\id GEN\n\\c 1\n\\p \\v 1 a\n\\tr \\tc1 \\xq quoted\\xq*";
+    let codes = common::codes(source);
+    assert!(
+        !codes.contains(&Code::MarkerNotAllowedHere) && !codes.contains(&Code::MarkerNotListedHere),
+        "{codes:?}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Attributes. The list is in the tree exactly as written whatever is reported,
+// which is what puts all six codes here; `newline-in-attributes`,
+// `attribute-value-not-quoted`, `missing-attribute-value` and
+// `unterminated-attribute-value` stay with the parser, which decides what the
+// list *is*.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn empty_attribute_list() {
+    check(
+        Code::EmptyAttributeList,
+        "\\id GEN\n\\c 1\n\\p \\v 1 \\w word| \\w*",
+    );
+}
+
+/// A second `|` in one character style replaces the first list rather than
+/// extending it, so the tree holds one list and the check reports once —
+/// where the parser, which ran the check at every `|`, reported once per pipe.
+/// `tcdocs/tests/paratextTests/EmptyFigure` (`\fig |||||| \fig*`) is the only
+/// input in the suites that has more than one, and it is unchanged by the
+/// difference: what the pipes dropped was already nothing.
+#[test]
+fn empty_attribute_list_is_reported_once_per_list_not_per_pipe() {
+    assert_eq!(
+        common::codes("\\id GEN\n\\c 1\n\\p \\v 1 \\fig |||| \\fig*"),
+        vec![Code::EmptyAttributeList],
+    );
+}
+
+/// The same shape on a milestone. All 24 `\ts-s` markers in
+/// `tasks/conformance/fixtures/usfm-grammar/autofix/fr-textTranslation-FR_TLX.txt`
+/// are written `\ts-s |\*`, which is how unfoldingWord's aligned texts write
+/// a translation section. A milestone carries nothing but its attributes, so
+/// the empty list loses nothing and the file must not fail `--strict`.
+#[test]
+fn empty_milestone_attribute_list() {
+    let source = "\\id GEN\n\\c 1\n\\p \\v 1 a \\ts-s |\\* b";
+    check(Code::EmptyMilestoneAttributeList, source);
+    let errors: Vec<&str> = common::codes(source)
+        .iter()
+        .filter(|code| code.severity() == Severity::Error)
+        .map(|code| code.as_str())
+        .collect();
+    assert!(
+        errors.is_empty(),
+        "`\\ts-s |\\*` should report nothing at error severity, got {errors:?}"
+    );
+}
+
+/// The same on a milestone the stylesheet does not define, which ticket 18
+/// found reporting nothing: the parser returned an empty list both for
+/// `\zaln-s\*` and for `\zaln-s |\*` and could not tell them apart.
+/// `Milestone::attributes` is an `Option` for that reason (ticket 20), so the
+/// two shapes are distinct in the tree and the rule is the one rule.
+#[test]
+fn empty_milestone_attribute_list_unknown_milestone() {
+    check_variant(
+        Code::EmptyMilestoneAttributeList,
+        "unknown_milestone",
+        "\\id GEN\n\\c 1\n\\p \\v 1 a \\zaln-s |\\* b",
+    );
+    assert_eq!(
+        common::codes("\\id GEN\n\\c 1\n\\p \\v 1 a \\zaln-s\\* b"),
+        vec![Code::UnknownCustomMilestone],
+        "without the `|` there is no empty list to report"
+    );
+}
+
+#[test]
+fn no_default_attribute() {
+    check(
+        Code::NoDefaultAttribute,
+        "\\id GEN\n\\c 1\n\\p \\v 1 \\em caption|no default\\em*",
+    );
+}
+
+#[test]
+fn default_attribute_with_others() {
+    check(
+        Code::DefaultAttributeWithOthers,
+        "\\id GEN\n\\c 1\n\\p \\v 1 \\w word|grace strong=\"H1234\"\\w*",
+    );
+}
+
+/// An attribute name that is not an identifier. The fuzzer found this: the
+/// name went straight into the USX output, which made it invalid XML. The
+/// tree keeps the attribute as written; `usx.rs` drops it.
+#[test]
+fn malformed_attribute_name() {
+    check(
+        Code::MalformedAttributeName,
+        "\\id GEN\n\\c 1\n\\p \\v 1 \\w word|b<c=\"1\"\\w*",
+    );
+}
+
+/// The same attribute name twice. The fuzzer found the two-defaults form
+/// (`\rb b|"h=c"`, where the quotes make two bare values): both became
+/// `gloss` and the USX had the attribute twice, which is not XML.
+#[test]
+fn duplicate_attribute() {
+    check(
+        Code::DuplicateAttribute,
+        "\\id GEN\n\\c 1\n\\p \\v 1 \\w word|lemma=\"a\" lemma=\"b\"\\w*",
+    );
+    check_variant(
+        Code::DuplicateAttribute,
+        "default_twice",
+        "\\id GEN\n\\c 1\n\\p \\v 1 \\rb b|\"h=c\"\\rb*",
     );
 }
 

@@ -130,7 +130,9 @@ impl<'s> Printer<'s> {
                     self.marker(milestone.style),
                     span(milestone.span)
                 );
-                self.attributes(out, &milestone.attributes);
+                if let Some(attributes) = &milestone.attributes {
+                    self.attributes(out, attributes);
+                }
                 out.push('\n');
             }
             Block::Para(para) => {
@@ -265,7 +267,9 @@ impl<'s> Printer<'s> {
                     self.marker(milestone.style),
                     span(milestone.span)
                 );
-                self.attributes(out, &milestone.attributes);
+                if let Some(attributes) = &milestone.attributes {
+                    self.attributes(out, attributes);
+                }
                 out.push('\n');
             }
             Inline::OptBreak(opt_break) => {

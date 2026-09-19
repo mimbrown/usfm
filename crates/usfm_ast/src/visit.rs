@@ -202,7 +202,9 @@ macro_rules! define_visitor {
         }
 
         pub fn walk_milestone<V: $Visit>(visitor: &mut V, milestone: $($r)+ Milestone<'_>) {
-            visitor.visit_attributes($($r)+ milestone.attributes);
+            if let Some(attributes) = $($r)+ milestone.attributes {
+                visitor.visit_attributes(attributes);
+            }
         }
 
         pub fn walk_attributes<V: $Visit>(visitor: &mut V, attributes: $($r)+ Attributes<'_>) {

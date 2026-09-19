@@ -28,6 +28,15 @@ re-parents content stays.
   field for it, filled by the parser.
 - Move what the table says, tests and snapshots with them, as in ticket 20.
 - `ParserImpl::check_document_structure` goes if everything in it moved.
+- Ticket 20 added `Attributes::pipe` and `Attribute::span`; extend
+  `usfm_parser::span_check` to assert them (in bounds, on a boundary, the
+  pipe is one byte of `|`, the name span starts the name) so the fuzz targets
+  cover them.
+- `parse_semantic` is 12% under `parse` after ticket 20, nearly all of it the
+  attribute re-check (`attributes-heavy` 15% apart). After this ticket's
+  moves, measure again and, if the gap is over 10%, ticket a targeted fix
+  (walk attribute lists once, or check them on the way in the parser's
+  `Attributes` builder and only *report* from the pass).
 
 Done when the gate is green with tcdocs unchanged and the module doc's table
 matches the emitters (a unit test in `usfm_semantic` that every code it emits
