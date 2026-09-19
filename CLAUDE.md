@@ -81,7 +81,8 @@ Conformance status (276 tests across two roots, 2026-09-19):
   fails on purpose, so a zero-test run can never report a pass rate.
 - CI (`.github/workflows/ci.yml`) runs the unit and integration suites
   (`recovery`, `snapshot`, `spans`, `whitespace`, `attributes`, `verse_ends`, `usx_text`,
-  `usfm_html`'s `footnotes`, parser lib), gates lint with
+  `usfm_html`'s `footnotes`, `usfm_json`'s `json` and `coverage`, parser lib),
+  gates lint with
   `cargo clippy --workspace --all-targets -- -D warnings` (in `scripts/gate.sh`
   since 2026-09-19, ticket 02: the workspace is clippy-clean, so a new warning
   fails the build) and
@@ -117,11 +118,21 @@ milestone paths, `verse(c, v)`, `VerseRef::nodes()` / `text()`), and
 read-only.
 
 Recent progress:
+- `usfm_json` (ticket 16): the AST as JSON, `to_json_value` /
+  `to_json_string` / `to_json_string_pretty`. One object per node with
+  `"type"` (the AST variant in snake_case, the whole vocabulary in
+  `usfm_json::TYPES`), `"span": [start, end]` on every node (`[0, 0]` when
+  synthesized), `"style"` as the marker name, `"children"`, `"attributes"` as
+  `{"name", "value"}` pairs in source order (the default attribute keeps its
+  empty name) and each node's own fields under their AST names; an absent
+  optional field is left out rather than written as `null`. A recursion, not a
+  `Visit`: every node maps to one `Value` and no state is carried between
+  them. `usfm parse --format json` writes it on one line.
 - The binary left the parser (ticket 15). `usfm_pipeline` holds the text
   replacements, the punctuation sectioning, the diglot HTML and the prompt
   weave, the SILE output and the format dispatch, each a function over
   `Document`s with a unit test; `apps/usfm_cli` is the `usfm` binary —
-  `usfm parse <files> --format usx|html|sile|prompt`, `--stylesheet`,
+  `usfm parse <files> --format usx|html|json|sile|prompt`, `--stylesheet`,
   `--output`, `--replace`, `--diglot…`, `--watch`, `--strict`,
   `--deny-warnings`, `--diagnostics text|json` — on `clap`, tested by running
   it (`apps/usfm_cli/tests/cli.rs`). `usfm_parser` is a library with no
@@ -253,6 +264,7 @@ usfm-tools/
 ├── usfm_style/            # Styling/output
 ├── usfm_usx/              # AST -> USX: the XML tree, its writer and reader
 ├── usfm_html/             # AST -> HTML: ToHtml, SerializeHtml, Context
+├── usfm_json/             # AST -> JSON: the tree as it is, one object per node
 ├── usfm_pipeline/         # Document -> Document/text: replacements, sections,
 │                          #   diglot, prompt, SILE, the format dispatch
 ├── apps/

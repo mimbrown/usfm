@@ -1,6 +1,6 @@
 # 16. `usfm_json`: the AST as JSON
 
-Status: ready-for-agent
+Status: resolved
 Milestone: M3
 Blocked by: 15
 
@@ -25,3 +25,19 @@ it is written before the facade.
   `docs/benchmarks.md` as a new row, not compared to anything.
 
 Done when the gate is green and the CLI emits JSON.
+
+## Answer
+
+Landed via PR #19 (2026-09-19). `usfm_json` (depends on `usfm_ast`,
+`usfm_style`, `serde_json`; the AST stays serde-free): `to_json_value`,
+`to_json_string`, `to_json_string_pretty`, `TYPES`. One object per node with
+`type`, `span`, `style` (marker name via the document's stylesheet),
+`children`, `attributes` (ordered, duplicates kept, default attribute named
+`""`), and the node's own fields under their AST names; absent optionals are
+omitted, USFM numbers stay strings, keys are sorted (`serde_json`'s `Map`).
+A direct recursion rather than `Visit`: nothing is carried between nodes.
+Tests: two insta snapshots, a coverage test in both directions against
+`TYPES`, well-formedness, and 268 notes in `71-WIS.usfm`. CLI `--format
+json`. `parse_json` whole-corpus 7.90 MiB/s (attributes-heavy 4.28: a
+`BTreeMap` per node and one object per attribute pair; a streaming writer
+would be the fix if it ever matters), recorded in `docs/benchmarks.md`.

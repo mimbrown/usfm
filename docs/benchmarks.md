@@ -15,7 +15,7 @@ licence). One command runs everything:
 cargo bench -p usfm_benchmark
 ```
 
-Five groups, each reporting throughput over the bytes of USFM it was given:
+Six groups, each reporting throughput over the bytes of USFM it was given:
 
 | Group | One iteration does |
 | --- | --- |
@@ -23,6 +23,7 @@ Five groups, each reporting throughput over the bytes of USFM it was given:
 | `parse` | `Parser::new(&text).parse(&sheet)` |
 | `parse_usx` | `parse`, then `usx::to_usx_string(&document)` |
 | `parse_html` | `parse`, then `to_html_string(&document, document.style_sheet())` |
+| `parse_json` | `parse`, then `usfm_json::to_json_string(&document)` |
 | `reference_index` | `document.reference_index()`; the parse is done once **outside** the timed loop |
 
 Five benchmark ids per group, one per file class. **The input of one id is the
@@ -49,7 +50,7 @@ Criterion is configured in `benches/corpus.rs` at `warm_up_time` 1 s,
 `measurement_time` 5 s and `sample_size` 10 — the smallest settings that still
 give criterion its ten samples when one whole-corpus iteration takes a quarter
 of a second. The defaults (100 samples over 5 s) would take hours. A full run
-of all five groups is about **3.5 minutes**.
+of all six groups is about **5 minutes**.
 
 Criterion's own output directory, `target/criterion`, is git-ignored through
 the `/target` entry in `.gitignore`, so nothing a run writes is committed.
@@ -418,6 +419,46 @@ groups were rerun interleaved against a `5d376e8` worktree build, both at
 than when tickets 13 and 14 were measured: at `5d376e8` itself `parse_usx`
 measures 18.04 here, not 19.24, which is why the file says to interleave
 rather than to compare absolutes.
+
+## `parse_json` (ticket 16)
+
+The new group, 2026-09-19, on the machine and toolchain of the baseline above.
+It is a **new row, compared to nothing**: `usfm_json` did not exist before, so
+there is no earlier number and no 3% question. Three consecutive runs,
+`cargo bench -p usfm_benchmark --bench corpus -- parse_json`, nothing else
+running; MiB/s, as everywhere in this file.
+
+| Class | Run 1 | Run 2 | Run 3 | Median | Spread |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| plain | 17.64 | 17.11 | 17.82 | **17.64** | 4.0% |
+| attributes-heavy | 4.28 | 4.26 | 4.28 | **4.28** | 0.4% |
+| alignment-heavy | 8.35 | 8.25 | 8.23 | **8.25** | 1.4% |
+| note-heavy | 11.23 | 11.15 | 11.24 | **11.23** | 0.8% |
+| **whole-corpus** | 7.90 | 7.86 | 8.00 | **7.90** | 1.7% |
+
+Whole-corpus throughput is **7.90 MiB/s**: the 12.78 MiB corpus parses and is
+written as JSON in about 1.62 s. `parse/whole-corpus` was rerun in the same
+sitting for the subtraction and came out at 47.9 MiB/s (0.27 s), which leaves
+the writing itself at about **9.5 MiB/s**. The same subtraction on ticket 15's
+same-day numbers puts USX at about 29 MiB/s and HTML at about 270, so JSON is
+by some way the most expensive output this repo writes.
+
+**Why it is the slowest output, and why `attributes-heavy` is under 5 MiB/s.**
+The unit of JSON output is an object per node, and a `serde_json::Map` is a
+`BTreeMap<String, Value>`: every field costs a `String` key and a tree
+insertion, and every attribute pair is a second object of its own with two
+keys and two owned values. USX, by contrast, adds an `OwnedAttribute` to an
+element that already exists — no container per pair — and HTML writes bytes
+straight into one `String`. `attributes-heavy` is the class where that
+multiplies worst: nearly every word is a `\w …|lemma="…" strong="…"\w*`, so
+per source byte it has the most nodes *and* the most attribute pairs, and it
+lands at **4.28 MiB/s**. Ticket 16 asked for this to be noted rather than
+optimised away; nothing in the writer is gratuitous (numbers go through
+`Value::from`, not `format!`; the only formatted strings are a chapter or
+verse number, once per marker), and the remaining cost is the shape of the
+output, not the walk. A caller that needs this class faster wants a streaming
+writer to a `String` rather than a `Value` tree — which `to_json_value`, the
+API the language server asked for, rules out for now.
 
 ## Reading a regression
 

@@ -15,7 +15,8 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use usfm_diagnostics::Severity;
 use usfm_pipeline::OutputFormat;
 
-/// Parse USFM and write it out as USX, HTML, SILE or a translation prompt.
+/// Parse USFM and write it out as USX, HTML, JSON, SILE or a translation
+/// prompt.
 #[derive(Debug, Parser)]
 #[command(name = "usfm", version, about)]
 pub struct Cli {
@@ -108,14 +109,15 @@ impl ParseArgs {
     }
 }
 
-/// `--format`. The same list as [`OutputFormat`], as a clap value enum;
-/// ticket 16 adds `json` to both.
+/// `--format`. The same list as [`OutputFormat`], as a clap value enum.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
 pub enum Format {
     /// USX, the XML serialisation of the AST.
     Usx,
     /// HTML.
     Html,
+    /// The AST as JSON, one object per node.
+    Json,
     /// SILE's flavour of USX.
     Sile,
     /// The two sides of a diglot woven section by section.
@@ -127,6 +129,7 @@ impl From<Format> for OutputFormat {
         match format {
             Format::Usx => OutputFormat::Usx,
             Format::Html => OutputFormat::Html,
+            Format::Json => OutputFormat::Json,
             Format::Sile => OutputFormat::Sile,
             Format::Prompt => OutputFormat::Prompt,
         }
