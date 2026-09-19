@@ -31,11 +31,13 @@ export class TransformService extends Resource {
       const { base } = parse(input.document.uri.fsPath);
       args.push("-d", resolve(root, preview.diglot.path, base));
       if (preview.diglot.style) {
-        args.push("-ds", resolve(root, preview.diglot.style));
+        // Long-only since the CLI moved to clap: a short flag is one
+        // character, so `-ds` and `-dr` are gone (ticket 15).
+        args.push("--diglot-stylesheet", resolve(root, preview.diglot.style));
       }
       if (preview.diglot.replacements) {
         for (const replacement of preview.diglot.replacements) {
-          args.push("-dr", resolve(root, replacement));
+          args.push("--diglot-replace", resolve(root, replacement));
         }
       }
     }
@@ -59,6 +61,9 @@ export class TransformService extends Resource {
 
   #createConnection() {
     return new Connection(this.signal, this.#extensionPath, [
+      // `usfm parse …`: the binary took its arguments bare until ticket 15
+      // moved it out of `usfm_parser` and gave it subcommands.
+      "parse",
       "-w",
       ...this.#args,
       "-f",
@@ -84,13 +89,13 @@ class Connection extends Resource {
     console.log(
       `${
         process.env.USFM_PARSER_PATH_DEV ||
-        join(extensionPath, "target/release/usfm_parser")
+        join(extensionPath, "target/release/usfm")
       } ${args.join(" ")}`
     );
 
     this.#cp = spawn(
       process.env.USFM_PARSER_PATH_DEV ||
-        join(extensionPath, "target/release/usfm_parser"),
+        join(extensionPath, "target/release/usfm"),
       args,
       {
         signal: this.signal,

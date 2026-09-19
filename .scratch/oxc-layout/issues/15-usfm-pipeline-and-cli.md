@@ -1,6 +1,6 @@
 # 15. `usfm_pipeline` and `apps/usfm_cli`: the binary leaves the parser
 
-Status: ready-for-agent
+Status: resolved
 Milestone: M3
 Blocked by: 14
 
@@ -43,3 +43,26 @@ and `main.rs` logic has tests.
 
 Done when `usfm_parser` has no binary, the CLI tests pass, and the gate is
 green.
+
+## Answer
+
+Landed via PR #18 (2026-09-19). `usfm_pipeline` holds `text_replacements`,
+`sections`, `diglot` (its raw text writes now go through
+`usfm_html::write_escaped`), `sile` and `render` (`OutputFormat`,
+`RenderError`; the `todo!()`/`unimplemented!()` arms are errors with
+messages), each with unit tests; `usfm_parser` is only its dev-dependency.
+`apps/usfm_cli` (binary `usfm`, clap 4) has `parse <FILES>... --format
+usx|html|sile|prompt --stylesheet --output --replace --diglot
+--diglot-stylesheet --diglot-replace --watch --strict --deny-warnings
+--diagnostics text|json`; `-ds`/`-dr` are long-only now. Six CLI tests run the
+binary. `usfm_parser` has no binary and depends only on `usfm_ast`,
+`usfm_diagnostics` and `usfm_style` (the M3 exit criterion, reached early);
+its `usx`/`xml_document`/`serialize_html`/`serialize`/`context`/
+`text_replacements` modules are gone, and `usfm_html::Serialize` (no
+implementor) is deleted. `parse`, `parse_usx`, `parse_html` interleaved
+against `5d376e8`: −0.8%, 0.0%, +0.3%. The VS Code extension's build scripts
+and preview service point at the new binary and flags.
+
+Left as found: the prompt weave writes section text raw (it is prompt text,
+not markup); the diagnostic label is `input`/`diglot`, not a filename, since
+inputs are concatenated before parsing.

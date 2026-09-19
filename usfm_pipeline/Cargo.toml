@@ -1,0 +1,33 @@
+[package]
+name = "usfm_pipeline"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+# The pipeline layer of `docs/adr/0001-oxc-style-crate-layout.md`: everything
+# that sits between a parsed `Document` and a file on disk — text replacements,
+# sectioning, diglot weaving, the prompt format — and the dispatch from an
+# output format to the crate that writes it. It is allowed to depend on the
+# output crates (the ADR's order is `outputs <- pipeline <- facade <- apps`),
+# which is why both `usfm_usx` and `usfm_html` are here.
+[dependencies]
+# The tree every pass walks.
+usfm_ast = { path = "../usfm_ast" }
+# HTML output, and `write_escaped` for the diglot serializer's own writes.
+usfm_html = { path = "../usfm_html" }
+# `StyleSheet`/`StyleRule`, to ask whether a marker is vernacular.
+usfm_style = { path = "../usfm_style" }
+# USX output, which the SILE output is a renamed root of.
+usfm_usx = { path = "../usfm_usx" }
+# The replacement rules are regexes: `regex` parses a rule and expands `\uXXXX`
+# in it, `regex-automata` runs the anchored search `TextReplacement::apply` is
+# built on.
+regex = { workspace = true }
+regex-automata = { workspace = true }
+
+[dev-dependencies]
+# Every test here starts from a parsed document, which only the parser can
+# build. It is a dev-dependency and not a dependency: nothing in this crate's
+# shipped code parses — the CLI hands it documents. `usfm_parser` does not
+# depend on this crate, so there is no cycle.
+usfm_parser = { path = "../usfm_parser" }

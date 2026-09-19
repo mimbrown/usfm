@@ -18,8 +18,8 @@
 
 use usfm_html::to_html_string;
 use usfm_parser::parser::Parser;
-use usfm_parser::usx::to_usx_string;
 use usfm_parser::{DEFAULT_STYLESHEET, span_check};
+use usfm_usx::to_usx_string;
 
 /// Run every check over one input.
 pub fn check_source(source: &str) {

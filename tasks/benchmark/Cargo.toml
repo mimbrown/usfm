@@ -7,8 +7,12 @@ publish = false
 
 [dependencies]
 usfm_ast = { path = "../../usfm_ast" }
+# The two output crates the `parse_usx` and `parse_html` groups measure, named
+# directly: ticket 15 removed the parser's re-exports of them.
+usfm_html = { path = "../../usfm_html" }
 usfm_parser = { path = "../../usfm_parser", features = ["benchmarking"] }
 usfm_style = { path = "../../usfm_style" }
+usfm_usx = { path = "../../usfm_usx" }
 
 [dev-dependencies]
 # `html_reports` is off: the benches are run on demand and read from stdout,

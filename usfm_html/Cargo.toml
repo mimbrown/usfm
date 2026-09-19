@@ -5,8 +5,7 @@ edition = "2024"
 license = "MIT"
 
 # An output crate in `docs/adr/0001-oxc-style-crate-layout.md`: it turns a
-# `Document` into HTML, and owns the generic `Serialize` trait the SILE output
-# is built on. "No output crate depends on another output crate", and no output
+# `Document` into HTML. "No output crate depends on another output crate", and no output
 # crate depends on the parser either — this one reads the AST and the
 # stylesheet the document carries, so neither `usfm_parser` nor `usfm_usx` is
 # in the list below. The character escaping in `escape.rs` is a deliberate copy

@@ -16,10 +16,11 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
-# The HTML writer `parse_html` checks. Named directly rather than through
-# `usfm_parser`'s re-export, which ticket 17 deletes.
+# The two writers the targets check. Both are named directly: ticket 15
+# removed `usfm_parser`'s re-exports of them.
 usfm_html = { path = "../../usfm_html" }
 usfm_parser = { path = "../../usfm_parser", features = ["testing"] }
+usfm_usx = { path = "../../usfm_usx" }
 xml-rs = "0.8.26"
 
 [[bin]]

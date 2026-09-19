@@ -128,7 +128,9 @@ The other tags line up the same way: `add` 1050, `b` 1021, `d` 139, `k` 91,
 
 ### 2. The parser accepts it
 
-Every file was run through `target/release/usfm_parser <file> -o out.usx`.
+Every file was run through `target/release/usfm parse <file> -o out.usx`
+(`cargo build -p usfm_cli --release`; the binary was `usfm_parser` until ticket
+15 moved it to `apps/usfm_cli`).
 
 `web/` — 86 files, **not one diagnostic** in the whole corpus:
 

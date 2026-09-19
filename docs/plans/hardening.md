@@ -252,9 +252,9 @@ paragraph-level attributes (`unexpected-pipe`).
       writer now escapes `&`, `<` and `>` in text (the old serializer wrote them
       raw, which was not well-formed XML) and writes an element with text among its
       children on one line instead of adding a newline and indent inside it.
-      `usfm_parser/tests/usx_text.rs` pins all three. `serialize.rs` survives: the
-      HTML serializer still implements it (since ticket 14,
-      `usfm_html/src/serialize.rs`).
+      `usfm_parser/tests/usx_text.rs` pins all three. `serialize.rs` is gone:
+      ticket 15 found the generic `Serialize` trait had no implementor at all
+      (the HTML writers use `ToHtml` / `SerializeHtml`) and deleted it.
 - [x] Fix the failing `serialize_html::tests::test_to_html_trait`. Verified passing
       2026-09-19 (26/26 lib tests); `cargo test -p usfm_parser` runs every suite.
 - [x] CLI prints diagnostics as `file:line:col` and exits non-zero under `--strict`
@@ -459,12 +459,17 @@ over the Phase 0 leftovers and the cross-cutting fuzzing, Miri and benchmark ite
 
 - [ ] `usfm_usx`, `usfm_html`, `usfm_json` crates, each a `Fold` or `Visit` over the
       AST with no shared mutable `Context` (each carries only the state it needs).
-- [ ] Move diglot weaving, punctuation sectioning, and the prompt formatter out of
+- [x] Move diglot weaving, punctuation sectioning, and the prompt formatter out of
       `main.rs` into a `usfm_pipeline` crate with tests. They are real tools and are
-      currently untestable.
-- [ ] CLI: argument parsing via `clap`, `--strict` / `--deny-warnings`, diagnostics
+      currently untestable. Done 2026-09-19 (ticket 15): `usfm_pipeline` holds them
+      plus `text_replacements.rs`, each with a unit test over a short input, and the
+      combinations that were `todo!()` are `RenderError`s.
+- [x] CLI: argument parsing via `clap`, `--strict` / `--deny-warnings`, diagnostics
       printed with file:line:col using spans, JSON diagnostics output for tooling.
-- [ ] Watch mode survives, but as a thin loop over the library.
+      Done 2026-09-19 (ticket 15): `apps/usfm_cli`, binary `usfm`, subcommand
+      `usfm parse`, `--diagnostics text|json`.
+- [x] Watch mode survives, but as a thin loop over the library. Done 2026-09-19
+      (ticket 15): `apps/usfm_cli/src/watch.rs`, and `notify` left the parser.
 
 ### Phase 5. Language server on the parser
 

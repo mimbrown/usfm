@@ -35,7 +35,7 @@ Done when the gate is green and the bench is within 3%.
 
 ## Answer
 
-Landed via PR #17 (2026-09-19). `usfm_html` (depends on `usfm_ast` and
+Landed in `5d376e8` (PR #17, 2026-09-19). `usfm_html` (depends on `usfm_ast` and
 `usfm_style`; `usfm_parser` only as a dev-dependency for tests) holds
 `serialize_html.rs`, `serialize.rs`, `context.rs` (now `usfm_html::Context`,
 minus the dead `from_book`/`marker`; the spec's `Context` question is settled:

@@ -7,8 +7,8 @@
 
 use usfm_parser::DEFAULT_STYLESHEET;
 use usfm_parser::parser::Parser;
-use usfm_parser::usx::to_usx_string;
-use usfm_parser::xml_document::XmlDocument;
+use usfm_usx::to_usx_string;
+use usfm_usx::xml_document::XmlDocument;
 
 fn usx(source: &str) -> String {
     to_usx_string(&Parser::new(source).parse(&DEFAULT_STYLESHEET).document)
