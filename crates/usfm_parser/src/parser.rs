@@ -161,8 +161,6 @@ pub struct ParserImpl<'a> {
     para_text_type: TextType,
     /// Whether the paragraph being parsed is the `\s5` chunk marker.
     para_is_s5: bool,
-    /// The paragraph being parsed, for `OccursUnder` placement checks.
-    para_marker: Option<usize>,
     /// Book code from `\id`, if any.
     book: Option<BookCode>,
     /// Whether a `\c` has been seen.
@@ -342,7 +340,6 @@ impl<'a> ParserImpl<'a> {
             in_cell: false,
             para_text_type: TextType::Other,
             para_is_s5: false,
-            para_marker: None,
             book: None,
             chapter_seen: false,
             in_periph_title: false,
@@ -969,18 +966,6 @@ impl<'a> ParserImpl<'a> {
         };
         self.para_text_type = text_type;
         self.para_is_s5 = is_s5;
-        // `\esb` and `\esbe` carry no content of their own: anything on their
-        // line is moved into an implicit `\p` by `content_after_marker`. The
-        // placement of a character style there is therefore checked against
-        // `\p`, the paragraph that ends up holding it, and not against the
-        // sidebar marker, which lists no children at all.
-        self.para_marker = Some(
-            if (marker == self.esb || marker == self.esbe) && self.p != usize::MAX {
-                self.p
-            } else {
-                marker
-            },
-        );
         self.start_block();
         if !self.chapter_seen
             && is_verse_text
@@ -1365,9 +1350,8 @@ impl<'a> ParserImpl<'a> {
                 }
                 Kind::Pipe => {
                     let span = self.bump_span();
-                    if let Some(style) = context.char_style() {
-                        let attributes = self.parse_attributes();
-                        self.check_attributes(style.index(), &attributes, span);
+                    if context.char_style().is_some() {
+                        let attributes = self.parse_attributes(span);
                         context.set_attributes(attributes);
                     } else {
                         self.emit(
@@ -1412,9 +1396,6 @@ impl<'a> ParserImpl<'a> {
             let name = name.to_string();
             if !closing && let Some(attributes) = self.take_unknown_milestone() {
                 let style = self.register_milestone(&name, span);
-                if !attributes.pairs.is_empty() {
-                    self.check_attributes(style, &attributes, span);
-                }
                 context.add_child(Inline::Milestone(Milestone {
                     style: StyleId::new(style as u32),
                     attributes,
@@ -1446,9 +1427,6 @@ impl<'a> ParserImpl<'a> {
             return None;
         }
 
-        if matches!(style_type, StyleType::Character | StyleType::Note) && name != "v" {
-            self.check_placement(marker, nested, span);
-        }
         match style_type {
             StyleType::Paragraph => Some(InnerListCloser::Paragraph(marker, span)),
             StyleType::Character if name == "v" => self.parse_verse(context, span),
@@ -1894,13 +1872,9 @@ impl<'a> ParserImpl<'a> {
     /// returns the node and leaves placing it to the caller.
     fn parse_milestone_node(&mut self, marker: usize, span: Span) -> Milestone<'a> {
         let pipe_span = self.cur_span();
-        let attributes = if self.eat(Kind::Pipe) {
-            let attributes = self.parse_attributes();
-            self.check_attributes(marker, &attributes, pipe_span);
-            attributes
-        } else {
-            Attributes { pairs: vec![] }
-        };
+        let attributes = self
+            .eat(Kind::Pipe)
+            .then(|| self.parse_attributes(pipe_span));
         self.eat_whitespace();
         if !self.eat(Kind::MilestoneEnd) {
             let name = self.marker_name(marker);
@@ -1932,18 +1906,23 @@ impl<'a> ParserImpl<'a> {
     /// whatever the stylesheet says. Consume it and return its attributes.
     /// Otherwise consume nothing and return `None`.
     ///
+    /// The two `Option`s answer different questions: the outer one is "was
+    /// this a milestone at all", the inner one is `Milestone::attributes` —
+    /// `None` for a marker with no `|`, `Some` with no pairs for `\zaln-s |\*`.
+    /// Ticket 18 found that collapsing them lost the second distinction, which
+    /// is the one `empty-milestone-attribute-list` reads.
+    ///
     /// Milestones are an open set in practice (`\zaln-s` from unfoldingWord
     /// alignment, `\ts` from tStudio), and the syntax alone says what the
     /// marker is, so the parser can keep the node and all its attributes
     /// rather than dropping them.
-    fn take_unknown_milestone(&mut self) -> Option<Attributes<'a>> {
+    fn take_unknown_milestone(&mut self) -> Option<Option<Attributes<'a>>> {
         let checkpoint = self.lexer.checkpoint();
         let diagnostics_len = self.diagnostics.len();
-        let attributes = if self.eat(Kind::Pipe) {
-            self.parse_attributes()
-        } else {
-            Attributes { pairs: vec![] }
-        };
+        let pipe_span = self.cur_span();
+        let attributes = self
+            .eat(Kind::Pipe)
+            .then(|| self.parse_attributes(pipe_span));
         self.eat_whitespace();
         if self.eat(Kind::MilestoneEnd) {
             Some(attributes)
@@ -2071,101 +2050,11 @@ impl<'a> ParserImpl<'a> {
         Text::new(Cow::Owned(owned), Span::new(run_start, end))
     }
 
-    /// Report a character style or note opened where its stylesheet entry
-    /// says it cannot occur. The parent that counts: for a note, the
-    /// paragraph; for a character style, the innermost open note if any,
-    /// else the paragraph. Inside an open character style the `NEST` flag
-    /// decides instead (see `parse_char`), so nothing is checked here; table
-    /// cells and the `\periph` title line are not checked either.
-    fn check_placement(&mut self, marker: usize, nested: bool, span: Span) {
-        if self.in_cell || self.in_periph_title || nested {
-            return;
-        }
-        let is_note = self.rule(marker).is_note();
-        let parent = if is_note {
-            self.para_marker
-        } else {
-            match self.open.last() {
-                Some(open) if !open.is_note => return,
-                Some(open) => Some(open.style),
-                None => self.para_marker,
-            }
-        };
-        let Some(parent) = parent else {
-            return;
-        };
-        let rule = self.rule(marker);
-        if rule.occurs_under.is_empty() {
-            return;
-        }
-        let parent_name = self.marker_name(parent);
-        if rule.occurs_under.contains(&parent_name) {
-            return;
-        }
-        let name = self.marker_name(marker);
-        // A marker that lives only in notes is wrong anywhere else; for the
-        // rest the stylesheet lists are advisory (Paratext accepts `\f`
-        // under `\cl`, which `\f` does not list).
-        let note_only = rule
-            .occurs_under
-            .iter()
-            .all(|allowed| self.resolve_marker(allowed).is_some_and(|s| self.rule(s).is_note()));
-        if note_only {
-            self.emit(
-                Code::MarkerNotAllowedHere,
-                span,
-                format!("`\\{name}` cannot occur under `\\{parent_name}`"),
-            );
-        } else {
-            self.emit(
-                Code::MarkerNotListedHere,
-                span,
-                format!("`\\{name}` is not listed as occurring under `\\{parent_name}`"),
-            );
-        }
-    }
-
-    /// Validate a parsed attribute list against the marker it belongs to.
-    /// The list is kept as parsed whatever is reported.
-    fn check_attributes(&mut self, marker: usize, attributes: &Attributes<'a>, span: Span) {
-        if attributes.pairs.is_empty() {
-            // A milestone is nothing but its attributes, so `\ts-s |\*` says
-            // the same as `\ts-s\*` and nothing was lost; unfoldingWord's
-            // aligned texts write their translation sections that way. On a
-            // character style the `|` announces a value that is missing.
-            let code = if self.rule(marker).is_milestone() {
-                Code::EmptyMilestoneAttributeList
-            } else {
-                Code::EmptyAttributeList
-            };
-            self.emit(code, span, "`|` is not followed by any attribute");
-            return;
-        }
-        let unnamed = attributes.pairs.iter().filter(|a| a.name.is_empty()).count();
-        if unnamed == 0 {
-            return;
-        }
-        let name = self.marker_name(marker);
-        if usfm_ast::default_attribute_name(&name).is_none() {
-            self.emit(
-                Code::NoDefaultAttribute,
-                span,
-                format!("`\\{name}` has no default attribute; the value needs a name"),
-            );
-        }
-        if attributes.pairs.len() > 1 {
-            self.emit(
-                Code::DefaultAttributeWithOthers,
-                span,
-                "a bare value must be the only attribute; give it a name",
-            );
-        }
-    }
-
-    /// Parse attributes after a `|`.
+    /// Parse attributes after a `|`, whose span the caller has already
+    /// consumed and passes in: an empty list has nothing else to point at.
     /// Format: `name="value"` or just `value` for the default attribute.
     /// Multiple attributes are whitespace-separated.
-    fn parse_attributes(&mut self) -> Attributes<'a> {
+    fn parse_attributes(&mut self, pipe: Span) -> Attributes<'a> {
         let mut pairs = Vec::new();
         let mut newline_reported = false;
 
@@ -2193,33 +2082,19 @@ impl<'a> ParserImpl<'a> {
 
             match self.cur_kind() {
                 Kind::Word if self.lexer.peek().kind == Kind::Equal => {
-                    // Named attribute: name="value"
+                    // Named attribute: name="value". Whether the name is one
+                    // USX can carry, and whether it repeats one already in the
+                    // list, are `usfm_semantic`'s to report: both keep the
+                    // pair as written, so nothing here depends on the answer.
                     let word = self.cur_src();
-                    if !usfm_ast::is_valid_attribute_name(word) {
-                        let span = self.cur_span();
-                        self.emit(
-                            Code::MalformedAttributeName,
-                            span,
-                            format!(
-                                "`{word}` is not an attribute name; it is kept in the \
-                                 tree but cannot be written to USX"
-                            ),
-                        );
-                    }
-                    if pairs.iter().any(|pair: &Attribute| pair.name == word) {
-                        let span = self.cur_span();
-                        self.emit(
-                            Code::DuplicateAttribute,
-                            span,
-                            format!("`{word}` is given more than once"),
-                        );
-                    }
+                    let name_span = self.cur_span();
                     self.bump_any();
                     self.bump_any();
                     let value = self.parse_attribute_value();
                     pairs.push(Attribute {
                         name: Cow::Borrowed(word),
                         value,
+                        span: name_span,
                     });
                 }
                 Kind::Word | Kind::DoubleQuote | Kind::OptBreak => {
@@ -2243,23 +2118,17 @@ impl<'a> ParserImpl<'a> {
                         self.bump_any();
                     }
                     let end = self.cur_span().start;
-                    if pairs.iter().any(|pair: &Attribute| pair.name.is_empty()) {
-                        self.emit(
-                            Code::DuplicateAttribute,
-                            Span::new(start, end),
-                            "the default attribute is given more than once",
-                        );
-                    }
                     pairs.push(Attribute {
                         name: Cow::Borrowed(""),
                         value: Cow::Borrowed(&self.source_text[start as usize..end as usize]),
+                        span: Span::new(start, end),
                     });
                 }
                 _ => break,
             }
         }
 
-        Attributes { pairs }
+        Attributes { pairs, pipe }
     }
 
     /// The text of a quoted attribute value, with `\\`, `\|`, and `\"`

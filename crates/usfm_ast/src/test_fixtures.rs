@@ -68,8 +68,10 @@ fn attributes(pairs: &[(&'static str, &'static str)]) -> Attributes<'static> {
             .map(|(name, value)| Attribute {
                 name: (*name).into(),
                 value: (*value).into(),
+                span: SPAN,
             })
             .collect(),
+        pipe: SPAN,
     }
 }
 
@@ -140,7 +142,7 @@ pub fn sample_document() -> Document<'static> {
             children: vec![
                 Inline::Milestone(Milestone {
                     style: s("qt-s"),
-                    attributes: attributes(&[("who", "God")]),
+                    attributes: Some(attributes(&[("who", "God")])),
                     span: SPAN,
                 }),
                 text("and "),
@@ -148,7 +150,7 @@ pub fn sample_document() -> Document<'static> {
                 text("the earth"),
                 Inline::Milestone(Milestone {
                     style: s("qt-e"),
-                    attributes: attributes(&[]),
+                    attributes: None,
                     span: SPAN,
                 }),
                 verse_end(2),

@@ -16,7 +16,7 @@
 
 mod common;
 
-use usfm_parser::diagnostics::{Code, Severity};
+use usfm_parser::diagnostics::Code;
 
 /// Snapshot named `recovery__<code>`.
 fn check(code: Code, source: &str) {
@@ -462,50 +462,6 @@ fn expected_table_cell() {
 }
 
 #[test]
-fn empty_attribute_list() {
-    check(
-        Code::EmptyAttributeList,
-        "\\id GEN\n\\c 1\n\\p \\v 1 \\w word| \\w*",
-    );
-}
-
-/// The same shape on a milestone. All 24 `\ts-s` markers in
-/// `tasks/conformance/fixtures/usfm-grammar/autofix/fr-textTranslation-FR_TLX.txt`
-/// are written `\ts-s |\*`, which is how unfoldingWord's aligned texts write
-/// a translation section. A milestone carries nothing but its attributes, so
-/// the empty list loses nothing and the file must not fail `--strict`.
-#[test]
-fn empty_milestone_attribute_list() {
-    let source = "\\id GEN\n\\c 1\n\\p \\v 1 a \\ts-s |\\* b";
-    check(Code::EmptyMilestoneAttributeList, source);
-    let errors: Vec<&str> = common::codes(source)
-        .iter()
-        .filter(|code| code.severity() == Severity::Error)
-        .map(|code| code.as_str())
-        .collect();
-    assert!(
-        errors.is_empty(),
-        "`\\ts-s |\\*` should report nothing at error severity, got {errors:?}"
-    );
-}
-
-#[test]
-fn no_default_attribute() {
-    check(
-        Code::NoDefaultAttribute,
-        "\\id GEN\n\\c 1\n\\p \\v 1 \\em caption|no default\\em*",
-    );
-}
-
-#[test]
-fn default_attribute_with_others() {
-    check(
-        Code::DefaultAttributeWithOthers,
-        "\\id GEN\n\\c 1\n\\p \\v 1 \\w word|grace strong=\"H1234\"\\w*",
-    );
-}
-
-#[test]
 fn attribute_value_not_quoted() {
     check(
         Code::AttributeValueNotQuoted,
@@ -521,66 +477,12 @@ fn missing_attribute_value() {
     );
 }
 
-/// An attribute name that is not an identifier. The fuzzer found this: the
-/// name went straight into the USX output, which made it invalid XML. The
-/// tree keeps the attribute as written; `usx.rs` drops it.
-#[test]
-fn malformed_attribute_name() {
-    check(
-        Code::MalformedAttributeName,
-        "\\id GEN\n\\c 1\n\\p \\v 1 \\w word|b<c=\"1\"\\w*",
-    );
-}
-
-/// The same attribute name twice. The fuzzer found the two-defaults form
-/// (`\rb b|"h=c"`, where the quotes make two bare values): both became
-/// `gloss` and the USX had the attribute twice, which is not XML.
-#[test]
-fn duplicate_attribute() {
-    check(
-        Code::DuplicateAttribute,
-        "\\id GEN\n\\c 1\n\\p \\v 1 \\w word|lemma=\"a\" lemma=\"b\"\\w*",
-    );
-    check_variant(
-        Code::DuplicateAttribute,
-        "default_twice",
-        "\\id GEN\n\\c 1\n\\p \\v 1 \\rb b|\"h=c\"\\rb*",
-    );
-}
-
 #[test]
 fn number_has_leading_zero() {
     check(
         Code::NumberHasLeadingZero,
         "\\id GEN\n\\c 091\n\\p \\v 01 text",
     );
-}
-
-/// `\xq` may only occur under `\x`; in a paragraph it is reported and kept.
-#[test]
-fn marker_not_allowed_here() {
-    check(
-        Code::MarkerNotAllowedHere,
-        "\\id GEN\n\\c 1\n\\p \\v 1 a \\xq quote\\xq* b",
-    );
-}
-
-/// `\f` under `\cl` is not in the stylesheet's list, but Paratext accepts
-/// it, so it only informs.
-#[test]
-fn marker_not_listed_here() {
-    check(
-        Code::MarkerNotListedHere,
-        "\\id GEN\n\\c 1\n\\cl Chapter One\\f + \\ft note\\f*\n\\p \\v 1 a",
-    );
-}
-
-/// A note's parent is its paragraph, whatever character style is open
-/// around it, and note text markers occur under the note: all silent.
-#[test]
-fn placement_looks_through_character_styles_for_notes() {
-    let source = "\\id GEN\n\\c 1\n\\p \\v 1 \\wj a \\x + \\xo 1.1 \\xt Gen 1\\x* b\\wj*";
-    assert_eq!(common::codes(source), Vec::<Code>::new());
 }
 
 #[test]

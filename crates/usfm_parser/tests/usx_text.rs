@@ -78,8 +78,9 @@ fn repeated_attributes_are_written_once() {
 }
 
 /// An attribute whose name is not an XML name cannot be written at all, so
-/// the parser reports `malformed-attribute-name` (tested in `recovery.rs`)
-/// and the serializer drops the attribute rather than emit broken XML.
+/// `usfm_semantic` reports `malformed-attribute-name` (tested in
+/// `usfm_semantic/tests/checks.rs`) and the serializer drops the attribute
+/// rather than emit broken XML.
 #[test]
 fn attributes_that_are_not_xml_names_are_dropped() {
     let output = usx("\\id GEN\n\\c 1\n\\p \\v 1 \\w a|b<c=\"1\" strong=\"H1\"\\w*");

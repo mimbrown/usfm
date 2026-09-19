@@ -1,0 +1,16 @@
+---
+source: crates/usfm_semantic/tests/checks.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 a \\zaln-s |\\* b"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..36
+  VerseStart 1@16..20
+  Text "a "@21..23
+  Milestone zaln-s@23..34
+  Text " b"@34..36
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+info[unknown-custom-milestone] @23..30: custom milestone `\zaln-s` is not in the stylesheet
+warning[empty-milestone-attribute-list] @31..32: `|` is not followed by any attribute

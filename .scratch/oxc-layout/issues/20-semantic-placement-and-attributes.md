@@ -1,6 +1,6 @@
 # 20. Move placement and stylesheet-driven attribute checks to `usfm_semantic`
 
-Status: ready-for-agent
+Status: resolved
 Milestone: M4
 Blocked by: 19
 
@@ -33,3 +33,26 @@ the parent, not the token stream.
 
 Done when the gate is green with tcdocs unchanged and the parser emits none of
 the seven codes.
+
+## Answer
+
+Landed via PR #24 (2026-09-19). `Analyzer` keeps a scope stack (para, char,
+note, cell) and reproduces `check_placement` off the tree; sidebars and
+periphs need no case since their content sits in its own `Para`. The `\+`
+nesting skip falls out of "char inside char: no check", verified by diffing
+every input in the repo against a `bb33209` build (one difference: `\fig
+||||||` reports `empty-attribute-list` once, not per pipe). Attribute checks
+moved with three additive AST changes: `Milestone::attributes` is
+`Option<Attributes>` (so `\zaln-s |\*` now reports
+`empty-milestone-attribute-list` like `\ts-s |\*`), `Attributes::pipe` and
+`Attribute::span`, which keep six of the eight moved codes' spans
+byte-identical; the two placement codes report the node span (same start,
+wider end). Eight codes in `Code::is_semantic()`; the parser lost
+`check_placement`, `check_attributes`, `in_cell`, `in_periph_title` and the
+`para_marker` substitution. Three parser snapshots lost one semantic line
+each. tcdocs 231 / 0 / 44; corpus zero errors, synthetic Info counts
+unchanged.
+
+`parse_semantic` whole-corpus 45.6 vs `parse` 52.1 MiB/s (12%), nearly all
+in the attribute re-check; noted on ticket 21 with the `span_check` gap for
+the two new span fields.

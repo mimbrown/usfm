@@ -103,7 +103,7 @@ Conformance status (276 tests across two roots, 2026-09-19):
   `usfm_diagnostics` libs, `usfm_usx`'s lib, `usfm_html`'s `escape` tests, the
   parser lib
   and the `whitespace`, `attributes`, `usx_text`, `verse_ends`, `spans` and
-  (11 of 76) `recovery` suites, about 3 min 50 s. It needs a nightly toolchain
+  (11 of 92) `recovery` suites, about 3 min 50 s. It needs a nightly toolchain
   with `miri` and `rust-src`, which CI installs in its own step and
   `scripts/session-start.sh` installs on a fresh VM; `rust-toolchain.toml`
   stays pinned at 1.98.0 for everything else.
@@ -198,7 +198,8 @@ Recent progress:
 - `StyleRule::occurs_under` carries the stylesheet's `OccursUnder` list. A
   note-only marker outside its note (`\xq` in a paragraph) is
   `marker-not-allowed-here` (Error); any other unlisted placement (`\f` under
-  `\cl`, which Paratext accepts) is `marker-not-listed-here` (Info)
+  `\cl`, which Paratext accepts) is `marker-not-listed-here` (Info). Both are
+  reported in `usfm_semantic` since ticket 20, over the style's whole node
 - `TableCell::column` keeps the source column (`\th3` stays 3); a gap or
   out-of-order cell is `unexpected-table-column`. A verse that starts inside a
   non-verse-text paragraph (`\lit`) ends the previous verse before it
@@ -209,7 +210,18 @@ Recent progress:
   `empty-attribute-list` (Error) is the character-style case only; on a
   milestone (`\ts-s |\*`, how unfoldingWord's aligned texts write a
   translation section) the same shape is `empty-milestone-attribute-list`
-  (Warning, nothing dropped, same USX) — ticket 18
+  (Warning, nothing dropped, same USX) — ticket 18. The six that keep the
+  list as written (`empty-attribute-list`,
+  `empty-milestone-attribute-list`, `no-default-attribute`,
+  `default-attribute-with-others`, `malformed-attribute-name`,
+  `duplicate-attribute`) are reported in `usfm_semantic` since ticket 20;
+  the ones that decide what the list *is* stay with the parser
+- `Milestone::attributes` is `Option<Attributes>` and `Char`'s already was:
+  `None` is a marker with no `|`, `Some` with no pairs is `\ts-s |\*`. That is
+  what `empty-milestone-attribute-list` reads, so `\zaln-s |\*` reports it too
+  (ticket 20). `Attributes` keeps the `|`'s span and each `Attribute` its
+  name's, so an attribute diagnostic still points at the attribute once the
+  check reads only the tree
 - `Block::Periph` (`\periph Title|id="x"` up to the next `\periph` or `\id`):
   a block container like `Sidebar`, with `title` and `attributes`; the
   attribute list on that line ends at the line break

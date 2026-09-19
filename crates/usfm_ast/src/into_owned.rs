@@ -212,7 +212,7 @@ impl<'a> IntoOwned for Milestone<'a> {
     fn into_owned(self) -> Self::Owned {
         Milestone {
             style: self.style,
-            attributes: self.attributes.into_owned(),
+            attributes: self.attributes.map(IntoOwned::into_owned),
             span: self.span,
         }
     }
@@ -224,6 +224,7 @@ impl<'a> IntoOwned for Attributes<'a> {
     fn into_owned(self) -> Self::Owned {
         Attributes {
             pairs: own_all(self.pairs),
+            pipe: self.pipe,
         }
     }
 }
@@ -235,6 +236,7 @@ impl<'a> IntoOwned for Attribute<'a> {
         Attribute {
             name: own(self.name),
             value: own(self.value),
+            span: self.span,
         }
     }
 }

@@ -256,8 +256,7 @@ mod tests {
 
         fn fold_milestone(&mut self, milestone: &Milestone<'_>) -> String {
             let who = milestone
-                .attributes
-                .pairs
+                .pairs()
                 .iter()
                 .map(|pair| format!("{}={:?}", pair.name, pair.value))
                 .collect();

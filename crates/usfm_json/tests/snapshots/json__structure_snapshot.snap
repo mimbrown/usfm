@@ -1,5 +1,5 @@
 ---
-source: usfm_json/tests/json.rs
+source: crates/usfm_json/tests/json.rs
 expression: json(STRUCTURE)
 ---
 {
@@ -46,7 +46,6 @@ expression: json(STRUCTURE)
               "type": "text"
             },
             {
-              "attributes": [],
               "span": [
                 68,
                 75

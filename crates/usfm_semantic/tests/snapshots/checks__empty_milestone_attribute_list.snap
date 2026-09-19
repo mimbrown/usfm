@@ -1,5 +1,5 @@
 ---
-source: crates/usfm_parser/tests/recovery.rs
+source: crates/usfm_semantic/tests/checks.rs
 description: "\\id GEN\n\\c 1\n\\p \\v 1 a \\ts-s |\\* b"
 ---
 Book GEN "" @0..7
