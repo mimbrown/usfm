@@ -8,8 +8,10 @@ members = [
   "usfm_style",
 ]
 # `wip/` is parked outside the workspace (ticket 01); M6 rebuilds the language
-# server in `apps/`.
-exclude = ["wip"]
+# server in `apps/`. `tasks/fuzz` is a cargo-fuzz crate: it needs nightly and
+# `-Zsanitizer=address`, so it keeps its own workspace and lockfile and is run
+# on demand (`tasks/fuzz/README.md`), not by the gate.
+exclude = ["wip", "tasks/fuzz"]
 resolver = "2"
 
 [workspace.dependencies]

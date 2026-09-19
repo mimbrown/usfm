@@ -1,0 +1,14 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 \\w word|b<c=\"1\"\\w*"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..39
+  VerseStart 1@16..20
+  Char w@21..39 b<c="1"
+    Text "word"@24..28
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[malformed-attribute-name] @29..32: `b<c` is not an attribute name; it is kept in the tree but cannot be written to USX

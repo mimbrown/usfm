@@ -15,9 +15,16 @@ xml-rs = { workspace = true }
 [features]
 # Exposes UniquePromise::new_for_tests_and_benchmarks.
 benchmarking = []
+# Exposes `span_check`, the span invariants that `tests/spans.rs` and the fuzz
+# targets in `tasks/fuzz` both assert.
+testing = []
 
 [build-dependencies]
 usfm_style = { path = "../usfm_style" }
 
 [dev-dependencies]
 insta = "1"
+# Self dev-dependency (a cycle cargo allows) so the integration tests link the
+# library with `testing` on and can call `usfm_parser::span_check`. The default
+# build, and every other crate's build, is unaffected.
+usfm_parser = { path = ".", features = ["testing"] }
