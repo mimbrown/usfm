@@ -69,6 +69,9 @@ sitting goes to `findings/` with a note, so it is not lost.
   (`tests/fixtures/usfm-grammar/{autofix/*,bugfixes/*/origin.usfm}`), as
   `usfm-grammar__<dir>__<name>.usfm`. The `autofix` inputs are deliberately
   malformed, which is what makes them worth seeding.
+- the vendored machine.py fixtures (`tests/fixtures/machine-py/*/*.SFM`), as
+  `machine-py__<project>__<book>.usfm`. Among them are a zero-byte book and
+  two whose `\id` disagrees with their filename.
 
 It is idempotent, and it truncates a seed longer than `-max_len` to the last
 whole line that fits, which is what libFuzzer would do with it anyway. Run

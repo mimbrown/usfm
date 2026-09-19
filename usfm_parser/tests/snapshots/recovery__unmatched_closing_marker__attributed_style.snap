@@ -1,0 +1,15 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 3 Chapter one \\w*,\n\\li2 verse three."
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..38
+  VerseStart 3@16..20
+  Text "Chapter one ,"@21..38
+Para li2@38..55
+  Text "verse three."@43..55
+  VerseEnd 3
+ChapterEnd 1
+--- diagnostics
+error[unmatched-closing-marker] @33..36: closing marker `\w*` has no matching `\w`

@@ -1,0 +1,21 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\esb\n\\ms Title\n\\p inside\n\\esbe\n\\v 1 a \\w three|lemma\\w*."
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Sidebar esb@13..43
+  Para ms@18..28
+    Text "Title"@22..28
+  Para p@28..38
+    Text "inside"@31..38
+Para p@38..69
+  VerseStart 1@44..48
+  Text "a "@49..51
+  Char w@51..68 "lemma"
+    Text "three"@54..59
+  Text "."@68..69
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[content-outside-paragraph] @38..69: content after `\esbe` is outside a paragraph; an implicit `\p` was opened

@@ -1,0 +1,246 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id MAT - Test\r\n\\h Matthew\r\n\\mt Matthew\r\n\\ip An introduction to Matthew\\fe + \\ft This is an endnote.\\fe*\r\n\\p \\rq MAT 1\\rq* Here is another paragraph.\r\n\\p and with a \\w keyword|a special concept\\w* in it.\r\n\\p and a \\weirdtaglookingthing that is not an actual tag.\r\n\\c 1\r\n\\s Chapter One\r\n\\v 1 Chapter \\pn one\\+pro WON\\+pro*\\pn*, verse one.\\f + \\fr 1:1: \\ft This is a footnote for v1.\\f*\r\n\\li1\r\n\\v 2 \\bd C\\bd*hapter one,\r\n\\li2 verse\\f + \\fr 1:2: \\ft This is a footnote for v2.\\f* two.\r\n\\v 3 Chapter one \\w*,\r\n\\li2 verse three.\r\n\\v 4 Chapter one with odd whitespace, \r\n\\li2 verse four,\r\n\\v 5 Chapter one,\r\n\\li2 verse \\fig Figure 1|src=\"image1.png\" size=\"col\" ref=\"1:5\"\\fig* five.\r\n\\v 6 Verse 6 content.\r\n\\v 7\r\n\\v 8\r\n\\c 2\r\n\\tr \\tc1 Row one, column one. \\tc2 Row one, column two.\r\n\\tr \\tc1 Row two, column one. \\tc2 Row two, column two.\r\n\\s1 Chapter \\it Two \\it*\r\n\\p\r\n\\p\r\n\\v 1 Chapter \\add two\\add*, verse \\f + \\fr 2:1: \\ft This is a footnote.\\f*one.\r\n\\v 2-3 Chapter two, // verse \\fm ∆\\fm*two.\r\n\\esb\r\n\\ms This is a sidebar\r\n\\p Here is some sidebar // content.\r\n\\esbe\r\n\\v 3-4a Chapter two, verse \\w three|lemma\\w*.\r\n\\v 4b Chapter two, verse four.\r\n\\p\r\n\\v 6 Chapter two, verse \\w six|strong=\"12345\" \\w*.\r\n\\p\r\n\\v 6 Bad verse. \\x - \\xo abc\\xt 123\\x* and more content.\r\n\\p\r\n\\v 5 Chapter two, verse five \\rq (MAT 3:1)\\rq*.\r\n\\v 7a Chapter two, verse seven A,\r\n\\s Section header \\ts-s\\*\r\n\\p\r\n\\v 7b verse seven B.\r\n\\p\r\n\\v 8 This is a list: \\ts-e\\*\r\n\\b\r\n\\tr \\tc1\r\n\\v 9 Chapter\\tcr2 2\\tc3 verse\\tcr4 9\r\n\\tr \\tc1-2\r\n\\v 10 \\tc3-4 \\qt-s |Jesus\\*Chapter 2 verse 10\\qt-e\\*\r\n\\v 11-12\r\n\\restore restore information\r\n\\c 3\r\n\\cl PSALM 3\r\n\\s1 Section 1\r\n\\mt1 Major Title 1\r\n\\d \\va (1)\\va* Description\r\n\\q1\r\n\\v 1 \\va 2\\va*\\vp 1 (2)\\vp* Chapter 3 verse 1.\r\n\\q1 3.1 part 2\r\n\\b\r\n\\q1 3.1 part 3\r\n\\q1 3.1 part 4\r\n\\c 4\r\n\\v 1\r\n"
+---
+Book MAT "- Test" @0..14
+Para h@16..28
+  Text "Matthew"@19..28
+Para mt@28..41
+  Text "Matthew"@32..41
+Para ip@41..106
+  Text "An introduction to Matthew"@45..71
+  Note fe caller=+@71..104
+    Char ft@77..104
+      Text "This is an endnote."@81..100
+Para p@106..151
+  Char rq@109..122
+    Text "MAT 1"@113..118
+  Text " Here is another paragraph."@122..151
+Para p@151..205
+  Text "and with a "@154..165
+  Char w@165..196 "a special concept"
+    Text "keyword"@168..175
+  Text " in it."@196..205
+Para p@205..264
+  Text "and a that is not an actual tag."@208..264
+ChapterStart 1@264..268
+Para s@270..386
+  Text "Chapter One "@273..286
+  VerseStart 1@286..290
+  Text "Chapter "@291..299
+  Char pn@299..325
+    Text "one"@303..306
+    Char pro@306..321
+      Text "WON"@312..315
+  Text ", verse one."@325..337
+  Note f caller=+@337..384
+    Char fr@342..351
+      Text "1:1: "@346..351
+    Char ft@351..384
+      Text "This is a footnote for v1."@355..381
+  VerseEnd 1
+Para li1@386..419
+  VerseStart 2@392..396
+  Char bd@397..406
+    Text "C"@401..402
+  Text "hapter one,"@406..419
+Para li2@419..506
+  Text "verse"@424..429
+  Note f caller=+@429..476
+    Char fr@434..443
+      Text "1:2: "@438..443
+    Char ft@443..476
+      Text "This is a footnote for v2."@447..473
+  Text " two."@476..483
+  VerseEnd 2
+  Text " "
+  VerseStart 3@483..487
+  Text "Chapter one ,"@488..506
+Para li2@506..567
+  Text "verse three."@511..525
+  VerseEnd 3
+  Text " "
+  VerseStart 4@525..529
+  Text "Chapter one with odd whitespace,\u{2009}"@530..567
+Para li2@567..604
+  Text "verse four,"@572..585
+  VerseEnd 4
+  Text " "
+  VerseStart 5@585..589
+  Text "Chapter one,"@590..604
+Para li2@604..714
+  Text "verse "@609..615
+  Char fig@615..671 src="image1.png" size="col" ref="1:5"
+    Text "Figure 1"@620..628
+  Text " five."@671..679
+  VerseEnd 5
+  Text " "
+  VerseStart 6@679..683
+  Text "Verse 6 content."@684..702
+  VerseEnd 6
+  Text " "
+  VerseStart 7@702..706
+  VerseEnd 7
+  VerseStart 8@708..712
+  VerseEnd 8
+ChapterEnd 1
+ChapterStart 2@714..718
+Table@720..834
+  Row@720..777
+    Cell header=false align=start column=1 colspan=1@724..750
+      Text "Row one, column one."@729..750
+    Cell header=false align=start column=2 colspan=1@750..777
+      Text "Row one, column two."@755..777
+  Row@777..834
+    Cell header=false align=start column=1 colspan=1@781..807
+      Text "Row two, column one."@786..807
+    Cell header=false align=start column=2 colspan=1@807..834
+      Text "Row two, column two."@812..834
+Para s1@834..860
+  Text "Chapter "@838..846
+  Char it@846..858
+    Text "Two "@850..854
+Para p@860..864
+Para p@864..994
+  VerseStart 1@868..872
+  Text "Chapter "@873..881
+  Char add@881..894
+    Text "two"@886..889
+  Text ", verse "@894..902
+  Note f caller=+@902..942
+    Char fr@907..916
+      Text "2:1: "@911..916
+    Char ft@916..942
+      Text "This is a footnote."@920..939
+  Text "one."@942..948
+  VerseEnd 1
+  Text " "
+  VerseStart 2-3@948..954
+  Text "Chapter two, "@955..968
+  OptBreak@968..970
+  Text " verse "@970..977
+  Char fm@977..988
+    Text "∆"@981..984
+  Text "two."@988..994
+Sidebar esb@994..1065
+  Para ms@1000..1023
+    Text "This is a sidebar"@1004..1023
+  Para p@1023..1060
+    Text "Here is some sidebar "@1026..1047
+    OptBreak@1047..1049
+    Text " content."@1049..1060
+Para p@1060..1146
+  VerseStart 3-4a@1067..1074
+  Text "Chapter two, verse "@1075..1094
+  Char w@1094..1111 "lemma"
+    Text "three"@1097..1102
+  Text "."@1111..1114
+  VerseEnd 3-4a
+  Text " "
+  VerseStart 4b@1114..1119
+  Text "Chapter two, verse four."@1120..1146
+  VerseEnd 4b
+Para p@1146..1202
+  VerseStart 6@1150..1154
+  Text "Chapter two, verse "@1155..1174
+  Char w@1174..1199 strong="12345"
+    Text "six"@1177..1180
+  Text "."@1199..1202
+  VerseEnd 6
+Para p@1202..1264
+  VerseStart 6@1206..1210
+  Text "Bad verse. "@1211..1222
+  Note x caller=-@1222..1244
+    Char xo@1227..1234
+      Text "abc"@1231..1234
+    Char xt@1234..1244
+      Text "123"@1238..1241
+  Text " and more content."@1244..1264
+  VerseEnd 6
+Para p@1264..1352
+  VerseStart 5@1268..1272
+  Text "Chapter two, verse five "@1273..1297
+  Char rq@1297..1314
+    Text "(MAT 3:1)"@1301..1310
+  Text "."@1314..1317
+  VerseEnd 5
+  Text " "
+  VerseStart 7a@1317..1322
+  Text "Chapter two, verse seven A,"@1323..1352
+  VerseEnd 7a
+Para s@1352..1379
+  Text "Section header "@1355..1370
+  Milestone ts-s@1370..1377
+Para p@1379..1405
+  VerseStart 7b@1383..1388
+  Text "verse seven B."@1389..1405
+  VerseEnd 7b
+Para p@1405..1439
+  VerseStart 8@1409..1413
+  Text "This is a list: "@1414..1430
+  Milestone ts-e@1430..1437
+  VerseEnd 8
+Para b@1439..1443
+Table@1443..1567
+  Row@1443..1491
+    Cell header=false align=start column=1 colspan=1@1447..1465
+      VerseStart 9@1453..1457
+      Text "Chapter"@1458..1465
+    Cell header=false align=end column=2 colspan=1@1465..1472
+      Text "2"@1471..1472
+    Cell header=false align=start column=3 colspan=1@1472..1482
+      Text "verse"@1477..1482
+    Cell header=false align=end column=4 colspan=1@1482..1491
+      Text "9"@1488..1491
+      VerseEnd 9
+  Row@1491..1567
+    Cell header=false align=start column=1 colspan=2@1495..1509
+      VerseStart 10@1503..1508
+    Cell header=false align=start column=3 colspan=2@1509..1567
+      Milestone qt-s@1516..1530 "Jesus"
+      Text "Chapter 2 verse 10"@1530..1548
+      Milestone qt-e@1548..1555
+      VerseEnd 10
+      Text " "
+      VerseStart 11-12@1557..1565
+      VerseEnd 11-12
+Para restore@1567..1597
+  Text "restore information"@1576..1597
+ChapterEnd 2
+ChapterStart 3@1597..1601
+Para cl@1603..1616
+  Text "PSALM 3"@1607..1616
+Para s1@1616..1631
+  Text "Section 1"@1620..1631
+Para mt1@1631..1651
+  Text "Major Title 1"@1636..1651
+Para d@1651..1679
+  Char va@1654..1665
+    Text "(1)"@1658..1661
+  Text " Description"@1665..1679
+Para q1@1679..1732
+  VerseStart 1@1684..1711 alt=2 pub="1 (2)"
+  Text "Chapter 3 verse 1."@1712..1732
+Para q1@1732..1748
+  Text "3.1 part 2"@1736..1748
+Para b@1748..1752
+Para q1@1752..1768
+  Text "3.1 part 3"@1756..1768
+Para q1@1768..1784
+  Text "3.1 part 4"@1772..1784
+  VerseEnd 1
+ChapterEnd 3
+ChapterStart 4@1784..1788
+Para p@1790..1796
+  VerseStart 1@1790..1794
+  VerseEnd 1
+ChapterEnd 4
+--- diagnostics
+error[verse-text-before-chapter] @106..108: `\p` (verse text) before the first `\c`
+error[verse-text-before-chapter] @151..153: `\p` (verse text) before the first `\c`
+error[verse-text-before-chapter] @205..207: `\p` (verse text) before the first `\c`
+error[unknown-marker] @214..235: unknown marker `\weirdtaglookingthing`
+error[verse-in-heading] @286..288: `\v` inside a title or section heading
+error[unmatched-closing-marker] @500..503: closing marker `\w*` has no matching `\w`
+error[content-outside-paragraph] @1060..1146: content after `\esbe` is outside a paragraph; an implicit `\p` was opened
+error[content-outside-paragraph] @1790..1792: content outside a paragraph; an implicit `\p` was opened

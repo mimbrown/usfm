@@ -1,0 +1,13 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 and a \\weirdtaglookingthing that is not an actual tag."
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..75
+  VerseStart 1@16..20
+  Text "and a that is not an actual tag."@21..75
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[unknown-marker] @27..48: unknown marker `\weirdtaglookingthing`

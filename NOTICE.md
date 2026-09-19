@@ -18,6 +18,14 @@ derives from the following, which keep their own terms.
   `tests/bugfixes/` directories are vendored. The fuzz seeds named
   `usfm-grammar__*` in `tasks/fuzz/corpus/` are copies of those inputs.
   Scripture excerpts inside those inputs belong to their respective publishers.
+- **machine.py test data** (`tests/fixtures/machine-py/`, from
+  https://github.com/sillsdev/machine.py at commit
+  `e2af2c868043c2b3594789d1110b05eda96de30e`, fetched 2026-09-19). Copyright ©
+  2022 SIL International, MIT; the licence text is copied verbatim to
+  `tests/fixtures/machine-py/LICENSE`. Only its `tests/testutils/data/usfm/`
+  directory is vendored. The fuzz seeds named `machine-py__*` in
+  `tasks/fuzz/corpus/` are copies of those inputs. Scripture excerpts inside
+  those inputs belong to their respective publishers.
 - **World English Bible** (`tasks/benchmark/corpus/web/`), the benchmark
   corpus. The WEB is in the **public domain**: no copyright, no attribution
   requirement, no restriction on redistribution. It is eBible.org's edition,
