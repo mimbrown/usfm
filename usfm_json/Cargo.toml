@@ -1,0 +1,28 @@
+[package]
+name = "usfm_json"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+# An output crate in `docs/adr/0001-oxc-style-crate-layout.md`: it turns a
+# `Document` into JSON. "No output crate depends on another output crate", and
+# no output crate depends on the parser either — this one reads the AST and the
+# stylesheet the document carries, so neither `usfm_parser` nor `usfm_usx` is in
+# the list below.
+[dependencies]
+# The tree it walks, and `Alignment`/`Caller`/`Span`.
+usfm_ast = { path = "../usfm_ast" }
+# `StyleSheet` and `StyleRule`, to resolve a node's `StyleId` to its marker.
+usfm_style = { path = "../usfm_style" }
+# `Value` and its writers. The AST itself stays serde-free: nothing here is a
+# `Serialize` derive, and `usfm_ast` does not gain a serde dependency (ticket
+# 16); the shape is built node by node in `json.rs`.
+serde_json = { workspace = true }
+
+[dev-dependencies]
+# The snapshots of the output, reviewed with `cargo insta review`.
+insta = "1"
+# Every test here starts from a parsed document, which only the parser can
+# build. A dev-dependency only: the shipped code parses nothing, and
+# `usfm_parser` does not depend on this crate, so there is no cycle.
+usfm_parser = { path = "../usfm_parser" }

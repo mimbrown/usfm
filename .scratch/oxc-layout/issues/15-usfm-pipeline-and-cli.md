@@ -46,7 +46,7 @@ green.
 
 ## Answer
 
-Landed via PR #18 (2026-09-19). `usfm_pipeline` holds `text_replacements`,
+Landed in `7e9d531` (PR #18, 2026-09-19). `usfm_pipeline` holds `text_replacements`,
 `sections`, `diglot` (its raw text writes now go through
 `usfm_html::write_escaped`), `sile` and `render` (`OutputFormat`,
 `RenderError`; the `todo!()`/`unimplemented!()` arms are errors with

@@ -20,6 +20,7 @@ use std::hint::black_box;
 use usfm_ast::Document;
 use usfm_benchmark::{CorpusFile, FileClass, total_bytes};
 use usfm_html::to_html_string;
+use usfm_json::to_json_string;
 use usfm_parser::DEFAULT_STYLESHEET;
 use usfm_parser::UniquePromise;
 use usfm_parser::lexer::Lexer;
@@ -115,6 +116,15 @@ fn bench_parse_html(c: &mut Criterion) {
     });
 }
 
+fn bench_parse_json(c: &mut Criterion) {
+    throughput_group(c, "parse_json", |files, sheet| {
+        for file in files {
+            let result = Parser::new(black_box(&file.text)).parse(sheet);
+            black_box(to_json_string(&result.document));
+        }
+    });
+}
+
 /// `reference_index` alone: the parse is done once, outside the timed loop, so
 /// the number is the cost of walking a built tree. Throughput is still counted
 /// over the bytes of source the tree came from, which keeps the unit the same
@@ -147,6 +157,7 @@ fn bench_reference_index(c: &mut Criterion) {
 criterion_group! {
     name = benches;
     config = configured();
-    targets = bench_lex, bench_parse, bench_parse_usx, bench_parse_html, bench_reference_index
+    targets = bench_lex, bench_parse, bench_parse_usx, bench_parse_html, bench_parse_json,
+        bench_reference_index
 }
 criterion_main!(benches);

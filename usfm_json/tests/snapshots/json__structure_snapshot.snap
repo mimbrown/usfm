@@ -1,0 +1,220 @@
+---
+source: usfm_json/tests/json.rs
+expression: json(STRUCTURE)
+---
+{
+  "children": [
+    {
+      "code": "FRT",
+      "description": "",
+      "span": [
+        0,
+        7
+      ],
+      "type": "book"
+    },
+    {
+      "attributes": [
+        {
+          "name": "id",
+          "value": "title"
+        }
+      ],
+      "children": [
+        {
+          "children": [
+            {
+              "attributes": [
+                {
+                  "name": "",
+                  "value": "Narrator"
+                }
+              ],
+              "span": [
+                41,
+                58
+              ],
+              "style": "qt-s",
+              "type": "milestone"
+            },
+            {
+              "content": "Once told.",
+              "span": [
+                58,
+                68
+              ],
+              "type": "text"
+            },
+            {
+              "attributes": [],
+              "span": [
+                68,
+                75
+              ],
+              "style": "qt-e",
+              "type": "milestone"
+            }
+          ],
+          "span": [
+            38,
+            76
+          ],
+          "style": "p",
+          "type": "para"
+        },
+        {
+          "category": "People",
+          "children": [
+            {
+              "children": [
+                {
+                  "content": "An aside.",
+                  "span": [
+                    101,
+                    111
+                  ],
+                  "type": "text"
+                }
+              ],
+              "span": [
+                98,
+                111
+              ],
+              "style": "p",
+              "type": "para"
+            }
+          ],
+          "span": [
+            76,
+            116
+          ],
+          "style": "esb",
+          "type": "sidebar"
+        },
+        {
+          "children": [
+            {
+              "children": [
+                {
+                  "alignment": "start",
+                  "children": [
+                    {
+                      "content": "Tribe",
+                      "span": [
+                        126,
+                        132
+                      ],
+                      "type": "text"
+                    }
+                  ],
+                  "colspan": 1,
+                  "column": 1,
+                  "header": true,
+                  "span": [
+                    121,
+                    132
+                  ],
+                  "type": "cell"
+                },
+                {
+                  "alignment": "end",
+                  "children": [
+                    {
+                      "content": "Number",
+                      "span": [
+                        138,
+                        145
+                      ],
+                      "type": "text"
+                    }
+                  ],
+                  "colspan": 1,
+                  "column": 2,
+                  "header": true,
+                  "span": [
+                    132,
+                    145
+                  ],
+                  "type": "cell"
+                }
+              ],
+              "span": [
+                117,
+                145
+              ],
+              "type": "row"
+            },
+            {
+              "children": [
+                {
+                  "alignment": "start",
+                  "children": [
+                    {
+                      "content": "Reuben",
+                      "span": [
+                        154,
+                        161
+                      ],
+                      "type": "text"
+                    }
+                  ],
+                  "colspan": 1,
+                  "column": 1,
+                  "header": false,
+                  "span": [
+                    149,
+                    161
+                  ],
+                  "type": "cell"
+                },
+                {
+                  "alignment": "end",
+                  "children": [
+                    {
+                      "content": "46,500",
+                      "span": [
+                        167,
+                        174
+                      ],
+                      "type": "text"
+                    }
+                  ],
+                  "colspan": 1,
+                  "column": 2,
+                  "header": false,
+                  "span": [
+                    161,
+                    174
+                  ],
+                  "type": "cell"
+                }
+              ],
+              "span": [
+                145,
+                174
+              ],
+              "type": "row"
+            }
+          ],
+          "span": [
+            117,
+            174
+          ],
+          "type": "table"
+        }
+      ],
+      "span": [
+        8,
+        174
+      ],
+      "style": "periph",
+      "title": "Title Page",
+      "type": "periph"
+    }
+  ],
+  "span": [
+    0,
+    174
+  ],
+  "type": "document"
+}

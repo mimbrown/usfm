@@ -457,8 +457,13 @@ consumer of a `Document` never needs the parser crate to walk it.
 *Superseded 2026-09-19 by `.scratch/oxc-layout/spec.md` (ADR 0001), which also takes
 over the Phase 0 leftovers and the cross-cutting fuzzing, Miri and benchmark items.*
 
-- [ ] `usfm_usx`, `usfm_html`, `usfm_json` crates, each a `Fold` or `Visit` over the
+- [x] `usfm_usx`, `usfm_html`, `usfm_json` crates, each a `Fold` or `Visit` over the
       AST with no shared mutable `Context` (each carries only the state it needs).
+      Done 2026-09-19 (tickets 13, 14, 16): `usfm_usx` and `usfm_html` walk with
+      `Visit` over their own private state; `usfm_json` is a recursion returning one
+      `serde_json::Value` per node, which is the same traversal without a children
+      stack, and its `Context` is the one field it needs (the document's stylesheet).
+      No output crate depends on another, and none on the parser.
 - [x] Move diglot weaving, punctuation sectioning, and the prompt formatter out of
       `main.rs` into a `usfm_pipeline` crate with tests. They are real tools and are
       currently untestable. Done 2026-09-19 (ticket 15): `usfm_pipeline` holds them
@@ -511,7 +516,11 @@ over the Phase 0 leftovers and the cross-cutting fuzzing, Miri and benchmark ite
       the day it lands.
 - [ ] **Benchmarks.** `criterion` benches for parse, parse + USX, parse + JSON on the
       three large IRV files. Fail CI on a 20% regression. Current baseline: ~10 ms
-      for 586 KB in release.
+      for 586 KB in release. The benches themselves are done (tickets 04 and, for
+      `parse_json`, 16): `tasks/benchmark` over a committed corpus, groups `lex`,
+      `parse`, `parse_usx`, `parse_html`, `parse_json` and `reference_index`,
+      recorded in `docs/benchmarks.md`. What is left is the CI gate: the numbers are
+      still compared by hand, interleaved against the previous commit.
 - [ ] **Property tests.** USX → USFM → USX round trip for the subset the parser
       supports, once a USFM writer exists.
 
