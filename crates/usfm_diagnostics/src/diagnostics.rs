@@ -109,6 +109,8 @@ pub enum Code {
     /// e.g. `\xq` in a paragraph rather than in `\x`.
     /// **Recovery:** the style is parsed where it is.
     /// **Severity:** Error. Paratext marks these `status="invalid"`.
+    /// **Reported by:** `usfm_semantic` (ticket 20). The span is the style's
+    /// node, from its opening marker to wherever it closed.
     MarkerNotAllowedHere,
     /// **Trigger:** any other character style or note opened under a marker
     /// its `OccursUnder` does not list, such as `\f` under `\cl`. The
@@ -118,6 +120,8 @@ pub enum Code {
     /// styles are open around it.
     /// **Recovery:** the style is parsed where it is.
     /// **Severity:** Info.
+    /// **Reported by:** `usfm_semantic` (ticket 20). The span is the style's
+    /// node, from its opening marker to wherever it closed.
     MarkerNotListedHere,
     /// **Trigger:** a nested marker (`\+name`) used where no character style
     /// is open.
@@ -313,6 +317,7 @@ pub enum Code {
     /// **Recovery:** the style carries an empty attribute list.
     /// **Severity:** Error. On a milestone the same shape is
     /// [`Code::EmptyMilestoneAttributeList`] instead.
+    /// **Reported by:** `usfm_semantic` (ticket 20), at the `|`.
     EmptyAttributeList,
     /// **Trigger:** `|` followed by no attribute at all on a milestone
     /// (`\ts-s |\*`). unfoldingWord's aligned texts write their translation
@@ -323,18 +328,23 @@ pub enum Code {
     /// the output is the same either way (`<ms style="ts-s"/>`).
     /// **Severity:** Warning. The empty list is not USFM, but nothing about
     /// the document is a guess.
+    /// **Reported by:** `usfm_semantic` (ticket 20), at the `|`. It reads
+    /// `Milestone::attributes`, which is `Some` with no pairs for exactly
+    /// this shape, so an unknown milestone (`\zaln-s |\*`) reports it too.
     EmptyMilestoneAttributeList,
     /// **Trigger:** a bare value (`|value`) on a marker that has no default
     /// attribute, such as `\em` or `\fig`.
     /// **Recovery:** kept in the tree with an empty name; USX serializers
     /// drop it, since there is no attribute name to write.
     /// **Severity:** Error.
+    /// **Reported by:** `usfm_semantic` (ticket 20), at the `|`.
     NoDefaultAttribute,
     /// **Trigger:** a bare value alongside named attributes
     /// (`|grace strong="H1234"`). USFM allows the unnamed form only when
     /// it is the sole attribute.
     /// **Recovery:** the bare value is kept as the default attribute.
     /// **Severity:** Error.
+    /// **Reported by:** `usfm_semantic` (ticket 20), at the `|`.
     DefaultAttributeWithOthers,
     /// **Trigger:** a named attribute whose value is not in double quotes
     /// (`lemma=grace`).
@@ -351,6 +361,7 @@ pub enum Code {
     /// **Recovery:** kept in the tree with its name as written; USX
     /// serializers drop it, since the name is not a valid XML name.
     /// **Severity:** Error.
+    /// **Reported by:** `usfm_semantic` (ticket 20), at the name.
     MalformedAttributeName,
     /// **Trigger:** the same attribute name twice in one list, including two
     /// bare values, which are both the marker's default attribute
@@ -359,6 +370,8 @@ pub enum Code {
     /// write the first and drop the rest, since XML has no repeated
     /// attribute.
     /// **Severity:** Error.
+    /// **Reported by:** `usfm_semantic` (ticket 20), at the second and each
+    /// later occurrence of the name.
     DuplicateAttribute,
     /// **Trigger:** the parser reached a state its own invariants say is
     /// impossible. Parsing stops at this point.
@@ -524,7 +537,18 @@ impl Code {
     /// assert!(!Code::UnknownBookCode.is_semantic());
     /// ```
     pub fn is_semantic(self) -> bool {
-        matches!(self, Code::UnlistedBookCode)
+        matches!(
+            self,
+            Code::UnlistedBookCode
+                | Code::MarkerNotAllowedHere
+                | Code::MarkerNotListedHere
+                | Code::EmptyAttributeList
+                | Code::EmptyMilestoneAttributeList
+                | Code::NoDefaultAttribute
+                | Code::DefaultAttributeWithOthers
+                | Code::MalformedAttributeName
+                | Code::DuplicateAttribute
+        )
     }
 
     /// The inverse of [`Code::as_str`]: the code with that name, if there is

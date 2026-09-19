@@ -332,10 +332,26 @@ pub struct OptBreak {
 pub struct Milestone<'a> {
     /// The milestone's style, resolved against the document's stylesheet.
     pub style: StyleId,
-    /// Attributes (sid, eid, who, etc.)
-    pub attributes: Attributes<'a>,
+    /// Attributes (sid, eid, who, etc.), when the source had a `|`. `Some`
+    /// with no pairs is a bare `|` (`\ts-s |\*`), which is not the same as
+    /// no `|` at all (`\ts-s\*`): the first is
+    /// `empty-milestone-attribute-list`, the second is ordinary USFM, and
+    /// only this distinction tells them apart once the tree is all that is
+    /// left to read.
+    pub attributes: Option<Attributes<'a>>,
     /// Source range from the marker to the closing `\*`.
     pub span: Span,
+}
+
+impl<'a> Milestone<'a> {
+    /// The attribute pairs, with no pipe and an empty list reading alike.
+    /// For the writers, which have no use for the difference.
+    pub fn pairs(&self) -> &[Attribute<'a>] {
+        match &self.attributes {
+            Some(attributes) => &attributes.pairs,
+            None => &[],
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -372,6 +388,12 @@ pub struct Char<'a> {
 pub struct Attributes<'a> {
     /// Attribute key-value pairs. Key may be empty for default attribute.
     pub pairs: Vec<Attribute<'a>>,
+    /// Source range of the `|` that opens the list — one byte, or [`SPAN`]
+    /// for a list built by hand. The list has no span of its own: each pair
+    /// carries one, and where the list is empty the `|` is the only thing
+    /// there is to point at, which is what a check reporting the empty list
+    /// needs.
+    pub pipe: Span,
 }
 
 /// A single attribute, either named or default (unnamed).
@@ -381,6 +403,11 @@ pub struct Attribute<'a> {
     pub name: Cow<'a, str>,
     /// Attribute value.
     pub value: Cow<'a, str>,
+    /// Source range of the name (`lemma` in `lemma="grace"`), or of the value
+    /// run for a default attribute, which has no name to point at. Like every
+    /// span it is where this came from, not what it reads: `value` has its
+    /// quotes stripped and its escapes resolved, and the span covers neither.
+    pub span: Span,
 }
 
 #[derive(Debug, PartialEq)]

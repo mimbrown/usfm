@@ -36,7 +36,7 @@
 # * `usfm_pipeline` — its lib suite is the text replacements, which spend all
 #   their time inside the `regex` crate; that is not this repo's code, and it
 #   cost 66 s of the parser's 86 s while it lived there (ticket 15 moved it).
-# * 65 of the 76 `recovery` tests — the 11 kept are the ones whose input drives
+# * 81 of the 92 `recovery` tests — the 11 kept are the ones whose input drives
 #   the lexer somewhere unusual (a lone `\`, an unterminated quote, an escaped
 #   one, a marker name with `-` or `_`, a newline inside an attribute list, EOF
 #   inside a character style, a malformed number through `string_parser`). The

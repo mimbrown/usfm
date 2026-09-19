@@ -209,10 +209,10 @@ impl<'a> UsxWriter<'a> {
     fn push_attributes(
         &self,
         attrs: &mut Vec<OwnedAttribute>,
-        attributes: &usfm_ast::Attributes<'_>,
+        pairs: &[usfm_ast::Attribute<'_>],
         marker: &str,
     ) {
-        for attr in &attributes.pairs {
+        for attr in pairs {
             let name = if attr.name.is_empty() {
                 default_attribute_name(marker)
             } else {
@@ -357,7 +357,7 @@ impl Visit for UsxWriter<'_> {
             attrs.push(attribute("alt", title.content.to_string()));
         }
         if let Some(attributes) = &periph.attributes {
-            self.push_attributes(&mut attrs, attributes, self.marker(periph.style));
+            self.push_attributes(&mut attrs, &attributes.pairs, self.marker(periph.style));
         }
         // The attribute list is written above, so the blocks are walked here
         // rather than through `walk_periph`, which would visit it as content.
@@ -453,7 +453,7 @@ impl Visit for UsxWriter<'_> {
         let mut attrs = vec![attribute("style", marker.to_string())];
         // `sid`, `eid`, `who` and the rest; milestones are self-closing `<ms>`
         // elements with no children.
-        self.push_attributes(&mut attrs, &milestone.attributes, marker);
+        self.push_attributes(&mut attrs, milestone.pairs(), marker);
         self.push_element("ms", attrs);
     }
 

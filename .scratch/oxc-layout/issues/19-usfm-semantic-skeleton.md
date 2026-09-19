@@ -39,7 +39,7 @@ reported by `usfm::parse` and not by `usfm_parser::Parser::parse`.
 
 ## Answer
 
-Landed via PR #23 (2026-09-19). `crates/usfm_semantic`: `analyze(&Document)
+Landed in `bb33209` (PR #23, 2026-09-19). `crates/usfm_semantic`: `analyze(&Document)
 -> Vec<Diagnostic>`, an `Analyzer: Visit` holding the document's stylesheet,
 diagnostics stably sorted by span start; never depends on the parser. The
 facade's `parse`/`parse_with`/new `parse_with_options` return the union
