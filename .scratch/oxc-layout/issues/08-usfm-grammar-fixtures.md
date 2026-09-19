@@ -44,7 +44,7 @@ Solutions.
 
 ## Answer
 
-Landed via PR #12 (2026-09-19). `tests/fixtures/usfm-grammar/` (MIT, commit
+Landed in `13f4488` (PR #12, 2026-09-19). `tests/fixtures/usfm-grammar/` (MIT, commit
 `4ee1b91c`) holds `bugfixes/` (16 cases, run by the `usfm_tests` harness as a
 second root, category `usfm-grammar/bugfixes`, 16 / 0) and `autofix/` (13
 inputs, covered by `recovery.rs` tests: 8 already-diagnosed shapes get a

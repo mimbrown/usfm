@@ -90,5 +90,8 @@ Rebuilt in `apps/` on `ParseResult`, `usfm_semantic` and `usfm_codegen`
   ebible.org is blocked from the cloud environment; see
   `tasks/benchmark/corpus/README.md`.
 - M3: whether `Context` (note numbering, counters) survives as HTML-only state.
+- M4: `usfm_semantic` should own verse-number uniqueness and order (a
+  duplicated `\v 6` or a `\v 5` after `\v 7a` is reported nowhere today; found
+  by ticket 09 in machine.py's `41MATTes.SFM`), which needs versification.
 - M4: whether verse-end emission is syntax or semantics. It is in the parser now
   (plan D4) and USX needs it; default is to leave it.

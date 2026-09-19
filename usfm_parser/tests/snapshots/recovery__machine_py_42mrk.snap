@@ -1,0 +1,11 @@
+---
+source: usfm_parser/tests/recovery.rs
+description: "\\id MRK - Test\r\n\\h Mark\r\n\\mt Mark\r\n\\ip An introduction to Mark"
+---
+Book MRK "- Test" @0..14
+Para h@16..25
+  Text "Mark"@19..25
+Para mt@25..35
+  Text "Mark"@29..35
+Para ip@35..62
+  Text "An introduction to Mark"@39..62

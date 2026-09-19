@@ -975,7 +975,18 @@ impl<'a> ParserImpl<'a> {
         };
         self.para_text_type = text_type;
         self.para_is_s5 = is_s5;
-        self.para_marker = Some(marker);
+        // `\esb` and `\esbe` carry no content of their own: anything on their
+        // line is moved into an implicit `\p` by `content_after_marker`. The
+        // placement of a character style there is therefore checked against
+        // `\p`, the paragraph that ends up holding it, and not against the
+        // sidebar marker, which lists no children at all.
+        self.para_marker = Some(
+            if (marker == self.esb || marker == self.esbe) && self.p != usize::MAX {
+                self.p
+            } else {
+                marker
+            },
+        );
         self.start_block();
         if !self.chapter_seen
             && is_verse_text

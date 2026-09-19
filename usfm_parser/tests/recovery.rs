@@ -913,6 +913,187 @@ fn autofix_empty_marker() {
     snapshot("autofix_empty_marker", source);
 }
 
+// The Paratext-shaped test project in `tests/fixtures/machine-py/`, from
+// sillsdev/machine.py. Unlike the tcdocs and usfm-grammar corpora it ships no
+// expected output of any kind, so the expectation here is the parser's own
+// tree and diagnostics: the books are snapshotted whole, and each shape in
+// them that no existing test covers gets a `check_variant` of its own below.
+
+const MACHINE_PY_41MAT: &str = include_str!("../../tests/fixtures/machine-py/Tes/41MATTes.SFM");
+const MACHINE_PY_03LEV: &str = include_str!("../../tests/fixtures/machine-py/Tes/03LEVTes.SFM");
+const MACHINE_PY_42MRK: &str = include_str!("../../tests/fixtures/machine-py/Tes/42MRKTes.SFM");
+const MACHINE_PY_44JHN: &str = include_str!("../../tests/fixtures/machine-py/Tes/44JHNTes.SFM");
+const MACHINE_PY_CUSTOM_STY: &str = include_str!("../../tests/fixtures/machine-py/Tes/custom.sty");
+
+/// `Tes/41MATTes.SFM` whole, the one book in the set that exercises anything:
+/// an `\fe` endnote, `\rq`, `\fm`, `\pn` with a nested `\+pro`, `\fig`, an
+/// `\esb` sidebar, two tables, `\ts-s`/`\ts-e`, `\va`/`\vp`, `//`, verse
+/// segments (`\v 3-4a`, `\v 4b`), and a handful of deliberate mistakes. Every
+/// one of the standard markers parses without a diagnostic; the eight below
+/// are the mistakes, listed here so a change to any of them has to be accepted
+/// explicitly.
+///
+/// Two of the file's oddities are deliberately *not* reported: `\v 6` occurs
+/// twice in chapter 2 and `\v 5` comes after `\v 7a`. Both are well-formed
+/// verse markers, and whether a book's verses are unique and in order is a
+/// question about the document, not about its syntax; that check belongs to
+/// `usfm_semantic` (M4), which will have the versification to check against.
+/// The thin space (U+2009) ending the `\v 4` line survives into the text:
+/// whitespace rule 1 normalises ASCII whitespace only.
+#[test]
+fn machine_py_41mat() {
+    assert_eq!(
+        common::codes(MACHINE_PY_41MAT),
+        vec![
+            // Three `\p` in the introduction, before `\c 1`.
+            Code::VerseTextBeforeChapter,
+            Code::VerseTextBeforeChapter,
+            Code::VerseTextBeforeChapter,
+            // `\weirdtaglookingthing`.
+            Code::UnknownMarker,
+            // `\v 1` on the line after `\s Chapter One`, with no `\p`.
+            Code::VerseInHeading,
+            // `\w*` with no `\w`.
+            Code::UnmatchedClosingMarker,
+            // `\v 3-4a` on the line after `\esbe`, and `\v 1` after `\c 4`.
+            Code::ContentOutsideParagraph,
+            Code::ContentOutsideParagraph,
+        ],
+    );
+    snapshot("machine_py_41mat", MACHINE_PY_41MAT);
+}
+
+/// `\weirdtaglookingthing that is not an actual tag`: a marker that is a whole
+/// word and has no closing marker anywhere, unlike the `\foo custom \foo*` of
+/// `unknown_marker`. The marker is dropped and the text on the rest of the
+/// line is kept, so the paragraph reads `and a that is not an actual tag.`
+#[test]
+fn unknown_marker_word_looking() {
+    check_variant(
+        Code::UnknownMarker,
+        "word_looking",
+        "\\id GEN\n\\c 1\n\\p \\v 1 and a \\weirdtaglookingthing that is not an actual tag.",
+    );
+}
+
+/// `\w*` with no `\w`: the closer of a style that carries attributes, rather
+/// than the `\em*`/`\x*` of `unmatched_closing_marker`. It is dropped without
+/// taking the `,` after it with it, and no attribute parsing starts.
+#[test]
+fn unmatched_closing_marker_attributed_style() {
+    check_variant(
+        Code::UnmatchedClosingMarker,
+        "attributed_style",
+        "\\id GEN\n\\c 1\n\\p \\v 3 Chapter one \\w*,\n\\li2 verse three.",
+    );
+}
+
+/// Content on the line after `\esbe`, the mirror of `content_after_sidebar_marker`.
+/// `\esbe` ends the sidebar and takes no content, so the verse that follows it
+/// goes into an implicit `\p` after the sidebar, and a character style in that
+/// content is checked for placement against `\p` — not against `\esbe`, which
+/// lists no children at all and would report `marker-not-listed-here` for
+/// every style in the file.
+#[test]
+fn content_after_sidebar_end_marker() {
+    check_variant(
+        Code::ContentOutsideParagraph,
+        "after_esbe",
+        "\\id GEN\n\\c 1\n\\esb\n\\ms Title\n\\p inside\n\\esbe\n\\v 1 a \\w three|lemma\\w*.",
+    );
+}
+
+/// `Tes/03LEVTes.SFM`: `\v 55b`, a verse segment continuing `\v 55` in the same
+/// paragraph, and `\id Leviticus` — a book name where the code belongs, which
+/// drops the `\id` line and so also leaves the document without one.
+#[test]
+fn machine_py_03lev() {
+    assert_eq!(
+        common::codes(MACHINE_PY_03LEV),
+        vec![Code::MissingId, Code::UnknownBookCode],
+    );
+    snapshot("machine_py_03lev", MACHINE_PY_03LEV);
+}
+
+/// `Tes/42MRKTes.SFM`: a scripture book that stops after its introduction,
+/// with no `\c` and no `\v` at all. Nothing is reported: `\ip` is not verse
+/// text, so `verse-text-before-chapter` does not apply, and a book file that
+/// only has its front matter written yet is not malformed USFM.
+#[test]
+fn machine_py_42mrk() {
+    assert_eq!(common::codes(MACHINE_PY_42MRK), Vec::<Code>::new());
+    snapshot("machine_py_42mrk", MACHINE_PY_42MRK);
+}
+
+/// `Tes/44JHNTes.SFM` is zero bytes, which a Paratext project uses for a book
+/// nobody has started. It parses to a document with no blocks and reports
+/// nothing: `check_document_structure` asks what the first block is, and there
+/// is no first block to be wrong about. The point of the test is that the
+/// parser neither panics nor loops on empty input.
+#[test]
+fn machine_py_44jhn_empty() {
+    assert!(MACHINE_PY_44JHN.is_empty());
+    assert_eq!(common::codes(MACHINE_PY_44JHN), Vec::<Code>::new());
+    snapshot("machine_py_44jhn_empty", MACHINE_PY_44JHN);
+}
+
+/// `Tes/custom.sty`, the project stylesheet beside those books, defines
+/// `\test` as a character style. There is no one-call API for extending a
+/// sheet from a `.sty` string: a caller reads the file with
+/// `StyleSheet::from_str` and adds its rules to a clone of the default sheet,
+/// which is what a Paratext project's stylesheet override amounts to. With
+/// that sheet `\test` is an ordinary character style instead of an unknown
+/// marker, and 41MAT — which uses none of the project's own markers — parses
+/// exactly as it does with the default sheet.
+#[test]
+fn machine_py_custom_stylesheet() {
+    use std::str::FromStr;
+    use std::sync::Arc;
+
+    use usfm_parser::DEFAULT_STYLESHEET;
+    use usfm_parser::parser::Parser;
+    use usfm_style::StyleSheet;
+
+    let custom = StyleSheet::from_str(MACHINE_PY_CUSTOM_STY).expect("custom.sty parses");
+    assert_eq!(
+        custom.rules.iter().map(|r| r.marker.as_str()).collect::<Vec<_>>(),
+        vec!["test"],
+    );
+    let mut extended = (**DEFAULT_STYLESHEET).clone();
+    for rule in custom.rules {
+        extended.add_rule(rule);
+    }
+    let extended = Arc::new(extended);
+
+    let source = "\\id GEN\n\\c 1\n\\p \\v 1 a \\test custom\\test* b";
+    assert_eq!(
+        common::codes(source),
+        vec![Code::UnknownMarker, Code::UnknownMarker],
+        "`\\test` and `\\test*` are unknown to the default stylesheet"
+    );
+
+    let result = Parser::new(source).parse(&extended);
+    assert!(
+        result.diagnostics.is_empty(),
+        "`\\test` should resolve against the project stylesheet, got {:?}",
+        result.diagnostics
+    );
+    let mut rendered = String::new();
+    common::Printer::new(result.document.style_sheet()).document(&mut rendered, &result.document);
+    assert!(
+        rendered.contains("Char test"),
+        "`\\test` should be a character style, got:\n{rendered}"
+    );
+
+    assert_eq!(
+        Parser::new(MACHINE_PY_41MAT).parse(&extended).diagnostics,
+        Parser::new(MACHINE_PY_41MAT)
+            .parse(&DEFAULT_STYLESHEET)
+            .diagnostics,
+        "the project stylesheet adds a marker 41MAT does not use"
+    );
+}
+
 /// Every code in the recovery table has a snapshot produced by a test in
 /// this file. Codes that cannot be triggered from the default stylesheet
 /// are listed explicitly.

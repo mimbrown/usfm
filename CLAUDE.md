@@ -42,6 +42,11 @@ Conformance status (276 tests across two roots, 2026-09-19):
   44 expected failures, 0 unexpected passes
 - `usfm-grammar/bugfixes` (16 tests, vendored under
   `tests/fixtures/usfm-grammar/`, MIT): 16 passed, 0 failed
+- `tests/fixtures/machine-py/` (sillsdev/machine.py, MIT) is *not* a harness
+  root: those Paratext-shaped projects ship no reference USX, so their
+  expectation is the parser's own tree and diagnostics, snapshotted by the
+  `machine_py_*` tests in `usfm_parser/tests/recovery.rs`. All seven books are
+  fuzz seeds.
 - `BookCode::Other([u8; 3])` holds a code USX accepts that the enum does not
   name: `book@code` in `usx.rnc` is the book list *or* the pattern
   `[A-Z][A-Z0-9]{2}|[0-9][A-Z][0-9]|[0-9]{2}[A-Z]`, so `\id TST` is valid and
