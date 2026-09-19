@@ -352,11 +352,10 @@ fn report_diagnostics(
     // of the source per diagnostic.
     let index = LineIndex::new(source);
     for diagnostic in &result.diagnostics {
-        let (line, col) = index.line_col(diagnostic.span.start);
-        eprintln!(
-            "{label}:{line}:{col}: {}[{}]: {}",
-            diagnostic.severity, diagnostic.code, diagnostic.message
-        );
+        // The line itself is `Diagnostic::render` in `usfm_diagnostics`, so
+        // the CLI ticket 15 builds and the language server format positions
+        // the same way (ticket 12).
+        eprintln!("{}", diagnostic.render(label, &index));
     }
     let errors = result.diagnostics_at_least(Severity::Error).count();
     if strict && errors > 0 {

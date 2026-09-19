@@ -4,6 +4,7 @@ members = [
   "tasks/benchmark",
   "tests",
   "usfm_ast",
+  "usfm_diagnostics",
   "usfm_parser",
   "usfm_span",
   "usfm_style",

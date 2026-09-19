@@ -9,6 +9,9 @@ notify.workspace = true
 regex = { workspace = true }
 regex-automata = { workspace = true }
 usfm_ast = { path = "../usfm_ast" }
+# `Diagnostic`, `Code`, `Severity`, `ParseResult`, re-exported as
+# `usfm_parser::diagnostics` (ticket 12).
+usfm_diagnostics = { path = "../usfm_diagnostics" }
 usfm_style = { path = "../usfm_style" }
 xml-rs = { workspace = true }
 

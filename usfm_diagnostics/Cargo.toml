@@ -1,0 +1,15 @@
+[package]
+name = "usfm_diagnostics"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+# `span <- style, ast <- diagnostics <- parser` in
+# `docs/adr/0001-oxc-style-crate-layout.md`: what the parser, the semantic pass
+# (M4), the outputs and the CLI all need in order to report and render a
+# diagnostic, without any of them depending on the parser.
+[dependencies]
+# `ParseResult` carries the `Document` the parse produced.
+usfm_ast = { path = "../usfm_ast" }
+# `Span` on every diagnostic, and `LineIndex` for `Diagnostic::render`.
+usfm_span = { path = "../usfm_span" }

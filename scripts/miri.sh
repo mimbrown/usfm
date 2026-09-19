@@ -48,12 +48,16 @@ run() {
 # `Span` and `LineIndex`: byte offsets sliced out of a `&str`.          ~1 s
 run -p usfm_span --lib
 
+# `Diagnostic::render` / `to_json_line` over a `LineIndex`, and the JSON
+# escaping that walks a `&str` char by char.                            ~5 s
+run -p usfm_diagnostics --lib
+
 # `string_parser` (through `number`), `cursor`, the visitors, `reference`,
 # `text`.                                                              ~9 s
 run -p usfm_ast --lib
 
 # The lexer's own unit tests, including `lexer::source`, plus the parser,
-# style, diagnostics and HTML unit tests.                             ~20 s
+# style and HTML unit tests.                                          ~20 s
 run -p usfm_parser --lib -- --skip text_replacements
 
 # Whole-document parses: the lexer over real markup, and the span

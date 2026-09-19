@@ -243,6 +243,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "usfm_diagnostics"
+version = "0.1.0"
+dependencies = [
+ "usfm_ast",
+ "usfm_span",
+]
+
+[[package]]
 name = "usfm_fuzz"
 version = "0.0.0"
 dependencies = [
@@ -259,6 +267,7 @@ dependencies = [
  "regex",
  "regex-automata",
  "usfm_ast",
+ "usfm_diagnostics",
  "usfm_style",
  "xml-rs",
 ]
