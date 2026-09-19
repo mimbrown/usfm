@@ -345,6 +345,65 @@ children of the element it is building. A `Vec<Vec<XmlNode>>` frame stack and a
 single `Vec<XmlNode>` swapped in and out by `UsxWriter::element` measured the
 same. The committed version is the swap, because it writes each node once.
 
+## After ticket 14
+
+`usfm_html` (2026-09-19): `serialize_html.rs`, `serialize.rs` and `context.rs`
+moved out of `usfm_parser` into their own crate, and the writer gained the
+escaping it never had — `&`, `<`, `>` in text, `"` as well in an attribute
+value, and U+FFFD for the characters HTML cannot carry, through the same
+byte-table scan ticket 06 gave the USX writer. Only `parse_html` can move, so
+only `parse_html` was rerun.
+
+Same VM, toolchain and profile as the baseline. Two binaries built first — one
+from `d918bd4` in a worktree, one from this tree — then run turn about, three
+rounds each, `--bench parse_html`, as "Reading a regression" says. MiB/s,
+criterion's point estimate per round; median of three. The last column is
+against the "M2 close" medians, which is the spec's exit test.
+
+| Id | base R1 | base R2 | base R3 | **base** | new R1 | new R2 | new R3 | **new** | Δ base | Δ M2 close |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `parse_html/plain` | 54.51 | 54.95 | 54.11 | **54.51** | 54.94 | 53.97 | 53.32 | **53.97** | −1.0% | +0.9% |
+| `parse_html/attributes-heavy` | 25.01 | 25.35 | 25.06 | **25.06** | 27.16 | 26.61 | 26.24 | **26.61** | +6.2% | +4.4% |
+| `parse_html/alignment-heavy` | 49.75 | 50.39 | 48.99 | **49.75** | 49.26 | 47.58 | 49.24 | **49.24** | −1.0% | +2.4% |
+| `parse_html/note-heavy` | 37.72 | 37.50 | 36.78 | **37.50** | 37.65 | 37.41 | 37.66 | **37.65** | +0.4% | +1.7% |
+| **`parse_html/whole-corpus`** | 40.10 | 39.92 | 38.95 | **39.92** | 39.67 | 38.84 | 38.26 | **38.84** | **−2.7%** | **−1.4%** |
+
+Every class is inside the 3% the spec asks for, on both comparisons.
+
+### What the escaping cost, and what paid for it
+
+The first version — escaping bolted on with `write!` where the old code had
+`write!` — measured −2.6% on `whole-corpus` and **−4.9% on
+`alignment-heavy`**, which is over the line. Two changes brought it back, in
+this order:
+
+1. **`write_str` instead of `write!` for everything that is not a number.** An
+   alignment-heavy document is mostly milestones with several attributes each,
+   and every ` data-x="y"` went through `format_args!`. Writing the literal,
+   the name and the value as three `write_str` calls skips the formatting
+   machinery entirely; the same change went into the `<span class="…">` of
+   `Char`, `Para` and `Milestone`. `alignment-heavy` −4.9% → −3.5%,
+   `whole-corpus` −2.6% → −1.4%.
+2. **`position` instead of an indexed loop in the scan.** `while let
+   Some(offset) = bytes[index..].iter().position(|&b| STOP[b as usize])` is the
+   same scan with the bounds check hoisted out. Measured on its own,
+   interleaved, three rounds each at `codegen-units=1`: `plain` +0.8%,
+   `alignment-heavy` +1.5%, `whole-corpus` +1.1%, `attributes-heavy` −1.0%,
+   `note-heavy` ±0. The USX writer's `write_escaped` still uses the indexed
+   form and would take the same win.
+
+**How much of the rest is placement.** Both binaries rebuilt with
+`CARGO_PROFILE_BENCH_CODEGEN_UNITS=1` and run interleaved (this was measured on
+version 1 above, before the `position` change): `plain` −2.4%,
+`attributes-heavy` +0.9%, `alignment-heavy` −2.5%, `note-heavy` −1.6%,
+`whole-corpus` −3.1%, against −3.0 / +3.0 / −3.5 / −1.3 / −1.4 at the default
+16 codegen units in the same sitting. So the per-class numbers move by 1–3%
+between the two builds with no code change at all — the effect ticket 05 and
+ticket 13 both ran into. The cost of the escaping itself, read off the
+`codegen-units=1` run, is about 2–3% on the text-heavy classes: one table scan
+over every byte of text the writer emits, which is what buys HTML that a
+browser reads back as what the AST held.
+
 ## Reading a regression
 
 The VM is a shared 4-vCPU cloud instance, so the numbers move on their own.

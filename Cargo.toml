@@ -5,6 +5,7 @@ members = [
   "tests",
   "usfm_ast",
   "usfm_diagnostics",
+  "usfm_html",
   "usfm_parser",
   "usfm_span",
   "usfm_style",

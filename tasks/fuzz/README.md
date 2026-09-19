@@ -13,8 +13,8 @@ installs carries only `miri` and `rust-src`).
 
 ## Targets
 
-Both call `usfm_fuzz::check_source` (`src/lib.rs`), which asserts what holds for
-*any* input, since the parser never fails:
+`parse_lossy` and `parse_utf8` call `usfm_fuzz::check_source` (`src/lib.rs`),
+which asserts what holds for *any* input, since the parser never fails:
 
 1. parsing does not panic;
 2. every span satisfies the invariants in `usfm_parser::span_check` — in
@@ -25,10 +25,22 @@ Both call `usfm_fuzz::check_source` (`src/lib.rs`), which asserts what holds for
 3. `to_usx_string` does not panic and produces well-formed XML, checked by
    reading it back with `xml-rs` to the end of the document.
 
-| Target | Input |
-| --- | --- |
-| `parse_lossy` | any bytes, through `String::from_utf8_lossy` |
-| `parse_utf8` | any bytes, skipped unless they are valid UTF-8 |
+`parse_html` calls `usfm_fuzz::check_html`, which parses the same way and then
+asserts the same thing of the other writer: `to_html_string` does not panic,
+and what it writes is well-formed markup. There is no HTML parser dependency —
+`check_markup` is a 150-line scanner asserting that every start tag is closed
+by the right name in the right order (`br`, `wbr`, `hr`, `img`, `meta`, `link`
+and `input` close themselves, as does a `<… />` tag, and `<!-- … -->` is
+skipped), that every attribute value is quoted with `"` and holds no raw `<`,
+that outside a tag `<` only ever starts one and `&` only ever starts a
+character reference, and that no character HTML cannot carry reaches the
+output.
+
+| Target | Input | Checks |
+| --- | --- | --- |
+| `parse_lossy` | any bytes, through `String::from_utf8_lossy` | parse, spans, USX |
+| `parse_utf8` | any bytes, skipped unless they are valid UTF-8 | parse, spans, USX |
+| `parse_html` | any bytes, through `String::from_utf8_lossy` | parse, HTML |
 
 ## Running
 
@@ -36,6 +48,7 @@ Both call `usfm_fuzz::check_source` (`src/lib.rs`), which asserts what holds for
 # From the repository root. 10 minutes is the milestone's exit criterion.
 cargo +nightly fuzz run --fuzz-dir tasks/fuzz parse_lossy -- -max_total_time=600 -max_len=65536
 cargo +nightly fuzz run --fuzz-dir tasks/fuzz parse_utf8  -- -max_total_time=600 -max_len=65536
+cargo +nightly fuzz run --fuzz-dir tasks/fuzz parse_html  -- -max_total_time=600 -max_len=65536
 
 # Four workers, same wall time.
 cargo +nightly fuzz run --fuzz-dir tasks/fuzz parse_lossy -- \
@@ -55,14 +68,16 @@ cargo +nightly fuzz tmin --fuzz-dir tasks/fuzz <target> tasks/fuzz/artifacts/<ta
 
 Then write the minimised input as a test — `usfm_parser/tests/recovery.rs` for a
 parser rule, `tests/spans.rs` for a span invariant, `tests/usx_text.rs` for the
-USX writer — and fix it. A finding is a bug: it is not worked around by widening
-an invariant or catching the panic. A finding that is not fixed in the same
+USX writer, `usfm_html`'s own tests for the HTML writer — and fix it. A finding
+is a bug: it is not worked around by widening an invariant or catching the
+panic. A finding that is not fixed in the same
 sitting goes to `findings/` with a note, so it is not lost.
 
 ## Seeds
 
-`./seed.sh` copies the conformance inputs into `corpus/parse_lossy/` and
-`corpus/parse_utf8/`, named after the test they came from:
+`./seed.sh` copies the conformance inputs into `corpus/parse_lossy/`,
+`corpus/parse_utf8/` and `corpus/parse_html/` — one corpus per target, listed
+in the script's `targets` array — named after the test they came from:
 
 - the tcdocs inputs (`tcdocs/tests/*/*/origin.usfm`), as `<category>__<case>.usfm`;
 - the vendored usfm-grammar fixtures
@@ -83,17 +98,29 @@ finds new coverage, so after a run `corpus/` holds more than the seeds;
 
 ## Results
 
-10 minutes per target on the final code (4 vCPUs, one worker each, the two
-targets run side by side, `-max_len=65536`), starting from the committed seeds.
-exec/s is low for a fuzzer because the corpus carries whole books: one input is
-up to 64 KiB of USFM, parsed and serialized. `parse_lossy` is the slower of the
-two because every input reaches the parser, while `parse_utf8` skips the ones
-that are not UTF-8.
+10 minutes per target on the final code (4 vCPUs, one worker each,
+`-max_len=65536`), starting from the committed seeds. exec/s is low for a
+fuzzer because the corpus carries whole books: one input is up to 64 KiB of
+USFM, parsed and serialized. `parse_lossy` is the slower of the first two
+because every input reaches the parser, while `parse_utf8` skips the ones that
+are not UTF-8.
+
+`parse_lossy` and `parse_utf8` were run side by side on `bfaa57f` (ticket 06);
+`parse_html` on the ticket 14 tree, twice — the run below is the second, on the
+final code, and the first (106 298 runs in 601 s, 177 exec/s, from the 295
+seeds) was clean as well. Its corpus row is larger because the second run
+started from what the first one had found; `./seed.sh --prune` puts the
+committed corpus back to the seeds afterwards.
 
 | Target | exec/s | corpus at the end | cov | ft | crashes |
 | --- | --- | --- | --- | --- | --- |
 | `parse_lossy` | 49 (29 749 runs in 601 s) | 1647 files, 14.9 MB | 4175 | 22 337 | none |
 | `parse_utf8` | 83 (50 097 runs in 601 s) | 1622 files, 13.7 MB | 4200 | 22 225 | none |
+| `parse_html` | 166 (100 068 runs in 601 s) | 2110 files, 16 MB | 3408 | 20 830 | none |
+
+`parse_html` found nothing in either run: the escaping it checks for went in
+with the target (ticket 14), so the hole ticket 06 left in the HTML writer was
+closed before the first run rather than by it.
 
 Found on the way there, each fixed with the test named:
 
