@@ -13,7 +13,7 @@ Done when both targets have run 10 minutes clean.
 
 ## Answer
 
-Landed via PR #9 (2026-09-19). `tasks/fuzz` (`usfm_fuzz`, outside the
+Landed in `bfaa57f` (PR #9, 2026-09-19). `tasks/fuzz` (`usfm_fuzz`, outside the
 workspace: nightly + sanitizer) with `parse_lossy` and `parse_utf8`, each
 asserting no panic, the span invariants (now `usfm_parser::span_check`, shared
 with `tests/spans.rs` behind the `testing` feature) and that `to_usx_string`
