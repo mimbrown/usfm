@@ -6,15 +6,51 @@ pub trait InlineContainer<'a> {
     fn children(&self) -> &Vec<Inline<'a>>;
     fn children_mut(&mut self) -> &mut Vec<Inline<'a>>;
 
-    fn add_child(&mut self, child: Inline<'a>) {
+    fn add_child(&mut self, mut child: Inline<'a>) {
+        // Rule 6 on `Text`: leading whitespace after a marker is part of the
+        // marker. Two places in a child list start "right after a marker" —
+        // the beginning, which follows the container's own marker, and just
+        // after a `VerseStart`, which is `\v N` and its space. The parser eats
+        // that whitespace as it reads the marker, but not when a marker it
+        // then *drops* stands in between (`\p\* n`, `\v 3\* x`: the `\*` ends
+        // no milestone, so nothing is left to have eaten the space). Rule 6 is
+        // about the tree, so it is enforced here rather than at every site
+        // that can drop a node.
+        if matches!(
+            self.children().last(),
+            None | Some(Inline::VerseStart(_))
+        ) && let Inline::Text(text) = &mut child
+        {
+            let trimmed = text.trim_start_matches(|c: char| c.is_ascii_whitespace());
+            if trimmed.len() != text.len() {
+                if trimmed.is_empty() {
+                    return;
+                }
+                // The span still covers the run the text was read from; see
+                // the note on `Text`.
+                text.content = Cow::Owned(trimmed.to_string());
+            }
+        }
         // If the last child is a text node, and the new child is also a text node, merge them
         let children = self.children_mut();
         if let Some(Inline::Text(prev_text)) = children.last_mut()
             && let Inline::Text(child_text) = child
         {
-            let mut string = String::with_capacity(prev_text.len() + child_text.len());
+            // Two runs merge when whatever stood between them left no node —
+            // a `\*` with no milestone open, a closing marker with nothing to
+            // close. What is left is one run of text, so rule 1 applies to it
+            // as to any other: the whitespace that ended the first run and the
+            // whitespace that starts the second are one space, not two. A
+            // `Text` holding `"a  b"` is one no source could produce and no
+            // writer could write back; the round-trip fuzz target found it.
+            let addition: &str = if prev_text.ends_with(|c: char| c.is_ascii_whitespace()) {
+                child_text.trim_start_matches(|c: char| c.is_ascii_whitespace())
+            } else {
+                &child_text
+            };
+            let mut string = String::with_capacity(prev_text.len() + addition.len());
             string.push_str(prev_text);
-            string.push_str(&child_text);
+            string.push_str(addition);
             prev_text.content = Cow::Owned(string);
             // The merged run covers both sources. A synthesized run has no
             // position, so it must not drag the span back to 0.

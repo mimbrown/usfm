@@ -1,0 +1,11 @@
+---
+source: crates/usfm_parser/tests/recovery.rs
+description: "\\v 1\\v\\va 3\\va*\\vp 1b\\vp* text"
+---
+Para p@0..30
+  VerseStart 1@0..4 alt=3 pub="1b"
+  Text "text"@25..30
+  VerseEnd 1
+--- diagnostics
+error[content-outside-paragraph] @0..2: content outside a paragraph; an implicit `\p` was opened
+error[missing-verse-number] @4..6: `\v` must be followed by a verse number

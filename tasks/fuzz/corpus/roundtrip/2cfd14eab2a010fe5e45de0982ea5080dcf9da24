@@ -1,0 +1,9 @@
+\id GEN
+\c 1
+\p \(v 1 this is som\id GEN1 
+\c
+\s some taxt
+\p
+\v 1 verse text
+\tr \th7 header1 \th3e\tcr2 cel
+l2 \tÿÿÿÿÿÿÿÿÿÿÿÿÿÿcr3 cell3

@@ -7,7 +7,12 @@ license = "MIT"
 [dependencies]
 # The USX tree, its reader and the serializer the harness compares against the
 # reference files (ticket 13), reached through the facade (ticket 17).
-usfm = { path = "../../crates/usfm", default-features = false, features = ["usx"] }
+# `codegen` is the round-trip step of `--roundtrip` (ticket 27); the rest of
+# the harness only needs `usx`.
+usfm = { path = "../../crates/usfm", default-features = false, features = [
+  "usx",
+  "codegen",
+] }
 xml-rs = { workspace = true }
 regex = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

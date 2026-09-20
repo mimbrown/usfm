@@ -1,0 +1,21 @@
+Gd \iEN
+\usfm 3>1.\id GEN genesis Some desc
+\c 1
+\p
+\v 1 test verse
+\s3 test
+\p
+\v 2 more verse 
+\c 2 3
+\p
+\v 1 text
+\v 2 more tex
+\v 1 test verse
+\s3 test
+\p
+\v 2 more verse 
+\c 2 3
+\p
+\v 1 text
+ev
+ 35 rest

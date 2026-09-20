@@ -79,3 +79,45 @@ fn double_slash_in_a_default_value_is_not_a_line_break() {
         [(String::new(), "https://example.org/a".to_string())]
     );
 }
+
+/// …except at the end of a `\periph` line, where the list ends with the line
+/// and the whitespace before a line break belongs to the line. Keeping it
+/// makes a value no writer can put back: what the writer writes ends in a line
+/// break, which reads back without it — `\periph|: ` at EOF read `": "` while
+/// `\periph|: \n` read `":"`, and `\periph|s \` (the list ended by a stray
+/// backslash) read `"s "`. Only the value that *ends* the list is trimmed: one
+/// followed by a named pair keeps the space that separates them. The
+/// round-trip fuzz target found both (ticket 27).
+#[test]
+fn a_periph_default_value_that_ends_the_list_drops_its_trailing_whitespace() {
+    let periph = |source: &str| {
+        let document = Parser::new(source)
+            .parse_with_options(&DEFAULT_STYLESHEET, false)
+            .document;
+        let Some(Block::Periph(periph)) = document.blocks.first() else {
+            panic!("no periph in {source:?}");
+        };
+        periph
+            .attributes
+            .as_ref()
+            .map(|attributes| {
+                attributes
+                    .pairs
+                    .iter()
+                    .map(|pair| (pair.name.to_string(), pair.value.to_string()))
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default()
+    };
+    assert_eq!(periph("\\periph|: "), periph("\\periph|: \n"));
+    assert_eq!(periph("\\periph|: "), [(String::new(), ":".to_string())]);
+    assert_eq!(periph("\\periph|s \\"), [(String::new(), "s".to_string())]);
+    // Not the last pair: the space before `id=` is what separates them.
+    assert_eq!(
+        periph("\\periph T|a b id=\"x\""),
+        [
+            (String::new(), "a b ".to_string()),
+            ("id".to_string(), "x".to_string())
+        ]
+    );
+}

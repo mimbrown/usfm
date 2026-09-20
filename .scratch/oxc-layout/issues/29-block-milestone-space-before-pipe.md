@@ -1,6 +1,6 @@
 # 29. A block-level milestone with a space before `|` is not read as a milestone
 
-Status: ready-for-agent
+Status: resolved
 Milestone: M5
 
 Found by ticket 25. `\zaln-s |x-strong="H1"\*` on its own line, with no
@@ -20,3 +20,14 @@ with no `eat_whitespace()` first, unlike the inline path in `parse_marker`.
   spells it; update its writer and docs, and the round trip must still hold.
 
 Done when the gate is green.
+
+## Answer
+
+Fixed by ticket 27 (PR #32, 2026-09-20). `parse_milestone_node` and
+`take_unknown_milestone` call `eat_whitespace()` before looking for the pipe
+(the latter after its checkpoint, so a non-milestone gives the whitespace
+back), matching the inline path. `usfm_codegen` now writes `\qt-s |who="…"\*`
+with the space USFM 3 spells; a character style's list stays flush. Tests:
+`recovery.rs::block_milestone_with_space_before_pipe` (both spellings give
+the same tree, snapshot) and `usfm_codegen`'s
+`a_milestone_between_blocks_is_on_its_own_line`.

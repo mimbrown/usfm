@@ -1,0 +1,11 @@
+---
+source: crates/usfm_parser/tests/recovery.rs
+description: "\\c 3\\c\n\\cp A B"
+---
+ChapterStart 3@0..14 pub="A"
+Para p@7..14
+  Text "B"@11..14
+ChapterEnd 3
+--- diagnostics
+error[missing-chapter-number] @4..6: `\c` must be followed by a chapter number
+error[content-outside-paragraph] @7..14: content after `\cp` is outside a paragraph; an implicit `\p` was opened

@@ -9,6 +9,8 @@ fn main() {
     let mut write_baseline: Option<String> = None;
     let mut category: Option<String> = None;
     let mut show: Option<String> = None;
+    let mut roundtrip: Option<Option<String>> = None;
+    let mut write_roundtrip_known: Option<String> = None;
 
     let mut i = 0;
     while i < args.len() {
@@ -45,6 +47,28 @@ fn main() {
                 }
                 i += 1;
             }
+            // `--roundtrip` takes an optional file: with one, the known
+            // failures are gated against it; without, any failure fails the
+            // run. The next argument is that file only if it does not itself
+            // look like a flag.
+            "--roundtrip" => {
+                let file = args
+                    .get(i + 1)
+                    .filter(|next| !next.starts_with('-'))
+                    .cloned();
+                if file.is_some() {
+                    i += 1;
+                }
+                roundtrip = Some(file);
+            }
+            "--write-roundtrip-known" => {
+                let Some(path) = args.get(i + 1) else {
+                    eprintln!("{} needs a file path", args[i]);
+                    std::process::exit(2);
+                };
+                write_roundtrip_known = Some(path.clone());
+                i += 1;
+            }
             arg if arg.starts_with('-') => {
                 eprintln!("Unknown argument: {}", arg);
                 print_help();
@@ -57,6 +81,13 @@ fn main() {
 
     if let Some(name) = show {
         show_test(&name);
+        return;
+    }
+    if roundtrip.is_some() || write_roundtrip_known.is_some() {
+        run_roundtrip_suite(
+            roundtrip.unwrap_or(None).as_deref(),
+            write_roundtrip_known.as_deref(),
+        );
         return;
     }
     match category {
@@ -132,6 +163,14 @@ Options:
                             tests must be removed from the baseline, so CI
                             fails on a regression and on stale expectations.
     --write-baseline FILE   Write the current failures to FILE
+    --roundtrip [FILE]      Run the round-trip property (parse -> USFM ->
+                            parse) over every case of every root, pass and
+                            fail alike, and report the cases that do not hold.
+                            With FILE, gate against it the way --baseline does:
+                            an unlisted failure is a regression and a listed
+                            case that round-trips is a stale entry.
+    --write-roundtrip-known FILE
+                            Write the current round-trip failures to FILE
     --show NAME             Print one test's diagnostics, output and expected
                             USX after normalisation (e.g. --show basic/minimal)
 
@@ -145,6 +184,7 @@ Examples:
     cargo run --package usfm_tests usfm-grammar/bugfixes # Run the vendored cases
     cargo run --package usfm_tests --categories          # List categories
     cargo run --package usfm_tests -- --baseline tasks/conformance/tcdocs-baseline.txt
+    cargo run --package usfm_tests -- --roundtrip tasks/conformance/roundtrip-known.txt
 "#
     );
 }
@@ -260,6 +300,127 @@ fn run_all(baseline: Option<&str>, write_baseline: Option<&str>) {
     };
     if !ok {
         std::process::exit(1);
+    }
+}
+
+/// Run the round-trip property (`roundtrip::check`) over every case of every
+/// root and gate the failures against `known`, the way `--baseline` gates the
+/// conformance failures: a failure that is not listed is a regression, and a
+/// listed case that round-trips is a stale entry. Both fail the run, so the
+/// file keeps describing the real state.
+///
+/// Unlike the conformance run, this one does not care whether a case is
+/// `pass` or `fail`, or whether it ships a reference USX. The property holds
+/// for any input: whatever the recovery rules made of it, writing that tree
+/// out and reading it back gives the same tree.
+fn run_roundtrip_suite(known: Option<&str>, write_known: Option<&str>) {
+    let tests = discover_tests();
+    require_tests(&tests);
+
+    println!("=== Round trip: parse -> USFM -> parse ===\n");
+    let (count, failures) = roundtrip::run_roundtrip(&tests);
+    println!(
+        "{} cases across {} roots: {} round-trip, {} failed",
+        count,
+        ROOTS.len(),
+        count - failures.len(),
+        failures.len()
+    );
+
+    for failure in &failures {
+        println!("\n=== {} ===\n{}", failure.name, failure.reason);
+    }
+
+    if let Some(path) = write_known {
+        save_roundtrip_known(path, &failures);
+    }
+
+    let ok = match known {
+        Some(path) => check_roundtrip_known(path, &failures),
+        None => failures.is_empty(),
+    };
+    if !ok {
+        std::process::exit(1);
+    }
+}
+
+/// The first line of a failure report, which is the sentence naming what went
+/// wrong ("the tree changed.", "the output is not a fixed point.", "the second
+/// parse gained diagnostics: …") without the trees that follow it.
+fn summarize(reason: &str) -> &str {
+    reason.lines().next().unwrap_or(reason).trim()
+}
+
+fn save_roundtrip_known(path: &str, failures: &[roundtrip::RoundTripFailure]) {
+    let mut out = String::from(
+        "# Conformance cases that do not round-trip through usfm_codegen.\n\
+         # One `name # reason` per line; the reason must name the bug, because\n\
+         # every entry here is a ticket rather than a licence. The aim is an\n\
+         # empty file.\n\
+         # Regenerate with: cargo run --package usfm_tests -- --write-roundtrip-known tasks/conformance/roundtrip-known.txt\n",
+    );
+    for failure in failures {
+        out.push_str(&format!("{} # {}\n", failure.name, summarize(&failure.reason)));
+    }
+    if let Err(err) = std::fs::write(path, out) {
+        eprintln!("Could not write {}: {}", path, err);
+        std::process::exit(1);
+    }
+    println!("\nWrote {} round-trip failures to {}", failures.len(), path);
+}
+
+/// Compare this run's round-trip failures against the known file. Mirrors
+/// [`check_baseline`]: a name before the `#` is the case, the rest of the line
+/// is its reason and is not compared.
+fn check_roundtrip_known(path: &str, failures: &[roundtrip::RoundTripFailure]) -> bool {
+    let contents = match std::fs::read_to_string(path) {
+        Ok(contents) => contents,
+        Err(err) => {
+            eprintln!("Could not read {}: {}", path, err);
+            return false;
+        }
+    };
+    let expected: std::collections::BTreeSet<&str> = contents
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .map(|line| line.split('#').next().unwrap_or(line).trim())
+        .collect();
+    let actual: std::collections::BTreeSet<&str> =
+        failures.iter().map(|f| f.name.as_str()).collect();
+
+    let regressions: Vec<_> = actual.difference(&expected).collect();
+    let fixed: Vec<_> = expected.difference(&actual).collect();
+
+    if !regressions.is_empty() {
+        println!(
+            "\nROUND-TRIP REGRESSIONS ({} cases fail that are not in {}):",
+            regressions.len(),
+            path
+        );
+        for name in &regressions {
+            println!("  {}", name);
+        }
+    }
+    if !fixed.is_empty() {
+        println!(
+            "\nSTALE ({} cases in {} now round-trip; remove them):",
+            fixed.len(),
+            path
+        );
+        for name in &fixed {
+            println!("  {}", name);
+        }
+    }
+    if regressions.is_empty() && fixed.is_empty() {
+        println!(
+            "Round-trip failures match {} ({} known)",
+            path,
+            expected.len()
+        );
+        true
+    } else {
+        false
     }
 }
 

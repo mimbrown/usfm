@@ -1,0 +1,19 @@
+\id MRK - TEst Project
+\rem Note categories
+\c 1
+\p
+\v 1 Verse one text\f + \c 1
+\p
+\v 13 I had many things to write to you, but I do not wish to wrŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠŠto see you soon, and ÷e will speak face to face. \v 15 May p\cat*
+\v 2 Verse two text
+\v 3 Verse three text. \fe + \cat ex\cat*\ :3fr 1\fq End note text.\ft \fe*
+\v 4 Verse four text.\x - \ckt ex st\ÖÖÖÖÖÖÖÖÖÖÖÖÖ The friends greet yÖÖÖÖÖÖÖÖÖÖÖÖact* \xo 1:4 \xta .\xt* \f*
+\v 2 Verse two text
+\v 3 Verse three text. \fe + \cat ex\cat*\ :3fr 1\fq End note text.\ft \fe*
+\v 4 Verse four t ex st ba\cat*\fr 1.1 \fq Footnote text ¤¡t \xt C.f. \ref Mark 1:4|PROMRK 1:4\ref* and \ref Matt. 4:3|MAT 4:3\ref*nd \ref Matt. 4:3|MAT 4:3\ref*.\xt* \f*
+\v 2 Verse two text
+\v 3 Verse three text. \fe + \cat ex\cat*\ :3fr 1\fq End note text.\ft \fe*
+\v 4 Verse four text.\x - \ckt ex st\ÖÖÖÖÖÖÖÖÖÖÖÖÖ The friends greet yÖÖÖÖÖÖÖÖÖÖÖÖact* \xo 1:4 \xta .\xt* \f*
+\v 2 Verse two text
+\v 3 Verse three text. \fe + \cat ex\cat*\ :3fr 1\fq End note text.\ft \fe*
+\v 4 Verse four text.\x - \ckt ex st\ÖÖÖÖÖÖÖÖÖÖÖÖÖ The friends greet yÖÖÖÖÖÖÖÖÖÖÖÖact* \xo 1:4 \xta See \xt \ref John 5:8|JHN 5:8\ref*.\x*

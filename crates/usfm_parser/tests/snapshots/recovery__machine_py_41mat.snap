@@ -122,6 +122,7 @@ Para p@864..994
   Char fm@977..988
     Text "∆"@981..984
   Text "two."@988..994
+  VerseEnd 2-3
 Sidebar esb@994..1065
   Para ms@1000..1023
     Text "This is a sidebar"@1004..1023

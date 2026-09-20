@@ -1,0 +1,27 @@
+\id ACT EN_ULT en_English_ltr Wed Oct 10 2018 11:55:23 GMT-0400 (EDT) tc
+\c 1
+\p
+\v 20 "
+\zaln-s|x-strong="G10630" x-lemma="γάρ" x-morph="Gr,CC,,,,,,,," x-occurrence="1" x-occurrences="1" x-content="γὰρ"
+\w For|x-occurrence="1" x-occurrences="1"\w*
+\zaln-e\*
+\zaln-s|x-strong="G11250" x-lemma="γράφω" x-morph="Gr,V,IEP3,,S," x-occurrence="1" x-occurrences="1" x-content="γέγραπται"
+\w it|x-occurrence="1" x-occurrences="1"\w*
+\w is|x-occurrence="1" x-occurrences="1"\w*
+\w written|x-occurrence="1" x-occurrences="1"\w*
+\zaln-e\*
+\zaln-s|x-strong\="G17220" x-lemma=id GEN
+\c 1"ἐν" x-morph="Gr,P,,,,,D,,," x-occurrence="1" x-occurrences="2" x-content="ἐν"
+\w in|x-occurrence="1" x-occurrences="1"\w*
+\zaln-e\*
+\zaln-s|x-strong="G09760" x-lemma="βίβλος" x-morph="Gr,N,,,,,DFS," x-occurrence="1" x-occurrences="1" x-content="βίβλῳ"
+\w the|x-occurrence="1" x-occurrences="1"\w*
+\w Book|x-occurrence="1" x-occurrences="1"\w*
+\zaln-e\*
+\zaln-s|x-strong="G55680" x-lemma="ψαλμός" x-morph="Gr,N,,,,,GMP," x
+\�
+\v-occurrence="1" x-occurrences="1" x-content="Ψαλμῶν"
+ 1 the fir\w of|x-occurrence="1" x-occurrences="2"\w*
+\w Psalms|x-occurrence="1" x-occurrences="1"\w*
+\zaln-e\*,\q '
+\zaln-s|x-strong="G10960" x-lemma="γίνομαι" x-morph="Gr,

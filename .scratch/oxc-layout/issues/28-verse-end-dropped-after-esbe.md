@@ -1,6 +1,6 @@
 # 28. A verse end is dropped when `\v` follows `\esbe` with no paragraph marker
 
-Status: ready-for-agent
+Status: resolved
 Milestone: M5
 
 Found by ticket 25's round trip on machine.py's `41MATTes.SFM`, the one
@@ -37,3 +37,15 @@ line is parsed with `parse_paragraph(&mut tail, esbe, span)` into a local
 
 Done when the gate is green and the round-trip test covers the machine-py
 fixtures.
+
+## Answer
+
+Fixed by ticket 27 (PR #32, 2026-09-20), where the `roundtrip` fuzz target's
+seed scan hit `41MATTes.SFM` first. `parse_sidebar` pushes the sidebar
+*before* parsing the `\esbe` line, so the verse end is handed to the real
+block list and lands before the sidebar (D7), and the `\esbe` line places
+verse ends as the implicit `\p` it becomes (`parse_paragraph_as`). Tests:
+`verse_ends.rs::a_verse_after_esbe_with_no_paragraph_marker_ends_the_one_before_the_sidebar`,
+`usx_text.rs::a_verse_after_esbe_closes_the_verse_before_the_sidebar`; the
+machine-py fixtures are in `usfm_codegen`'s
+`roundtrip.rs::the_machine_py_fixtures_round_trip`.

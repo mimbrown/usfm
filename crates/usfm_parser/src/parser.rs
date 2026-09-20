@@ -267,6 +267,26 @@ fn has_leading_zero(word: &str) -> bool {
     chars.next() == Some('0') && chars.next().is_some_and(|c| c.is_ascii_digit())
 }
 
+/// Rule 1 on `Text` over a string that was built by joining runs: every run of
+/// ASCII whitespace becomes one space. Each run the parser read is already
+/// normalised, so this only ever collapses a seam between two of them.
+fn collapse_ascii_whitespace(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut in_whitespace = false;
+    for character in text.chars() {
+        if character.is_ascii_whitespace() {
+            if !in_whitespace {
+                out.push(' ');
+                in_whitespace = true;
+            }
+        } else {
+            out.push(character);
+            in_whitespace = false;
+        }
+    }
+    out
+}
+
 /// A synthesized verse end milestone.
 fn verse_end<'a>(number: NumberList) -> Inline<'a> {
     Inline::VerseEnd(VerseEnd { number, span: SPAN })
@@ -436,7 +456,7 @@ impl<'a> ParserImpl<'a> {
                 None => match self.parse_block_start() {
                     BlockStart::Marker(marker, span) => (marker, span),
                     BlockStart::Milestone(milestone) => {
-                        blocks.push(Block::Milestone(milestone));
+                        self.place_block_milestone(blocks, milestone);
                         continue;
                     }
                     BlockStart::Eof => return None,
@@ -472,7 +492,7 @@ impl<'a> ParserImpl<'a> {
             } else if marker == self.esb {
                 pending = self.parse_sidebar(blocks, span);
             } else if marker == self.periph {
-                pending = self.parse_periph(blocks, span);
+                pending = self.parse_periph(blocks, span, &stop);
             } else {
                 if marker == self.esbe {
                     // Inside a sidebar `stop` accepts it, so this one is stray.
@@ -485,6 +505,31 @@ impl<'a> ParserImpl<'a> {
                 pending = self.parse_paragraph(blocks, marker, span);
             }
         }
+    }
+
+    /// A milestone found between blocks, placed where the source puts it.
+    ///
+    /// Normally that is beside the paragraphs, as `Block::Milestone` — USX
+    /// writes `<ms>` next to `<para>`, and the milestone reached this point
+    /// precisely because no paragraph was open. But "no paragraph was open"
+    /// can also mean *the marker that closed the last one left no node*: an
+    /// `\id` with no book code, an unknown marker, anything the block loop
+    /// skipped. Nothing then stands between the paragraph and the milestone in
+    /// the tree, and no USFM spells that — written out, the paragraph runs on
+    /// and swallows the milestone as an inline one. So it goes inside the
+    /// paragraph, which is what the remaining text says. The round-trip fuzz
+    /// target found this (`r\id\-\*`, ticket 27).
+    ///
+    /// A milestone that really does stand between blocks always has a block
+    /// between it and the paragraph before it — the `\c`, `\id` or `\esb` that
+    /// ended that paragraph — so this never fires on one.
+    fn place_block_milestone(&mut self, blocks: &mut Vec<Block<'a>>, milestone: Milestone<'a>) {
+        if let Some(Block::Para(para)) = blocks.last_mut() {
+            para.span.end = milestone.span.end;
+            para.add_child(Inline::Milestone(milestone));
+            return;
+        }
+        blocks.push(Block::Milestone(milestone));
     }
 
     /// `\esb` … `\esbe`. The `\esb` line may carry a `\cat` category and
@@ -518,10 +563,26 @@ impl<'a> ParserImpl<'a> {
         match pending {
             Some((marker, span)) if marker == esbe => {
                 sidebar.span.end = span.end;
-                let mut tail = vec![];
-                pending = self.parse_paragraph(&mut tail, esbe, span);
+                // The sidebar goes in *before* the `\esbe` line is parsed,
+                // because that line is a paragraph like any other and a `\v`
+                // on it ends the verse that was open before `\esb`. That end
+                // cannot go inside the sidebar (see `end_verse_in_last_block`),
+                // so `parse_paragraph` hands it to the block list it is given —
+                // and a list of its own would be empty and drop it, which is
+                // what ticket 28 was. With `blocks`, the end lands in the last
+                // verse-text block before the sidebar, exactly where it lands
+                // when a `\p` follows `\esbe` and the `\v` is that paragraph's.
                 blocks.push(Block::Sidebar(sidebar));
-                if let Some(Block::Para(para)) = tail.pop()
+                // The text type is `\p`'s, not `\esbe`'s: what is on this line
+                // becomes an implicit `\p` below. See `parse_paragraph_as`.
+                let text_type_of = if self.p == usize::MAX { esbe } else { self.p };
+                pending = self.parse_paragraph_as(blocks, esbe, span, text_type_of);
+                // Take back the paragraph `\esbe` opened: its content, if any,
+                // belongs to an implicit `\p` after the sidebar, not to a
+                // paragraph styled `\esbe`. Guarded rather than assumed —
+                // nothing here may panic on an input.
+                if matches!(blocks.last(), Some(Block::Para(para)) if para.style.index() == esbe)
+                    && let Some(Block::Para(para)) = blocks.pop()
                     && !para.children.is_empty()
                 {
                     self.content_after_marker(blocks, para, "esbe");
@@ -553,7 +614,12 @@ impl<'a> ParserImpl<'a> {
     /// `\periph Title|id="x"` and every block up to the next `\periph`, the
     /// next `\id`, or end of input. The line is read as a character style so
     /// that `|` introduces attributes; its text is the title.
-    fn parse_periph(&mut self, blocks: &mut Vec<Block<'a>>, marker_span: Span) -> Option<(usize, Span)> {
+    fn parse_periph(
+        &mut self,
+        blocks: &mut Vec<Block<'a>>,
+        marker_span: Span,
+        outer_stop: &dyn Fn(usize) -> bool,
+    ) -> Option<(usize, Span)> {
         self.eat_whitespace();
         let mut head = ParserInlineContext::Char(Char {
             style: StyleId::new(self.periph as u32),
@@ -561,6 +627,12 @@ impl<'a> ParserImpl<'a> {
             attributes: None,
             span: marker_span,
         });
+        // Peripheral matter has no verses, and that includes this line: only
+        // the title's *text* survives it, so a `\v` here would open a verse
+        // whose start is thrown away with the rest of the line while its end
+        // is still emitted — into the paragraph before the periph. The
+        // suspension is lifted after the periph's blocks, below.
+        self.verses_suspended += 1;
         self.in_periph_title = true;
         let closer = self.parse_inner_list(&mut head);
         self.in_periph_title = false;
@@ -568,8 +640,7 @@ impl<'a> ParserImpl<'a> {
             unreachable!("context variant does not change");
         };
         // The title's span is its text run, up to the `|`. Only text read from
-        // the source counts: a `\v` on the title line leaves a verse end and a
-        // synthesized space behind it, and a synthesized node carries `SPAN`,
+        // the source counts: a node the line synthesized carries `SPAN`,
         // which would put the end of the title at offset 0.
         let title_end = head
             .children
@@ -588,7 +659,14 @@ impl<'a> ParserImpl<'a> {
                 _ => None,
             })
             .collect();
-        let title = title.trim_matches(|c: char| c.is_ascii_whitespace());
+        // Rule 1 on `Text`: the title is the line's text runs joined, and a
+        // child that contributes none — a character style, a milestone —
+        // leaves the whitespace on both sides of it next to each other. Each
+        // run is normalised on its own, so only the seams double up; collapse
+        // them, as the lexer would have in a single run.
+        let title = collapse_ascii_whitespace(
+            title.trim_matches(|c: char| c.is_ascii_whitespace()),
+        );
         let mut periph = Periph {
             style: StyleId::new(self.periph as u32),
             title: (!title.is_empty()).then(|| {
@@ -600,7 +678,7 @@ impl<'a> ParserImpl<'a> {
                         _ => None,
                     })
                     .unwrap_or(marker_span.end);
-                Text::new(title.to_string(), Span::new(start, title_end))
+                Text::new(title.clone(), Span::new(start, title_end))
             }),
             attributes: head.attributes,
             blocks: vec![],
@@ -623,17 +701,48 @@ impl<'a> ParserImpl<'a> {
             }
         };
         let (periph_marker, id) = (self.periph, self.id);
-        // Peripheral matter has no verses.
-        self.verses_suspended += 1;
-        let pending = self.parse_blocks(&mut periph.blocks, pending, |marker| {
-            marker == periph_marker || marker == id
-        });
+        // The division runs to the next `\periph` or `\id`. An `\id` ends it
+        // only if it *is* one: `parse_id` drops a `\id` with no book code or
+        // with a code it cannot read, and a marker that is dropped ends
+        // nothing — the blocks after it are still the division's. Written out,
+        // a block left beside the periph is swallowed by it anyway, so this
+        // is also the only reading a writer can reproduce (ticket 27).
+        // Verses stay suspended across the whole loop, as they must: a `\v`
+        // in the continued division is inside a periph however it got there.
+        let mut book = None;
+        let mut id_span = None;
+        let mut pending = pending;
+        loop {
+            pending = self.parse_blocks(&mut periph.blocks, pending, |marker| {
+                // `outer_stop` too: whatever ends the container this division
+                // is in ends the division. Without it a `\periph` inside a
+                // sidebar swallowed the `\esbe` that closes it — and a
+                // sidebar the writer cannot close is a tree it cannot write
+                // (ticket 27). At the top level `outer_stop` is never true.
+                marker == periph_marker || marker == id || outer_stop(marker)
+            });
+            let Some((marker, span)) = pending else { break };
+            if marker != id {
+                break;
+            }
+            let mut parsed = vec![];
+            self.parse_id(&mut parsed, span);
+            pending = None;
+            if let Some(block) = parsed.pop() {
+                id_span = Some(span);
+                book = Some(block);
+                break;
+            }
+        }
         self.verses_suspended -= 1;
-        periph.span.end = match pending {
-            Some((_, span)) => span.start,
-            None => self.prev_token_end(),
+        periph.span.end = match (id_span, pending) {
+            (Some(span), _) | (None, Some((_, span))) => span.start,
+            (None, None) => self.prev_token_end(),
         };
         blocks.push(Block::Periph(periph));
+        if let Some(block) = book {
+            blocks.push(block);
+        }
         pending
     }
 
@@ -667,14 +776,21 @@ impl<'a> ParserImpl<'a> {
         let Inline::Char(char) = children.remove(0) else {
             unreachable!("checked above");
         };
-        let content: String = char
-            .children
-            .iter()
-            .filter_map(|inline| match inline {
-                Inline::Text(text) => Some(text.content.as_ref()),
-                _ => None,
-            })
-            .collect();
+        // Rule 1 on `Text`, as in `parse_periph`: the category is the `\cat`
+        // style's text runs joined, so a child that contributes none — a
+        // character style, a milestone — leaves the whitespace on both sides
+        // of itself side by side. Each run is normalised on its own, so only
+        // the seams double up.
+        let content: String = collapse_ascii_whitespace(
+            &char
+                .children
+                .iter()
+                .filter_map(|inline| match inline {
+                    Inline::Text(text) => Some(text.content.as_ref()),
+                    _ => None,
+                })
+                .collect::<String>(),
+        );
         if let Some(Inline::Text(text)) = children.first_mut() {
             let trimmed = text.content.trim_start_matches(|c: char| c.is_ascii_whitespace());
             if trimmed.is_empty() {
@@ -914,12 +1030,32 @@ impl<'a> ParserImpl<'a> {
         marker: usize,
         span: Span,
     ) -> Option<(usize, Span)> {
+        self.parse_paragraph_as(blocks, marker, span, marker)
+    }
+
+    /// [`parse_paragraph`](Self::parse_paragraph), with the text type taken
+    /// from a different marker than the style.
+    ///
+    /// The one caller that needs this is the `\esbe` line: whatever stands on
+    /// it is not a paragraph styled `\esbe` in the end — `content_after_marker`
+    /// turns it into an implicit `\p` — so a verse there has to place the
+    /// previous verse's end the way a `\p` would, inline after the text
+    /// already in the paragraph. The round-trip fuzz target found the
+    /// disagreement (ticket 27): the writer turns that line into a real `\p`,
+    /// and the two spellings must read back the same.
+    fn parse_paragraph_as(
+        &mut self,
+        blocks: &mut Vec<Block<'a>>,
+        marker: usize,
+        span: Span,
+        text_type_of: usize,
+    ) -> Option<(usize, Span)> {
         // The text type decides where a verse end goes (see `place_verse_end`),
         // which is the one thing the paragraph's style changes about the tree.
         // Whether a verse-text paragraph may stand here at all
         // (`verse-text-before-chapter`) is `usfm_semantic`'s: the tree holds
         // the paragraph, its style and the chapter it does or does not follow.
-        self.para_text_type = self.rule(marker).text_type.clone();
+        self.para_text_type = self.rule(text_type_of).text_type.clone();
         self.start_block();
         let mut context = ParserInlineContext::Para(Para {
             style: StyleId::new(marker as u32),
@@ -932,8 +1068,55 @@ impl<'a> ParserImpl<'a> {
         };
         para.span.end = self.container_end(&closer);
         self.place_pending_verse_end_before_block(blocks);
+        // A `\cp` paragraph cannot follow a chapter start: `\c` absorbs a
+        // `\cp` that comes after it, so a writer's `\c 3` and `\cp A` on the
+        // next line read back as the chapter's published number, not as a
+        // paragraph. It only ever gets here because a marker between the two
+        // was dropped (`\c 3\c` and then `\cp A`: the second `\c` has no
+        // number and goes). So hand it to the chapter, reading it exactly as
+        // `parse_chapter` would have. The round-trip fuzz target found this
+        // (ticket 27).
+        if self.marker_name(marker) == "cp"
+            && matches!(blocks.last(), Some(Block::ChapterStart(_)))
+        {
+            self.fold_published_number_into_chapter(blocks, para);
+            return self.block_closer(closer);
+        }
         blocks.push(Block::Para(para));
         self.block_closer(closer)
+    }
+
+    /// Read a `\cp` paragraph as the preceding chapter's published number, the
+    /// way `parse_chapter`'s own loop reads one: the first word is the number,
+    /// and anything after it is content outside a paragraph.
+    fn fold_published_number_into_chapter(
+        &mut self,
+        blocks: &mut Vec<Block<'a>>,
+        mut para: Para<'a>,
+    ) {
+        let mut pub_number = None;
+        if let Some(Inline::Text(text)) = para.children.first_mut() {
+            let content = text.content.as_ref();
+            let end = content
+                .find(|c: char| c.is_ascii_whitespace())
+                .unwrap_or(content.len());
+            pub_number = Some(Cow::Owned(content[..end].to_string()));
+            let rest = content[end..]
+                .trim_start_matches(|c: char| c.is_ascii_whitespace())
+                .to_string();
+            if rest.is_empty() {
+                para.children.remove(0);
+            } else {
+                text.content = Cow::Owned(rest);
+            }
+        }
+        if let Some(Block::ChapterStart(chapter)) = blocks.last_mut() {
+            chapter.pub_number = pub_number;
+            chapter.span.end = para.span.end;
+        }
+        if !para.children.is_empty() {
+            self.content_after_marker(blocks, para, "cp");
+        }
     }
 
     /// `tr_span` is the `\tr` marker that opened the table; the block loop has
@@ -970,7 +1153,19 @@ impl<'a> ParserImpl<'a> {
         if let Some(open) = before_table {
             self.end_verse_in_last_block(blocks, open.number);
         }
-        blocks.push(Block::Table(Table { rows, span }));
+        // Two tables with nothing between them are one table: consecutive
+        // `\tr` rows belong to the same `<table>`, so a writer cannot put
+        // them side by side. They only get here when the marker that split
+        // them was dropped (`\tr \tc1 x\c` and then another `\tr`: the `\c`
+        // has no number and goes), and the round-trip fuzz target found that
+        // (ticket 27). Join them, which is what the source that is left says.
+        match blocks.last_mut() {
+            Some(Block::Table(table)) => {
+                table.span.end = span.end;
+                table.rows.extend(rows);
+            }
+            _ => blocks.push(Block::Table(Table { rows, span })),
+        }
         self.block_closer(closer)
     }
 
@@ -1175,7 +1370,101 @@ impl<'a> ParserImpl<'a> {
         if let Some(open) = self.take_pending_verse_end(self.open.len() + 1) {
             self.place_verse_end(context, open);
         }
-        context.add_child(Inline::Char(char));
+        if let Some(char) = self.fold_verse_number_style(context, char) {
+            context.add_child(Inline::Char(char));
+        }
+    }
+
+    /// `\va` and `\vp` directly after `\v N` are the verse's alternate and
+    /// published numbers, not character styles: [`parse_verse`](Self::parse_verse)
+    /// absorbs them, and so does a re-parse of anything a writer puts there —
+    /// it has nowhere else to write `alt_number` and `pub_number` than right
+    /// after the number. One that reaches here got past `parse_verse` because
+    /// a marker between it and the `\v` was dropped (`\v 1\v\vp`: the second
+    /// `\v` has no number and goes), so it is read the same way here. The
+    /// round-trip fuzz target found it (ticket 27).
+    ///
+    /// Returns the style when it is not one of those, or when it is a `\vp`
+    /// holding formatting — `parse_verse` keeps that one as a `Char` too, so
+    /// it is written and read back as one.
+    fn fold_verse_number_style(
+        &mut self,
+        context: &mut ParserInlineContext<'a>,
+        char: Char<'a>,
+    ) -> Option<Char<'a>> {
+        let name = self.marker_name(char.style.index());
+        let alternate = name == "va";
+        if !alternate && name != "vp" {
+            return Some(char);
+        }
+        if !matches!(context.children().last(), Some(Inline::VerseStart(_))) {
+            return Some(char);
+        }
+        let span = char.span;
+        if !alternate {
+            // `\vp`: plain text is the published number, anything else stays
+            // a `Char`, exactly as `parse_verse` reads it.
+            let plain: Option<String> = char
+                .children
+                .iter()
+                .map(|inline| match inline {
+                    Inline::Text(text) => Some(text.content.as_ref()),
+                    _ => None,
+                })
+                .collect();
+            let Some(value) = plain else {
+                return Some(char);
+            };
+            let value = value.trim_end_matches(|c: char| c.is_ascii_whitespace());
+            if let Some(Inline::VerseStart(verse)) = context.children_mut().last_mut()
+                && !value.is_empty()
+            {
+                verse.pub_number = Some(Cow::Owned(value.to_string()));
+            }
+            return None;
+        }
+        // `\va`: one word is the alternate number and the rest is ordinary
+        // content, which is what `parse_verse`'s `eat_word` leaves behind.
+        let mut children = char.children;
+        let mut number = None;
+        match children.first_mut() {
+            Some(Inline::Text(text)) => {
+                let content = text.content.as_ref();
+                let end = content
+                    .find(|c: char| c.is_ascii_whitespace())
+                    .unwrap_or(content.len());
+                match NumberList::parse_str(&content[..end]) {
+                    Ok(parsed) => number = Some(parsed),
+                    Err(_) => self.emit(
+                        Code::MalformedVerseNumber,
+                        span,
+                        "`\\va` must be followed by a verse number",
+                    ),
+                }
+                let rest = content[end..]
+                    .trim_start_matches(|c: char| c.is_ascii_whitespace())
+                    .to_string();
+                if rest.is_empty() {
+                    children.remove(0);
+                } else {
+                    text.content = Cow::Owned(rest);
+                }
+            }
+            _ => self.emit(
+                Code::MalformedVerseNumber,
+                span,
+                "`\\va` must be followed by a verse number",
+            ),
+        }
+        if let Some(Inline::VerseStart(verse)) = context.children_mut().last_mut()
+            && let Some(number) = number
+        {
+            verse.alt_number = Some(number);
+        }
+        for child in children {
+            context.add_child(child);
+        }
+        None
     }
 
     /// A block is about to be pushed: a verse end that belongs before it
@@ -1499,13 +1788,21 @@ impl<'a> ParserImpl<'a> {
                         "`\\vp` is not closed by `\\vp*`",
                     );
                 }
-                // Only a closed `\vp` is lifted: an unclosed one has swallowed
-                // whatever followed, and that is not a published number.
+                // An unclosed `\vp` is lifted too, though it has swallowed
+                // whatever followed it and that is not really a published
+                // number. The alternative was to leave it beside the verse as
+                // a `Char`, and that is a tree no USFM spells: `\vp …\vp*`
+                // after `\v N` *is* the published number, so the only source
+                // that gives the `Char` is the unclosed one, and a writer
+                // closing it — which every writer must — turns it back into a
+                // published number. The round-trip fuzz target found that
+                // (`\v 1\vp x`). Either way the swallowed text is lost from
+                // the verse; this way the tree can be written.
                 let plain: Option<String> = char
                     .children
                     .iter()
                     .map(|inline| match inline {
-                        Inline::Text(text) if closed => Some(text.content.as_ref()),
+                        Inline::Text(text) => Some(text.content.as_ref()),
                         _ => None,
                     })
                     .collect();
@@ -1791,6 +2088,12 @@ impl<'a> ParserImpl<'a> {
     /// Milestones occur both inside a paragraph and between blocks, so this
     /// returns the node and leaves placing it to the caller.
     fn parse_milestone_node(&mut self, marker: usize, span: Span) -> Milestone<'a> {
+        // USFM 3 spells the list `\qt-s |who="…"\*`, with a space before the
+        // pipe, and that space is the marker's own whitespace like any other
+        // marker's. The inline path has eaten it by now (`parse_marker`); the
+        // block path calls straight in, so eat it here and the two agree
+        // (ticket 29).
+        self.eat_whitespace();
         let pipe_span = self.cur_span();
         let attributes = self
             .eat(Kind::Pipe)
@@ -1839,6 +2142,10 @@ impl<'a> ParserImpl<'a> {
     fn take_unknown_milestone(&mut self) -> Option<Option<Attributes<'a>>> {
         let checkpoint = self.lexer.checkpoint();
         let diagnostics_len = self.diagnostics.len();
+        // As in `parse_milestone_node`: the space before the pipe belongs to
+        // the marker (ticket 29). The checkpoint is taken first, so a marker
+        // that turns out not to be a milestone gives its whitespace back.
+        self.eat_whitespace();
         let pipe_span = self.cur_span();
         let attributes = self
             .eat(Kind::Pipe)
@@ -2048,6 +2355,28 @@ impl<'a> ParserImpl<'a> {
             }
         }
 
+        // A `\periph` attribute list ends with its line, so trailing ASCII
+        // whitespace in a default value that ends the list belongs to the
+        // line, not to the value — and no writer can put it back: what it
+        // writes ends in a line break, which reads back without it. Every
+        // other list ends at a marker (`\w*`, `\*`) with the whitespace
+        // safely inside the line, and a default value that is *not* last keeps
+        // the space that separates it from the pair after it, which is why
+        // only the last one is trimmed. The round-trip fuzz target found both
+        // spellings this bites on, `\periph|: ` and `\periph|s \`
+        // (ticket 27).
+        if self.in_periph_title
+            && let Some(last) = pairs.last_mut()
+            && last.name.is_empty()
+        {
+            let trimmed = last
+                .value
+                .trim_end_matches(|c: char| c.is_ascii_whitespace())
+                .len() as u32;
+            let end = last.span.start + trimmed;
+            last.value = Cow::Borrowed(&self.source_text[last.span.start as usize..end as usize]);
+            last.span.end = end;
+        }
         Attributes { pairs, pipe }
     }
 

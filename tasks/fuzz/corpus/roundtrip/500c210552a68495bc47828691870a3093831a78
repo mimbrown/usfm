@@ -1,0 +1,18 @@
+\id GEN genesis Some desc
+\c 1
+\p
+\v1 test vere desc
+\c 1
+\p
+\v1 test verse
+\s3 test
+\v 2 more verse
+\c2
+\p
+\v 1 next chapter
+\v2 errse
+\s3 test
+\v 2 more verse
+\c2
+\p
+\v 1 next chaptrror text
