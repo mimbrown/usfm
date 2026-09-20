@@ -60,9 +60,14 @@
 //! name: an attribute diagnostic points at the attribute, exactly as it did
 //! when the parser reported it mid-parse.
 
+pub mod placement;
 pub mod reference;
 
+pub use placement::Placement;
 pub use reference::{ChapterRef, ReferenceIndex, VerseRef};
+
+/// The placement rule's answer, under the name the checks here call it by.
+use placement::Placement as Verdict;
 
 use std::collections::BTreeSet;
 
@@ -710,40 +715,12 @@ impl Analyzer<'_> {
     }
 }
 
-/// What `check_placement` decides about one (style, parent) pair.
-#[derive(Clone, Copy, PartialEq)]
-enum Verdict {
-    /// The parent is in the style's `OccursUnder`, or the list is empty,
-    /// which is what an unrestricted style has.
-    Listed,
-    /// Not listed, and every marker the style does list is a note style, so
-    /// the style exists only inside a note: `marker-not-allowed-here`.
-    NotAllowed,
-    /// Not listed, but the list is not note-only: `marker-not-listed-here`.
-    NotListed,
-}
-
-/// The rule itself, as a function of the pair and the sheet alone — which is
-/// what makes it safe to remember in [`PlacementMemo`].
+/// What `check_placement` decides about one (style, parent) pair: the rule
+/// itself is [`placement::check`], and this is it looked up by `StyleId`,
+/// which is what makes it safe to remember in [`PlacementMemo`].
 fn placement_verdict(sheet: &StyleSheet, style: StyleId, parent: StyleId) -> Verdict {
-    let rule = sheet.get_rule(style.index());
-    if rule.occurs_under.is_empty() {
-        return Verdict::Listed;
-    }
     let parent_name = &sheet.get_rule(parent.index()).marker;
-    if rule.occurs_under.contains(parent_name) {
-        return Verdict::Listed;
-    }
-    let note_only = rule.occurs_under.iter().all(|allowed| {
-        sheet
-            .get_rule_by_marker(allowed)
-            .is_some_and(|allowed| allowed.is_note())
-    });
-    if note_only {
-        Verdict::NotAllowed
-    } else {
-        Verdict::NotListed
-    }
+    placement::check(sheet, sheet.get_rule(style.index()), parent_name)
 }
 
 /// The verdicts already worked out, by (style, parent).

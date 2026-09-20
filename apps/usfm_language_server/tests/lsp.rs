@@ -264,7 +264,21 @@ fn diagnostics_are_published_on_open_and_cleared_on_a_clean_change() {
         result["capabilities"]["documentFormattingProvider"],
         json!(true)
     );
-    assert_eq!(result["capabilities"].get("completionProvider"), None);
+    // Ticket 32's three, each advertised the way its request is answered:
+    // completion pops up on the `\` that opens every marker, and the only
+    // code actions are quick fixes.
+    assert_eq!(
+        result["capabilities"]["documentSymbolProvider"],
+        json!(true)
+    );
+    assert_eq!(
+        result["capabilities"]["completionProvider"]["triggerCharacters"],
+        json!(["\\"]),
+    );
+    assert_eq!(
+        result["capabilities"]["codeActionProvider"]["codeActionKinds"],
+        json!(["quickfix"]),
+    );
     assert_eq!(result["serverInfo"]["name"], json!("usfm-language-server"));
 
     lsp.notify("initialized", json!({}));
@@ -302,6 +316,169 @@ fn diagnostics_are_published_on_open_and_cleared_on_a_clean_change() {
     assert_eq!(lsp.diagnostics(&uri), Vec::<Value>::new());
 
     shutdown(&mut lsp);
+}
+
+/// A two-chapter book, for the outline.
+const TWO_CHAPTERS: &str = "\\id GEN\n\\c 1\n\\p\n\\v 1 a\n\\v 2 b\n\\c 2\n\\p\n\\v 1 c\n";
+
+/// A document with the cursor's `\` already typed, at the end of the third
+/// line (line 2, character 14).
+const HALF_WRITTEN_MARKER: &str = "\\id GEN\n\\c 1\n\\p \\v 1 text \\\n";
+
+/// Symbols, completion and code actions over the wire (ticket 32): the
+/// outline the editor draws, the marker list the `\` pops up, and the quick
+/// fix on the diagnostic the server itself published.
+#[test]
+fn symbols_completion_and_code_actions_answer_over_the_wire() {
+    let (_path, uri) = document("43LUK.SFM");
+    let mut lsp = Lsp::start();
+
+    lsp.request(
+        "initialize",
+        json!({"processId": null, "rootUri": null, "capabilities": {}}),
+    );
+    lsp.notify("initialized", json!({}));
+    open(&mut lsp, &uri, TWO_CHAPTERS);
+    assert_eq!(lsp.diagnostics(&uri), Vec::<Value>::new());
+
+    // The outline: the book at the top, chapters under it, verses under those.
+    let symbols = lsp.request(
+        "textDocument/documentSymbol",
+        json!({"textDocument": {"uri": uri}}),
+    );
+    let symbols = symbols.as_array().expect("an array of symbols");
+    assert_eq!(symbols.len(), 1, "{symbols:#?}");
+    let book = &symbols[0];
+    assert_eq!(book["name"], json!("GEN"));
+    let chapters = book["children"].as_array().expect("the chapters");
+    assert_eq!(names(chapters), ["Chapter 1", "Chapter 2"], "{chapters:#?}");
+    assert_eq!(names(children(&chapters[0])), ["1", "2"]);
+    assert_eq!(names(children(&chapters[1])), ["1"]);
+    // `\c 1` is the second line and the selection range is the marker alone.
+    assert_eq!(
+        chapters[0]["selectionRange"],
+        json!({
+            "start": {"line": 1, "character": 0},
+            "end": {"line": 1, "character": 4},
+        }),
+    );
+    // The chapter covers its verses, which the protocol requires.
+    assert_eq!(
+        chapters[0]["range"]["start"],
+        json!({"line": 1, "character": 0})
+    );
+    assert_eq!(
+        chapters[0]["range"]["end"],
+        json!({"line": 5, "character": 0})
+    );
+
+    // Completion after a `\` inside a paragraph.
+    lsp.notify(
+        "textDocument/didChange",
+        json!({
+            "textDocument": {"uri": uri, "version": 2},
+            "contentChanges": [{"text": HALF_WRITTEN_MARKER}],
+        }),
+    );
+    lsp.diagnostics(&uri);
+
+    let items = lsp.request(
+        "textDocument/completion",
+        json!({
+            "textDocument": {"uri": uri},
+            "position": {"line": 2, "character": 14},
+            "context": {"triggerKind": 2, "triggerCharacter": "\\"},
+        }),
+    );
+    let items = items.as_array().expect("an array of completion items");
+    let p = items
+        .iter()
+        .find(|item| item["label"] == json!("p"))
+        .unwrap_or_else(|| panic!("`\\p` is offered: {items:#?}"));
+    assert_eq!(
+        p["detail"],
+        json!("p - Paragraph - Normal - First Line Indent")
+    );
+    // The edit starts after the `\` the user typed, so accepting it writes
+    // `\p` and not `\\p`.
+    assert_eq!(
+        p["textEdit"]["range"],
+        json!({
+            "start": {"line": 2, "character": 14},
+            "end": {"line": 2, "character": 14},
+        }),
+    );
+    assert_eq!(p["textEdit"]["newText"], json!("p"));
+    // A character style brings its closing marker as a snippet.
+    let nd = items
+        .iter()
+        .find(|item| item["label"] == json!("nd"))
+        .expect("`\\nd` is offered");
+    assert_eq!(nd["textEdit"]["newText"], json!("nd $1\\nd*$0"));
+    // `InsertTextFormat.Snippet`.
+    assert_eq!(nd["insertTextFormat"], json!(2));
+    // A note-only marker is not offered in a paragraph: writing `\fq` there
+    // is `marker-not-allowed-here`.
+    assert!(
+        !items.iter().any(|item| item["label"] == json!("fq")),
+        "`\\fq` is note-only and the cursor is in a `\\p`",
+    );
+
+    // The quick fix for the diagnostic the server published, sent back the
+    // way an editor sends it.
+    lsp.notify(
+        "textDocument/didChange",
+        json!({
+            "textDocument": {"uri": uri, "version": 3},
+            "contentChanges": [{"text": WITH_UNKNOWN_MARKER}],
+        }),
+    );
+    let diagnostics = lsp.diagnostics(&uri);
+    assert_eq!(diagnostics.len(), 1, "{diagnostics:#?}");
+    let diagnostic = diagnostics[0].clone();
+
+    let actions = lsp.request(
+        "textDocument/codeAction",
+        json!({
+            "textDocument": {"uri": uri},
+            "range": diagnostic["range"],
+            "context": {"diagnostics": [diagnostic]},
+        }),
+    );
+    let actions = actions.as_array().expect("an array of code actions");
+    assert_eq!(actions.len(), 1, "{actions:#?}");
+    let action = &actions[0];
+    assert_eq!(action["title"], json!("Delete `\\qqq`"));
+    assert_eq!(action["kind"], json!("quickfix"));
+    // One edit, on this document: the marker and the space after it are
+    // deleted, which is what the parser did to the tree.
+    let edits = action["edit"]["changes"][&uri]
+        .as_array()
+        .unwrap_or_else(|| panic!("edits for {uri}: {action:#?}"));
+    assert_eq!(edits.len(), 1, "{edits:#?}");
+    assert_eq!(edits[0]["newText"], json!(""));
+    assert_eq!(
+        edits[0]["range"],
+        json!({
+            "start": {"line": 3, "character": 10},
+            "end": {"line": 3, "character": 15},
+        }),
+    );
+
+    shutdown(&mut lsp);
+}
+
+/// The `name` of each symbol in a list.
+fn names(symbols: &[Value]) -> Vec<&str> {
+    symbols
+        .iter()
+        .map(|symbol| symbol["name"].as_str().expect("a symbol name"))
+        .collect()
+}
+
+/// A symbol's children, which the server leaves out where there are none.
+fn children(symbol: &Value) -> &[Value] {
+    symbol["children"].as_array().map_or(&[], Vec::as_slice)
 }
 
 /// Formatting and hover over the wire (ticket 31): the edit the client

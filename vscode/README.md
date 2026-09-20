@@ -96,3 +96,54 @@ in CI runs VS Code. This is the check by hand, and it is the one ticket 30's
     repaired text over yours. That is the same rule as `usfm format --write`
     without `--force`: a parse that reported an error was repaired, and the
     repaired tree is not the author's text.
+
+### The outline, completion and quick fixes (ticket 32)
+
+Start from a file with two chapters, which is what the outline is for:
+
+```usfm
+\id GEN
+\c 1
+\p
+\v 1 In the beginning
+\v 2 and the earth
+\c 2
+\p
+\v 1 thus the heavens
+```
+
+11. Open the **Outline** view (Explorer sidebar, or `Ctrl+Shift+O` for "go to
+    symbol in file"). It shows `GEN` with `Chapter 1` and `Chapter 2` under
+    it, and `1`, `2` under the first. Clicking a verse jumps to its `\v` and
+    selects the marker; the breadcrumb bar at the top of the editor shows
+    `GEN > Chapter 1 > 1` as the cursor moves. A `\v 1-2` shows as `1-2`, a
+    number written twice shows twice — the outline is of the file, not of the
+    versification. An `\esb` sidebar appears as `Sidebar` where it stands,
+    and a `\periph` as `Periph <title>`.
+12. Put the cursor at the end of the `\v 1` line and type a `\`. The
+    completion list opens by itself (`\` is the trigger character); each item
+    shows the marker with its `\Name` beside it and its `\Description` in the
+    details pane (`Ctrl+Space` toggles that pane open). Type `nd` and press
+    Enter: the line gets `\nd \nd*` with the cursor between the two, because
+    a character style is inserted as a snippet with its closing marker. Note
+    that the `\` you typed is not doubled.
+13. The list is filtered by where the cursor is. In the paragraph, `\fq` is
+    **not** offered — it occurs only inside a note, and writing it there is
+    `marker-not-allowed-here`. Write a footnote (`\f + \ft note\f*`), put the
+    cursor inside it before `\f*`, type `\`, and `\fq` is offered there. A
+    marker from your `custom.sty` is offered like any other: the list is the
+    sheet the file was parsed with.
+14. Quick fixes. With `\qqq` in the file again, put the cursor on it and
+    press `Ctrl+.` (or click the lightbulb). One action is offered, **Delete
+    `\qqq`**; applying it removes the marker and the space after it, and the
+    problem goes. The other four:
+    - `\em text` with no `\em*` (a warning) offers **Close `\em` with
+      `\em*`**, which writes the closer at the end of the styled text;
+    - `\f \ft note\f*` (no caller) offers **Add the `+` caller to `\f`**;
+    - `\w word|lemma=grace\w*` offers **Put `grace` in quotes**;
+    - `\ts-s |\*` offers **Delete the empty attribute list**.
+
+    Every one of them is the repair the parser already made, written back
+    into the file, so the diagnostic disappears and no new one appears.
+    Diagnostics without an obvious edit (`missing-id`, `verse-out-of-order`,
+    `marker-not-allowed-here`) offer no action: those are edits for a person.
