@@ -264,13 +264,24 @@ pub fn default_attribute_name(marker: &str) -> Option<&'static str> {
 /// ASCII letter or `_`, then ASCII letters, digits, `-`, `_` or `.`. Anything
 /// else (`\w a|b<c="1"\w*`) is reported as `malformed-attribute-name` and
 /// dropped by the USX serializers, which have no way to write it.
+///
+/// One scan of the bytes: a character outside ASCII is one of the bytes
+/// 0x80..=0xFF, every one of which fails the same tests its `char` does, so
+/// there is nothing here for `chars()` to decode. `#[inline]` because the
+/// crate that calls it most (`usfm_semantic`, once per attribute of every
+/// `\w` in the document) is not this one, and out of line the byte tests cost
+/// several times what they do inlined — this was the single most expensive
+/// thing the semantic pass did over an aligned text (ticket 24,
+/// `docs/benchmarks.md`).
+#[inline]
 pub fn is_valid_attribute_name(name: &str) -> bool {
-    let mut chars = name.chars();
-    let Some(first) = chars.next() else {
+    let [first, rest @ ..] = name.as_bytes() else {
         return false;
     };
-    (first.is_ascii_alphabetic() || first == '_')
-        && chars.all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
+    (first.is_ascii_alphabetic() || *first == b'_')
+        && rest
+            .iter()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
 }
 
 /// A run of text, with the source range it came from.
