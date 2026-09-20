@@ -149,6 +149,25 @@ The two Info codes are expected and realistic: `\w` inside `\wj` (Luke) and
 inside `\qs` (Psalms) is what unfoldingWord's aligned texts write too, and
 `\zaln-s`/`\zaln-e` are custom milestones no stylesheet declares.
 
+Both tables are the output of `usfm parse`, which since ticket 19 is the
+facade's — the parser's diagnostics *and* `usfm_semantic`'s. Ticket 23 added
+four verse- and chapter-order warnings to the second half, and the counts
+above are unchanged by them:
+
+| Code | Severity | `web/` | `synthetic/` |
+| --- | --- | --- | --- |
+| `duplicate-verse-number` | Warning | 0 | 0 |
+| `verse-out-of-order` | Warning | 0 | 0 |
+| `duplicate-chapter-number` | Warning | 0 | 0 |
+| `chapter-out-of-order` | Warning | 0 | 0 |
+
+A published Bible is the case these checks are quiet on, and the WEB is one:
+every chapter of all 86 books numbers its verses once, upwards, including the
+deuterocanon, whose Greek Esther and Daniel additions are the obvious place
+for a chapter to repeat. (Verse ranges do occur — five of them, all in
+Sirach, `\v 15-16` through `\v 19-27` — and none overlaps its neighbours.) The corpus therefore still parses with **zero
+errors**, which is the property the benches and the fuzz seeds rely on.
+
 ### Fixed: a `*` note caller
 
 `web/78-1MA.usfm` line 22 (1 Maccabees 2:18) has `\f * \ft See 1 Maccabees

@@ -589,6 +589,29 @@ against 36.70 (17.9%). The two heavy classes are the two full of attribute
 lists — an alignment file is `\zaln-s |x-strong="…"` most of the way down — so
 the cost is still the second pass over those lists, not the checks moved here.
 
+**After ticket 23** (the four verse- and chapter-order checks, which ride the
+`Analyzer` walk), same method and one bench binary, six rounds turn about on
+whole-corpus: `parse_semantic` **45.62** MiB/s (43.93, 46.89, 45.64, 45.59,
+43.16, 46.31) against `parse` at **51.73** (51.73, 50.00, 53.78, 51.72, 52.03,
+50.33). The gap is **11.8%**, against 10.9% after ticket 21 — the four checks
+cost nothing above this VM's noise, which on this pair of numbers is wide:
+`parse` alone spread 7.6% across the six rounds, which is why six were run
+rather than three.
+
+The first cut of this ticket read a `ReferenceIndex` built in `analyze`
+instead, and that is worth recording because it is the same information
+obtained two ways. It measured **43.03** against `parse` at 53.65, a **19.8%**
+gap; with only the `check_order` call commented out, the same binary in the
+same sitting gave 47.92, a 10.7% gap. So the index — a second full traversal
+that allocates a `NodePath` per verse, 37 654 of them in this corpus — cost
+about 24 ms over 12.78 MiB, or 9 points of `parse_semantic`, for numbers the
+walk was already passing. `reference_index/whole-corpus` measured 279.3 MiB/s
+in that sitting, and adding a 279 MiB/s pass to a 47.9 MiB/s one predicts 40.9,
+near enough the 43.03 seen. `ReferenceIndex` stays what it is for callers that
+want to *read* verses; `analyze` does not build one.
+
+The gap that is left is still ticket 24's, and still the attribute re-check.
+
 ## Reading a regression
 
 The VM is a shared 4-vCPU cloud instance, so the numbers move on their own.

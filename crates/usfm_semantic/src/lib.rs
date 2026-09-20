@@ -26,9 +26,12 @@
 //!
 //! [`ReferenceIndex`] is here for the same reason (ticket 22): the chapters and
 //! verses of a document are *derived* from the tree, not part of it, and the
-//! order checks that read them are this crate's. It is the one thing here that
+//! checks that talk about them are this crate's. It is the one thing here that
 //! is not a check — a caller that only wants "the content of Genesis 1:2" can
-//! build one and ignore [`analyze`].
+//! build one and ignore [`analyze`] — and [`analyze`] does not build one: the
+//! order checks (ticket 23) need a chapter number, a verse number and a span,
+//! all of which the walk already passes, where the index costs a second
+//! traversal and a [`usfm_ast::NodePath`] per verse.
 //!
 //! [`analyze`] is the whole API of the checks. Callers usually reach it through
 //! `usfm::parse`, which merges these diagnostics with the parser's; a caller
@@ -61,11 +64,13 @@ pub mod reference;
 
 pub use reference::{ChapterRef, ReferenceIndex, VerseRef};
 
+use std::collections::BTreeSet;
+
 use usfm_ast::visit::{Visit, walk_note, walk_para, walk_table_cell};
 use usfm_ast::{
-    Attributes, Block, Book, BookCode, ChapterStart, Char, Document, Milestone, Note, Para, Periph,
-    Sidebar, StyleId, Table, TableCell, VerseStart, default_attribute_name,
-    is_valid_attribute_name,
+    Attributes, Block, Book, BookCode, ChapterStart, Char, Document, Milestone, Note, NumberList,
+    NumberRange, Para, Periph, Sidebar, StyleId, Table, TableCell, VerseStart,
+    default_attribute_name, is_valid_attribute_name,
 };
 use usfm_diagnostics::{Code, Diagnostic};
 use usfm_span::Span;
@@ -100,6 +105,11 @@ pub const EMITS: &[Code] = &[
     Code::VerseInCharacterStyle,
     Code::UnexpectedTableColumn,
     Code::EmptyWord,
+    // ticket 23
+    Code::DuplicateVerseNumber,
+    Code::VerseOutOfOrder,
+    Code::DuplicateChapterNumber,
+    Code::ChapterOutOfOrder,
 ];
 
 /// Run every semantic check over `document`.
@@ -143,7 +153,49 @@ struct Analyzer<'a> {
     book: Option<BookCode>,
     /// Whether a `\c` has been passed, anywhere, at any depth.
     chapter_seen: bool,
+    /// The numbers the order checks compare against; see [`Order`].
+    order: Order,
     diagnostics: Vec<Diagnostic>,
+}
+
+/// What the order checks (ticket 23) remember as the walk goes.
+///
+/// The four codes are the only ones here that are not about a node on its own:
+/// a verse repeats or runs backwards *relative to the other verses of its
+/// chapter*, and a chapter relative to the other chapters of its book. That is
+/// all the state it takes, and the walk passes every `\id`, `\c` and `\v` in
+/// document order already — which is why this rides on the walk rather than on
+/// a second pass over a [`ReferenceIndex`] (the index is still the thing to
+/// build to *read* verses; it costs a traversal and a path per verse, which
+/// these checks have no use for).
+#[derive(Default)]
+struct Order {
+    /// Chapter numbers passed in the current book, for the duplicate rule.
+    chapters_seen: BTreeSet<usize>,
+    /// The last chapter number passed in the current book, for the order rule.
+    previous_chapter: Option<usize>,
+    /// The chapter in force, or `None` before the first `\c` of the book —
+    /// which is when a verse is not checked at all.
+    chapter_number: Option<usize>,
+    /// Verse numbers passed in the current chapter.
+    covered: Coverage,
+    /// The end of the last verse passed in the current chapter.
+    previous_verse: Option<VerseKey>,
+}
+
+impl Order {
+    /// A new book: its chapters are its own, and no chapter is open yet.
+    fn book(&mut self) {
+        *self = Order::default();
+    }
+
+    /// A new chapter: its verses are its own.
+    fn chapter(&mut self, number: usize) {
+        self.chapter_number = Some(number);
+        self.previous_chapter = Some(number);
+        self.covered = Coverage::default();
+        self.previous_verse = None;
+    }
 }
 
 /// One level of the containment the placement check reads.
@@ -175,6 +227,7 @@ impl<'a> Analyzer<'a> {
             first_in_container: true,
             book: None,
             chapter_seen: false,
+            order: Order::default(),
             diagnostics: Vec::new(),
         }
     }
@@ -385,6 +438,96 @@ impl<'a> Analyzer<'a> {
         }
     }
 
+    /// `duplicate-chapter-number` / `chapter-out-of-order`: a `\c` against the
+    /// chapters of the same book that the walk has already passed.
+    ///
+    /// **Per book.** A document is normally one book, but the CLI concatenates
+    /// its input files into one, and a second `\id` starts a second book whose
+    /// chapters begin again at 1. So [`Order::book`] clears the chapter state
+    /// at every `Book` block: two books each with `\c 1` say nothing, while
+    /// `\c 1` twice inside one of them is the duplicate this reports.
+    ///
+    /// Versification is out of scope (ticket 23): nothing here knows which
+    /// chapters a book is *supposed* to have, so a gap (`\c 1`, `\c 3`) is not
+    /// reported. Only what the document says about itself is.
+    ///
+    /// The span is the later `ChapterStart`.
+    fn check_chapter_order(&mut self, chapter: &ChapterStart<'_>) {
+        let number = chapter.number;
+        if !self.order.chapters_seen.insert(number) {
+            self.emit(
+                Code::DuplicateChapterNumber,
+                chapter.span,
+                format!("chapter {number} occurs more than once"),
+            );
+        } else if let Some(previous) = self
+            .order
+            .previous_chapter
+            .filter(|previous| number < *previous)
+        {
+            self.emit(
+                Code::ChapterOutOfOrder,
+                chapter.span,
+                format!("chapter {number} comes after chapter {previous}"),
+            );
+        }
+        self.order.chapter(number);
+    }
+
+    /// `duplicate-verse-number` / `verse-out-of-order`: a `\v` against the
+    /// verses of the same chapter that the walk has already passed.
+    ///
+    /// Coverage is by number *with* its segment ([`Coverage`]): `\v 4a` and
+    /// `\v 4b` are two verses, while a bare `\v 4` is the whole of verse 4 and
+    /// so collides with either. A range covers its endpoints as written and
+    /// everything between them unsegmented, so `\v 3-4a` and `\v 4b` sit side
+    /// by side — the shape `41MATTes.SFM` uses — while `\v 3-5` and a later
+    /// `\v 4` do not.
+    ///
+    /// A verse reports at most one of the two codes, the duplicate first: a
+    /// number that has already been used is a duplicate whether or not it also
+    /// runs backwards, and saying both about one `\v` says nothing more.
+    ///
+    /// A verse before the first `\c` of its book is skipped: there is no
+    /// chapter for it to repeat or run backwards in, and
+    /// `verse-outside-chapter` has already said what there is to say.
+    ///
+    /// The span is the `VerseStart` of the *later* verse, the one a reader
+    /// would have to move or renumber.
+    fn check_verse_order(&mut self, verse: &VerseStart<'_>) {
+        let Some(chapter) = self.order.chapter_number else {
+            return;
+        };
+        let number = &verse.number;
+        let start = start_key(number);
+        // Both of these end their borrow of `self.order` before `emit` takes
+        // `&mut self`: one returns an owned key, the other a copy.
+        let repeat = self.order.covered.first_covered(number);
+        let previous = self.order.previous_verse;
+        if let Some(repeat) = repeat {
+            self.emit(
+                Code::DuplicateVerseNumber,
+                verse.span,
+                format!(
+                    "verse {} occurs more than once in chapter {chapter}",
+                    show(repeat)
+                ),
+            );
+        } else if let Some(previous) = previous.filter(|previous| start < *previous) {
+            self.emit(
+                Code::VerseOutOfOrder,
+                verse.span,
+                format!(
+                    "verse {} comes after verse {} in chapter {chapter}",
+                    show(start),
+                    show(previous)
+                ),
+            );
+        }
+        self.order.covered.add(number);
+        self.order.previous_verse = Some(end_key(number));
+    }
+
     /// The parent a character style or note is placed under, or `None` where
     /// nothing is checked.
     ///
@@ -551,6 +694,178 @@ impl Analyzer<'_> {
     }
 }
 
+/// One verse number with its segment: `4a` is `(4, Some('a'))`, a bare `4` is
+/// `(4, None)`.
+///
+/// The derived order is the one the checks want. `None` sorts before `Some`,
+/// so a bare `4` comes before `4a` — which is how they are written — and
+/// segments compare by letter, so `4b` after `4a` is forward and `4a` after
+/// `4b` is backwards.
+type VerseKey = (usize, Option<char>);
+
+/// A key as USFM writes it, for a message: `4`, or `4a`.
+fn show((number, segment): VerseKey) -> String {
+    match segment {
+        Some(segment) => format!("{number}{segment}"),
+        None => number.to_string(),
+    }
+}
+
+/// Where a verse begins: the start of its first range, `3` in `\v 3-5` and
+/// `1` in `\v 1,3-5`.
+fn start_key(number: &NumberList) -> VerseKey {
+    let range = number.first_range();
+    (range.start, range.start_modifier)
+}
+
+/// Where a verse ends: the end of its last range. A collapsed range carries
+/// its only segment in `start_modifier` (`\v 4a` is 4..4 with `start_modifier`
+/// `a`), so that is the segment the end takes.
+fn end_key(number: &NumberList) -> VerseKey {
+    let range = number.last_range();
+    if range.is_collapsed() {
+        (range.end, range.end_modifier.or(range.start_modifier))
+    } else {
+        (range.end, range.end_modifier)
+    }
+}
+
+/// A piece of what a verse number covers.
+///
+/// A [`NumberRange`] is at most three of these: its start as written, its end
+/// as written, and — because `\v 3-7` is a verse that contains verses 4, 5 and
+/// 6 whole — everything strictly between them, unsegmented. Keeping the
+/// interior as a run rather than as its numbers is what stops `\v 1-99999999`
+/// from costing anything.
+#[derive(Clone, Copy)]
+enum Part {
+    /// One number, with or without a segment.
+    One(VerseKey),
+    /// Every number from the first to the second inclusive, unsegmented.
+    Run(usize, usize),
+}
+
+/// The parts of one range, in ascending order.
+fn parts(range: &NumberRange) -> impl Iterator<Item = Part> {
+    let start = Part::One((range.start, range.start_modifier));
+    let interior = (range.end > range.start.saturating_add(1))
+        .then(|| Part::Run(range.start + 1, range.end - 1));
+    // A collapsed range has one number, and it is already `start` — unless the
+    // two ends were written with different segments (`\v 4a-4b`).
+    let end = (range.end != range.start
+        || (range.end_modifier.is_some() && range.end_modifier != range.start_modifier))
+        .then_some(Part::One((range.end, range.end_modifier)));
+    [Some(start), interior, end].into_iter().flatten()
+}
+
+/// The verse numbers used so far in one chapter.
+///
+/// Two stores, because the two questions are different: whole numbers, which
+/// cover every segment of themselves, are kept as sorted, disjoint,
+/// non-adjacent inclusive intervals; segments are kept one by one. A number is
+/// covered if an interval holds it, or — for a bare number — if any segment of
+/// it was written, which is the rule that makes `\v 4a` then `\v 4` a
+/// duplicate.
+#[derive(Default)]
+struct Coverage {
+    whole: Vec<(usize, usize)>,
+    segments: BTreeSet<(usize, char)>,
+}
+
+impl Coverage {
+    /// The first number of `number` an earlier verse already covered, or
+    /// `None` if the verse is new all through.
+    fn first_covered(&self, number: &NumberList) -> Option<VerseKey> {
+        number
+            .ranges()
+            .iter()
+            .flat_map(parts)
+            .find_map(|part| self.covered(part))
+    }
+
+    fn covered(&self, part: Part) -> Option<VerseKey> {
+        match part {
+            Part::One(key) => self.covers(key).then_some(key),
+            Part::Run(low, high) => {
+                let from_whole = self.overlapping(low, high).map(|(start, _)| start.max(low));
+                let from_segment = self
+                    .segments
+                    .range((low, '\0')..=(high, char::MAX))
+                    .next()
+                    .map(|&(number, _)| number);
+                match (from_whole, from_segment) {
+                    (Some(a), Some(b)) => Some(a.min(b)),
+                    (found, None) | (None, found) => found,
+                }
+                .map(|number| (number, None))
+            }
+        }
+    }
+
+    fn covers(&self, (number, segment): VerseKey) -> bool {
+        if self.overlapping(number, number).is_some() {
+            return true;
+        }
+        match segment {
+            Some(segment) => self.segments.contains(&(number, segment)),
+            // A bare number is the whole verse, so any of its segments is a
+            // collision.
+            None => self
+                .segments
+                .range((number, '\0')..=(number, char::MAX))
+                .next()
+                .is_some(),
+        }
+    }
+
+    /// The first interval of `whole` that meets `low..=high`.
+    fn overlapping(&self, low: usize, high: usize) -> Option<(usize, usize)> {
+        let position = self.whole.partition_point(|&(_, end)| end < low);
+        self.whole
+            .get(position)
+            .copied()
+            .filter(|&(start, _)| start <= high)
+    }
+
+    /// Record everything `number` covers.
+    fn add(&mut self, number: &NumberList) {
+        for part in number.ranges().iter().flat_map(parts) {
+            match part {
+                Part::One((number, Some(segment))) => {
+                    self.segments.insert((number, segment));
+                }
+                Part::One((number, None)) => self.add_run(number, number),
+                Part::Run(low, high) => self.add_run(low, high),
+            }
+        }
+    }
+
+    /// Add `low..=high` to `whole`, merging with any interval it touches so
+    /// the list stays sorted, disjoint and searchable by bisection however
+    /// many verses a chapter has.
+    fn add_run(&mut self, low: usize, high: usize) {
+        if low > high {
+            return;
+        }
+        // The intervals this one joins onto: those ending at or after `low - 1`
+        // and starting at or before `high + 1`. Adjacency counts, so `1-2` and
+        // `3-4` become `1-4` rather than two intervals that both hold 2-and-3.
+        let first = self.whole.partition_point(|&(_, end)| end.saturating_add(1) < low);
+        let last = self
+            .whole
+            .partition_point(|&(start, _)| start <= high.saturating_add(1));
+        if first == last {
+            self.whole.insert(first, (low, high));
+            return;
+        }
+        let merged = (
+            low.min(self.whole[first].0),
+            high.max(self.whole[last - 1].1),
+        );
+        self.whole.splice(first..last, [merged]);
+    }
+}
+
 impl Visit for Analyzer<'_> {
     fn visit_document(&mut self, document: &Document<'_>) {
         self.check_document(document);
@@ -561,10 +876,15 @@ impl Visit for Analyzer<'_> {
         self.check_unlisted_book_code(book);
         self.check_id_not_first(book);
         self.book = Some(book.code);
+        // A second `\id` is a second book — `id-not-first` says so, and the
+        // CLI produces one by concatenating files — and its chapters number
+        // from 1 again.
+        self.order.book();
     }
 
-    fn visit_chapter_start(&mut self, _chapter: &ChapterStart<'_>) {
+    fn visit_chapter_start(&mut self, chapter: &ChapterStart<'_>) {
         self.chapter_seen = true;
+        self.check_chapter_order(chapter);
     }
 
     fn visit_para(&mut self, para: &Para<'_>) {
@@ -574,6 +894,7 @@ impl Visit for Analyzer<'_> {
 
     fn visit_verse_start(&mut self, verse: &VerseStart<'_>) {
         self.check_verse_placement(verse);
+        self.check_verse_order(verse);
     }
 
     fn visit_table(&mut self, table: &Table<'_>) {
