@@ -245,6 +245,8 @@ mod tests {
     fn rule(marker: &str, style_type: StyleType) -> StyleRule {
         StyleRule {
             marker: marker.to_string(),
+            name: None,
+            description: None,
             style_type,
             text_type: TextType::Other,
             text_properties: TextProperties::default(),

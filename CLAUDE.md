@@ -16,10 +16,14 @@ This project has three parallel work streams, all in progress:
    - Live since ticket 30 (2026-09-20): full text sync, a document store and
      `publishDiagnostics` from `usfm::parse_with` — the parser's diagnostics
      and `usfm_semantic`'s, the same list `usfm parse` prints
-   - Next: formatting and hover (ticket 31), then document symbols,
-     completion and code actions (32). Advertise a capability only once it
-     works, and keep the diagnostics path as it is — the server holds no rules
-     of its own, it publishes the toolchain's
+   - And since ticket 31: `textDocument/formatting` (`usfm_codegen`'s text,
+     one edit over the whole document, refused on an Error) and
+     `textDocument/hover` (the stylesheet's `\Name`, `\Description` and
+     `\OccursUnder` for the marker under the cursor, or the reference —
+     `GEN 1:1` — in a verse)
+   - Next: document symbols, completion and code actions (32). Advertise a
+     capability only once it works, and keep the diagnostics path as it is —
+     the server holds no rules of its own, it publishes the toolchain's
    - `wip/usfm_language_server/` is the old, parked server: outside the
      workspace, does not build, replaced rather than fixed, and deleted by
      ticket 33. Do not work on it.
@@ -151,6 +155,39 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **Formatting and hover in the language server (ticket 31, M6).** Two
+  capabilities, each a pure function with its own module and the wiring in
+  `main.rs`. `textDocument/formatting` is `usfm_codegen`'s text of the stored
+  document's parse — `apps/usfm_language_server/src/format.rs`'s `formatted`,
+  the same trailing newline as `apps/usfm_cli/src/format.rs`, so
+  `formatOnSave` and `usfm format --write` write the same bytes — returned as
+  **one** `TextEdit` from `0:0` to the end of the file (a minimal diff is a
+  follow-up if a client flickers). It **refuses** with `Ok(None)`, the
+  protocol's `null`, plus a `window/showMessage` warning naming the first
+  error, when the parse reported an Error: that is `usfm format --write`'s
+  rule without `--force`, and `null` rather than `[]` because `[]` means
+  "already formatted". An unchanged document does answer `[]`.
+  `textDocument/hover` locates the innermost node whose **span** holds the
+  cursor's byte offset (`locate.rs`: `locate` -> `Location { node, book,
+  chapter, verse }`, one walk with `NodeRef::descendants`, which ticket 32
+  reuses for symbols and code actions) and answers in markdown: for a styled
+  node — `Para`, `Char`, `Note`, `Milestone`, `Sidebar`, `Periph`, and a
+  `TableCell`, whose marker is spelled from `header`/`alignment`/`column` as
+  the writer spells it — the **document's own** sheet's `\Name`,
+  `\Description` and `\OccursUnder` list; for a `\c`/`\v`, and for text
+  inside a verse, the reference (`GEN 1:1`). The hover range is the located
+  node's whole span, not the marker's: the innermost node at an offset is
+  already the smallest thing there, and this way the empty places (the space
+  after `\p`) answer too. Text outside any chapter falls back to the style
+  around it. **`StyleRule` had no `\Name` or `\Description`** — the `.sty`
+  parser dropped both lines — so `usfm_style` now keeps them as
+  `Option<String>`, `crates/usfm_parser/build.rs` writes them into the
+  generated default sheet, and a derived rule (`\k-s`, an unknown milestone)
+  has neither. `convert.rs` gained the inverse of `position` —
+  `offset(source, Position)`, UTF-16, clamping a column past the line to its
+  end and a line past the last to the end of the file — and
+  `whole_document`. `tests/lsp.rs` now asserts both capabilities, the edit,
+  its range, the refusal and its notification, and both shapes of hover
 - **The language server, rebuilt (ticket 30, M6).**
   `apps/usfm_language_server` is a new workspace member on the `usfm` facade
   (`default-features = false`: the parser, the semantic pass and the
@@ -555,8 +592,9 @@ crate split, M4 `usfm_semantic`, M5 `usfm_codegen`, M6 language server. M1–M5
 closed (exit criteria recorded in the spec; M5 on 2026-09-20, tickets 25–27
 and 34–36). Ticket 37 paid back the M5 parse regression, and **M6 is under
 way**: the language server is rebuilt in `apps/usfm_language_server`
-(ticket 30, diagnostics), and **next is ticket 31** (formatting and hover),
-then 32 (symbols, completion, code actions) and 33 (delete `wip/`).
+(ticket 30, diagnostics) with formatting and hover on it (ticket 31), and
+**next is ticket 32** (symbols, completion, code actions), then 33 (delete
+`wip/`).
 Tickets are in
 `.scratch/oxc-layout/issues/`, written one milestone ahead. Unattended
 sessions follow `docs/agents/loop.md`; `scripts/gate.sh` is the gate before every push.

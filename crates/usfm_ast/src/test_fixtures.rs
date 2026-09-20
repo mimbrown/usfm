@@ -11,6 +11,8 @@ use crate::*;
 fn rule(marker: &str, style_type: StyleType, text_type: TextType) -> StyleRule {
     StyleRule {
         marker: marker.to_string(),
+        name: None,
+        description: None,
         style_type,
         text_type,
         text_properties: TextProperties::default(),
