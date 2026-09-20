@@ -338,6 +338,42 @@ fn unclosed_nestable_style_is_a_sibling() {
     snapshot("unclosed_nestable_style_is_a_sibling", source);
 }
 
+/// Nothing nests inside `\xo` without `\+`, even when the closing marker is
+/// there: a cross reference's origin reference holds plain text (ticket 36),
+/// so `\x - \xo 1.1 \xt Gen 1.1\xt*\x*` is two children of the note.
+///
+/// The references say so. `paratextTests/NestingInCrossReferencesInvalid`
+/// puts it in as many words — "Grammar is accepting nesting of character
+/// styles under `\xo` - this is normally just text" — and its USX, like
+/// `CrossReferencesQuoteOutsideNote`'s and
+/// `CrossReferencesInsideCharacterMarker`'s, has the closed style beside the
+/// `\xo` rather than inside it.
+#[test]
+fn closed_nestable_style_after_xo_is_a_sibling() {
+    let source = "\\id GEN\n\\c 1\n\\p \\v 1 a\\x - \\xo 1.1 \\xt Gen 1.1\\xt*\\x* b";
+    assert_eq!(common::codes(source), Vec::<Code>::new());
+    snapshot("closed_nestable_style_after_xo_is_a_sibling", source);
+}
+
+/// `\+` is the author saying what they mean, so it still nests inside `\xo`
+/// — the rule above decides only the unmarked spelling.
+#[test]
+fn a_plussed_style_still_nests_inside_xo() {
+    let source = "\\id GEN\n\\c 1\n\\p \\v 1 a\\x - \\xo 1.1 \\+xt Gen 1.1\\+xt*\\x* b";
+    assert_eq!(common::codes(source), Vec::<Code>::new());
+    snapshot("a_plussed_style_still_nests_inside_xo", source);
+}
+
+/// A footnote's origin reference is the same shape and needs no rule of its
+/// own: `\ft` has no `NEST`, so a closed `\ft` after `\fr` is already the
+/// `\fr`'s sibling.
+#[test]
+fn closed_style_after_fr_is_a_sibling() {
+    let source = "\\id GEN\n\\c 1\n\\p \\v 1 a\\f + \\fr 1.1 \\ft text\\ft*\\f* b";
+    assert_eq!(common::codes(source), Vec::<Code>::new());
+    snapshot("closed_style_after_fr_is_a_sibling", source);
+}
+
 /// The lookahead stops at the enclosing style's closing marker: here `\nd*`
 /// belongs to nothing, so `\nd` is a sibling and `\nd*` is unmatched.
 #[test]

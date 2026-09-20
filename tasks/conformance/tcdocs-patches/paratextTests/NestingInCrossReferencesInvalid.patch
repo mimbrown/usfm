@@ -1,24 +1,21 @@
-Accepted deviation. `\xo 1.1 \em \+pn name\+pn* stuff \em*`: Paratext closes
-`\xo` at the un-plussed `\em` and marks the `\+pn` inside it
-`status="invalid"`. The parser nests `\em` under `\xo`, as it does for any
-style that may nest (`NEST`) and is closed by its own marker ahead, and
-reports `character-style-nested-without-plus`. The stylesheet gives no rule
-that separates this case from `\ft ... \sc BC\sc* ...` (specExamples/
-extended/contentCatogories1), where the reference nests, so the parser keeps
-the one rule. The `status` attribute is Paratext's way of reporting; the
-parser reports through diagnostics.
+Reference quirk. The tree is the reference's own as of ticket 36: nothing
+nests inside `\xo`, so `\em` is the `\xo`'s sibling, and the `\+pn` inside the
+`\em` is a child because the author wrote `\+`. What is left is the `status`
+attribute: Paratext marks the `\+pn` `status="invalid"` — a cross-reference
+note holds cross-reference content, and `\pn` is not that — where the parser
+reports through diagnostics and writes no such attribute. Every other
+reference file that uses `status` belongs to a case that is decided on its
+error diagnostics before the USX is compared at all; this one reports nothing,
+because the input is nesting the author asked for.
 
 --- origin.xml
 +++ origin.xml
-@@ -3,9 +3,8 @@
-   <chapter number="1" style="c" sid="GEN 1" />
-   <para style="p">
+@@ -5,7 +5,7 @@
      <note caller="+" style="x">
--      <char style="xo">1.1 </char>
--      <char style="em">
+       <char style="xo">1.1 </char>
+       <char style="em">
 -        <char style="pn" status="invalid">name</char> stuff </char>
-+      <char style="xo">1.1 <char style="em">
-+        <char style="pn">name</char> stuff </char></char>
++        <char style="pn">name</char> stuff </char>
      </note> <verse number="1" style="v" sid="GEN 1:1" />something<verse eid="GEN 1:1" /></para>
    <chapter eid="GEN 1" />
  </usx>

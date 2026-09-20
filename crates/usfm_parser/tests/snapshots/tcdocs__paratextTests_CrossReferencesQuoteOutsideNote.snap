@@ -9,14 +9,12 @@ Para p@15..78
     Text "quote "@22..28
   Text " "@32..33
   Note x caller=+@33..62
-    Char xo@38..62
+    Char xo@38..46
       Text "1.1 "@42..46
-      Char em@46..59
-        Text "stuff"@50..55
+    Char em@46..59
+      Text "stuff"@50..55
   Text " "@62..64
   VerseStart 1@64..68
   Text "something"@69..78
   VerseEnd 1
 ChapterEnd 1
---- diagnostics
-info[character-style-nested-without-plus] @46..49: `\em` is nested without `+`; treated as `\+em`
