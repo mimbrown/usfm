@@ -138,7 +138,8 @@ actually looks like.
 Every node gets a `Span` (byte offsets into the source, already the lexer's currency).
 Diagnostics reference spans. Serializers ignore them. This is a prerequisite for the
 language server, for good error messages in pipelines, and for any future
-formatting or round-tripping.
+formatting or round-tripping. (Both arrived: `usfm_codegen` writes the AST
+back as USFM and `usfm format` is the formatter over it — tickets 25 and 26.)
 
 ### D3. Documents are self-describing about style
 

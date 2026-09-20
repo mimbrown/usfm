@@ -46,7 +46,7 @@ list is documented and ticketed) and the gate is green.
 
 ## Answer
 
-Landed via PR #30 (2026-09-20). `crates/usfm_codegen` (depends on `usfm_ast`
+Landed in `b4a832f` (PR #30, 2026-09-20). `crates/usfm_codegen` (depends on `usfm_ast`
 and `usfm_style` only): `to_usfm_string` / `write_usfm`, a `Visit` writing
 bytes straight into a `String`; whole-corpus 233 MiB/s, the cheapest output.
 Escapes: `\\`, `\|`, `~` in text, `\\` and `\"` in quoted values, the

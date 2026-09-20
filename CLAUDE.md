@@ -133,6 +133,26 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **`usfm format` and `--format usfm` (ticket 26, M5).** `usfm format <files>`
+  parses each file on its own through the facade and writes it back with
+  `usfm_codegen`: to stdout by default, `--write` in place, `--check` for CI
+  (exit 1 and `would reformat <path>` per file that differs, nothing written).
+  `--write` refuses a file whose parse reported an Error unless `--force`, since
+  the repaired tree is not the author's text; `--write` and `--check` together
+  is a usage error. `--stylesheet` and `--diagnostics text|json` are `parse`'s.
+  The driver is `apps/usfm_cli/src/format.rs` — no `Driver`, because a
+  formatter must keep the files apart where `parse` concatenates them — sharing
+  `read_source`, `read_stylesheet` and the new `print_diagnostics` with
+  `driver.rs`. `usfm_pipeline::OutputFormat::Usfm` is the same writer behind
+  `usfm parse --format usfm` (no diglot form), and the facade's `pipeline`
+  feature pulls in `codegen`. **`format --check` does not pass on
+  `tasks/benchmark/corpus/web/` as it stands** (78 of 86 files): the corpus was
+  written by `usfx_to_usfm.py`, which leaves a note's content runs implicitly
+  closed (`\f + \ft text\f*`) where the writer closes them (`\ft text\ft*\f*`),
+  and puts `\cp` on its own line where the writer puts it after `\c N`. Both
+  are ticket 25's deliberate canonical spellings, not whitespace bugs; the
+  honest criterion holds instead — **after one `format --write` pass, `--check`
+  exits 0 on all 86 files with no diagnostic**, so the formatter is idempotent
 - **`usfm_codegen`: USFM from the AST (ticket 25, M5).** `to_usfm_string(&Document)`
   (and `write_usfm` into any `fmt::Write`), a `Visit` writing into a `String`,
   re-exported as `usfm::codegen` behind the default-on `codegen` feature. M5's
@@ -240,7 +260,7 @@ Recent progress:
   replacements, the punctuation sectioning, the diglot HTML and the prompt
   weave, the SILE output and the format dispatch, each a function over
   `Document`s with a unit test; `apps/usfm_cli` is the `usfm` binary —
-  `usfm parse <files> --format usx|html|json|sile|prompt`, `--stylesheet`,
+  `usfm parse <files> --format usx|html|json|usfm|sile|prompt`, `--stylesheet`,
   `--output`, `--replace`, `--diglot…`, `--watch`, `--strict`,
   `--deny-warnings`, `--diagnostics text|json` — on `clap`, tested by running
   it (`apps/usfm_cli/tests/cli.rs`). `usfm_parser` is a library with no
@@ -367,8 +387,8 @@ Priority areas, next: the route is `.scratch/oxc-layout/spec.md` (decision in
 Milestones in order: M1 workspace builds clean, M2 benchmarks + Miri + fuzz, M3
 crate split, M4 `usfm_semantic`, M5 `usfm_codegen`, M6 language server. M1–M4
 closed (exit criteria recorded in the spec; M4 on 2026-09-20). **M5 is in
-progress**: ticket 25 (the crate and the round trip) is done, 26 (`usfm
-format`) and 27 are next.
+progress**: tickets 25 (the crate and the round trip) and 26 (`usfm format`)
+are done, 27 is next.
 Tickets are in
 `.scratch/oxc-layout/issues/`, written one milestone ahead. Unattended
 sessions follow `docs/agents/loop.md`; `scripts/gate.sh` is the gate before every push.

@@ -13,6 +13,9 @@ license = "MIT"
 [dependencies]
 # The tree every pass walks.
 usfm_ast = { path = "../usfm_ast" }
+# USFM output: the formatter's writer, which `usfm format` and
+# `usfm parse --format usfm` both go through (ticket 26).
+usfm_codegen = { path = "../usfm_codegen" }
 # HTML output, and `write_escaped` for the diglot serializer's own writes.
 usfm_html = { path = "../usfm_html" }
 # JSON output: the AST as it is, for the language server and other consumers
