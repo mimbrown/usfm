@@ -11,12 +11,14 @@ This project has three parallel work streams, all in progress:
    - Handle edge cases and malformed input gracefully
    - Expand grammar coverage
 
-2. **Language Server** (`wip/usfm_language_server/`) — parked
+2. **Language Server** (`wip/usfm_language_server/`) — parked until M6
    - Power VS Code extension for editing USFM
    - Validation, diagnostics, formatting
    - Eventually: completion, hover, go-to-definition
    - Parked outside the workspace in `wip/` (ticket 01) and does not build;
-     M6 rebuilds it in `apps/` on `ParseResult`. Do not work this stream until then.
+     M6 (tickets 30–33, ticketed 2026-09-20) rebuilds it in `apps/` on
+     `ParseResult`, `usfm_semantic` and `usfm_codegen`, and ticket 33 then
+     deletes the parked copy. Work this stream through those tickets only.
 
 3. **Output Generation** (`crates/usfm_style/`, future crates)
    - Transform AST to HTML, Dart, XML, etc.
@@ -497,11 +499,12 @@ it leaves for callers:
 Priority areas, next: the route is `.scratch/oxc-layout/spec.md` (decision in
 `docs/adr/0001-oxc-style-crate-layout.md`): oxc's crate organisation, not its arena.
 Milestones in order: M1 workspace builds clean, M2 benchmarks + Miri + fuzz, M3
-crate split, M4 `usfm_semantic`, M5 `usfm_codegen`, M6 language server. M1–M4
-closed (exit criteria recorded in the spec; M4 on 2026-09-20). **M5 is in
-progress**: tickets 25 (the crate and the round trip), 26 (`usfm format`),
-27 (the round trip as an invariant), 34 (idiomatic note spelling) and 35 (where
-a `Block::Milestone` may stand, which closed 27's last open finding) are done.
+crate split, M4 `usfm_semantic`, M5 `usfm_codegen`, M6 language server. M1–M5
+closed (exit criteria recorded in the spec; M5 on 2026-09-20, tickets 25–27
+and 34–36). **Next: ticket 37** (`parse` is 3.9% slower at the M5 close than
+at the M4 close, over the 3% threshold — the boundary rerun in
+`docs/benchmarks.md`, "M5 close"), then **M6**, the language server rebuilt in
+`apps/` (tickets 30–33; 30 is blocked by 37).
 Tickets are in
 `.scratch/oxc-layout/issues/`, written one milestone ahead. Unattended
 sessions follow `docs/agents/loop.md`; `scripts/gate.sh` is the gate before every push.
