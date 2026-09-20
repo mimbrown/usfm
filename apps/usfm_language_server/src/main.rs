@@ -8,20 +8,25 @@
 //! publishes is `usfm::parse_with`'s, which is the parser's repairs and
 //! `usfm_semantic`'s checks together, the same list `usfm parse` prints.
 //!
-//! What it answers: diagnostics on every change (ticket 30), and since
-//! ticket 31 `textDocument/formatting` — the document written back out by
+//! What it answers: diagnostics on every change (ticket 30); since ticket 31
+//! `textDocument/formatting` — the document written back out by
 //! `usfm_codegen`, the same text `usfm format` writes — and
 //! `textDocument/hover`, which is the stylesheet's own words about the marker
 //! under the cursor, or the reference (`GEN 1:1`) where the cursor is in a
-//! verse.
+//! verse; and since ticket 32 `textDocument/documentSymbol` (the outline of
+//! chapters and verses), `textDocument/completion` (the markers that may be
+//! written where the cursor is) and `textDocument/codeAction` (the quick
+//! fixes for the repairs the parser reports).
 //!
 //! A module per part, so that each is a pure function with tests of its own
 //! and this file stays the wiring: [`documents`] keeps the open text,
 //! [`convert`] turns a byte [`Span`](usfm::Span) into a protocol range and a
 //! protocol position back into an offset, [`stylesheet`] decides which `.sty`
 //! a document is parsed with, [`locate`] finds the node under a position (and
-//! the reference it is in), [`hover`] writes the markdown for it, and
-//! [`format`] holds the formatter and the rule under which it refuses.
+//! the reference it is in), [`hover`] writes the markdown for it, [`format`]
+//! holds the formatter and the rule under which it refuses, [`symbols`]
+//! builds the outline, [`completion`] the marker list and [`actions`] the
+//! quick fixes.
 //!
 //! Nothing is debounced. A parse of a whole book is a few milliseconds
 //! (`docs/benchmarks.md`: the corpus parses at tens of MiB/s, and the largest
@@ -29,24 +34,31 @@
 //! before the next keystroke arrives; a debounce would only add latency to
 //! measure later.
 
+mod actions;
+mod completion;
 mod convert;
 mod documents;
 mod format;
 mod hover;
 mod locate;
 mod stylesheet;
+mod symbols;
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use tokio::sync::Mutex;
 use tower_lsp_server::jsonrpc::Result;
 use tower_lsp_server::ls_types::{
-    DidChangeTextDocumentParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams,
-    DocumentFormattingParams, Hover, HoverContents, HoverParams, HoverProviderCapability,
+    CodeAction, CodeActionKind, CodeActionOptions, CodeActionOrCommand, CodeActionParams,
+    CodeActionProviderCapability, CodeActionResponse, CompletionOptions, CompletionParams,
+    CompletionResponse, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
+    DidOpenTextDocumentParams, DocumentFormattingParams, DocumentSymbolParams,
+    DocumentSymbolResponse, Hover, HoverContents, HoverParams, HoverProviderCapability,
     InitializeParams, InitializeResult, InitializedParams, MarkupContent, MarkupKind, MessageType,
-    OneOf, PositionEncodingKind, ServerCapabilities, ServerInfo, TextDocumentSyncCapability,
-    TextDocumentSyncKind, TextEdit, Uri,
+    NumberOrString, OneOf, PositionEncodingKind, ServerCapabilities, ServerInfo,
+    TextDocumentSyncCapability, TextDocumentSyncKind, TextEdit, Uri, WorkspaceEdit,
 };
 use tower_lsp_server::{Client, LanguageServer, LspService, Server};
 
@@ -130,11 +142,13 @@ impl LanguageServer for Backend {
     /// The capabilities are what is implemented and no more: full text
     /// synchronisation, so the server is handed the whole document on every
     /// change; UTF-16 positions (the protocol's default, said out loud because
-    /// [`convert`] depends on it); whole-document formatting; and hover.
+    /// [`convert`] depends on it); whole-document formatting; hover; and,
+    /// since ticket 32, document symbols, completion after a `\` and
+    /// `quickfix` code actions.
     ///
-    /// Symbols, completion and code actions arrive with ticket 32. Advertising
-    /// them before they work would only make the editor ask questions this
-    /// server answers with `null`.
+    /// Each one is advertised only once it answers: a capability the server
+    /// claims and then answers with `null` is a question the editor asks for
+    /// nothing.
     async fn initialize(&self, params: InitializeParams) -> Result<InitializeResult> {
         // `initializationOptions.stylesheet`: a path to the project's `.sty`.
         // Anything else the client sends is ignored rather than refused — an
@@ -163,6 +177,29 @@ impl LanguageServer for Backend {
                 // document. This is what `editor.formatOnSave` asks for.
                 document_formatting_provider: Some(OneOf::Left(true)),
                 hover_provider: Some(HoverProviderCapability::Simple(true)),
+                document_symbol_provider: Some(OneOf::Left(true)),
+                // `\` opens every marker, so it is the one character that
+                // should pop the list up on its own. A client that asks
+                // explicitly (`Ctrl+Space`) is answered the same way, from
+                // whatever has been typed after the `\`.
+                completion_provider: Some(CompletionOptions {
+                    trigger_characters: Some(vec!["\\".to_owned()]),
+                    // Every item is complete when it is sent: the sheet's name
+                    // and description are already in hand, so there is nothing
+                    // for a resolve round trip to fetch.
+                    resolve_provider: Some(false),
+                    ..Default::default()
+                }),
+                // Only `quickfix`: every action here repairs a diagnostic.
+                // Saying so lets the editor skip the request when it is
+                // collecting refactorings.
+                code_action_provider: Some(CodeActionProviderCapability::Options(
+                    CodeActionOptions {
+                        code_action_kinds: Some(vec![CodeActionKind::QUICKFIX]),
+                        resolve_provider: Some(false),
+                        ..Default::default()
+                    },
+                )),
                 ..Default::default()
             },
             server_info: Some(ServerInfo {
@@ -261,6 +298,101 @@ impl LanguageServer for Backend {
             }),
             range: Some(convert::range(&index, hover.span)),
         }))
+    }
+
+    /// The outline: the book, its chapters and their verses, with sidebars
+    /// and `\periph` divisions where they stand. See [`symbols`].
+    async fn document_symbol(
+        &self,
+        params: DocumentSymbolParams,
+    ) -> Result<Option<DocumentSymbolResponse>> {
+        let Some((text, sheet)) = self.source(&params.text_document.uri).await else {
+            return Ok(None);
+        };
+        let result = usfm::parse_with(&text, &sheet);
+        let index = LineIndex::new(&text);
+        // Nested, not flat: the protocol's two shapes, and the nested one is
+        // the tree the Outline view draws.
+        Ok(Some(DocumentSymbolResponse::Nested(symbols::symbols(
+            &result.document,
+            &index,
+        ))))
+    }
+
+    /// The markers that may be written where the cursor is. See
+    /// [`completion`].
+    ///
+    /// `null` rather than an empty list where the cursor is not after a `\`:
+    /// an empty list is a claim that nothing may be written there, which
+    /// would stop the editor falling back to its own word completion.
+    async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
+        let position = params.text_document_position;
+        let Some((text, sheet)) = self.source(&position.text_document.uri).await else {
+            return Ok(None);
+        };
+        let offset = convert::offset(&text, position.position);
+        let result = usfm::parse_with(&text, &sheet);
+        let index = LineIndex::new(&text);
+        Ok(
+            completion::completions(&result.document, &text, &index, offset)
+                .map(CompletionResponse::Array),
+        )
+    }
+
+    /// The quick fixes for the diagnostics the request carries. See
+    /// [`actions`].
+    ///
+    /// The request's diagnostics are the editor's copy of what this server
+    /// published, so each is matched back to the parse's own by code *and*
+    /// range and the edit is computed from the toolchain's span — never from
+    /// the protocol range, which would have to be converted back to an offset
+    /// and could name a place the tree knows nothing about.
+    async fn code_action(&self, params: CodeActionParams) -> Result<Option<CodeActionResponse>> {
+        let uri = params.text_document.uri;
+        let Some((text, sheet)) = self.source(&uri).await else {
+            return Ok(None);
+        };
+        let result = usfm::parse_with(&text, &sheet);
+        let index = LineIndex::new(&text);
+
+        let wanted = |diagnostic: &usfm::Diagnostic| {
+            params.context.diagnostics.iter().any(|reported| {
+                reported.code == Some(NumberOrString::String(diagnostic.code.to_string()))
+                    && reported.range == convert::range(&index, diagnostic.span)
+            })
+        };
+
+        let actions = result
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| wanted(diagnostic))
+            .filter_map(|diagnostic| {
+                let fix = actions::fix(&result.document, &text, diagnostic)?;
+                let edits = fix
+                    .edits
+                    .into_iter()
+                    .map(|edit| TextEdit {
+                        range: convert::range(&index, edit.span),
+                        new_text: edit.text,
+                    })
+                    .collect();
+                Some(CodeActionOrCommand::CodeAction(CodeAction {
+                    title: fix.title,
+                    kind: Some(CodeActionKind::QUICKFIX),
+                    diagnostics: Some(vec![convert::diagnostic(&index, diagnostic)]),
+                    edit: Some(WorkspaceEdit {
+                        changes: Some(HashMap::from([(uri.clone(), edits)])),
+                        ..Default::default()
+                    }),
+                    // Each fix is the only sensible edit for its diagnostic,
+                    // which is what `isPreferred` means: `Ctrl+.` applies it
+                    // without a menu.
+                    is_preferred: Some(true),
+                    ..Default::default()
+                }))
+            })
+            .collect();
+        Ok(Some(actions))
     }
 
     async fn did_close(&self, params: DidCloseTextDocumentParams) {

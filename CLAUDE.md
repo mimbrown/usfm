@@ -21,9 +21,17 @@ This project has three parallel work streams, all in progress:
      `textDocument/hover` (the stylesheet's `\Name`, `\Description` and
      `\OccursUnder` for the marker under the cursor, or the reference —
      `GEN 1:1` — in a verse)
-   - Next: document symbols, completion and code actions (32). Advertise a
-     capability only once it works, and keep the diagnostics path as it is —
-     the server holds no rules of its own, it publishes the toolchain's
+   - And since ticket 32: `textDocument/documentSymbol` (the outline —
+     book, chapters, verses, sidebars and `\periph` divisions),
+     `textDocument/completion` (the markers that may stand where the cursor
+     is, from the document's own sheet, `\` the trigger character) and
+     `textDocument/codeAction` (a `quickfix` per parser repair that has an
+     obvious edit)
+   - The stream's tickets are done. What is left of M6 is ticket 33
+     (delete `wip/`, and the lexicon question), which is **ready-for-human**:
+     do not work on it. Whatever comes next, advertise a capability only once
+     it works, and keep the diagnostics path as it is — the server holds no
+     rules of its own, it publishes the toolchain's
    - `wip/usfm_language_server/` is the old, parked server: outside the
      workspace, does not build, replaced rather than fixed, and deleted by
      ticket 33. Do not work on it.
@@ -155,6 +163,60 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **Symbols, completion and code actions (ticket 32, M6).** Three more
+  capabilities, three more modules of pure functions with the wiring in
+  `main.rs`. **`textDocument/documentSymbol`** (`symbols.rs`) is the outline:
+  the `\id` at the top, chapters under it, verses under those, and a sidebar
+  or a `\periph` where it stands — kinds Module / Namespace / Key / Object.
+  Entries are built flat, each with the source range it covers, and nested by
+  **containment**, which is what the protocol requires of a child's range and
+  what puts a sidebar inside the verse it interrupts without a special case.
+  `selection_range` is the marker (`\c 1`), `range` the content: to the next
+  chapter or verse, cut short by the end of the block container the node is
+  written in. It is **one walk, not `ReferenceIndex`**: the index reads
+  chapters from the *top-level* blocks, and a `\periph` division runs to the
+  next `\periph` or `\id` (ticket 27) and so holds everything after it, which
+  dropped every chapter of a front-matter book from the outline; and the
+  outline needs the block containers, which the index does not model. A node
+  with an empty span (`SPAN`, synthesized) is left out.
+  **`textDocument/completion`** (`completion.rs`) answers after a `\` — the
+  trigger character, and the same answer when invoked by hand part-way
+  through a marker name — with the markers of the **document's own**
+  stylesheet, so a project `custom.sty` completes. The `TextEdit` starts
+  *after* the `\`, so the typed backslash is never doubled; a character
+  style, a note and a milestone are `InsertTextFormat::SNIPPET` with their
+  closing marker (`nd $1\nd*$0`, `f + $1\f*$0`, `qt-s$1\*$0`) and a paragraph
+  marker is a plain Keyword. The filter is **ticket 20's rule**, now
+  `usfm_semantic::placement::check(sheet, rule, parent_marker) -> Placement`
+  (`Listed` / `NotListed` / `NotAllowed`, with `is_allowed()`): the crate's
+  own `placement_verdict` is two lines over it, so the check that reports a
+  misplaced marker and the completion that declines to offer one are one
+  implementation and `usfm_semantic` still depends on nothing of the
+  server's. Only the Error half filters — `\fq` is not offered outside a
+  note; `marker-not-listed-here` is advisory and stays in the list. The
+  parent comes from `locate`'s path by `placement_parent`'s three rules (a
+  table cell and the inside of a character style filter nothing, a note is
+  the parent of what it holds, otherwise the paragraph), and in practice it
+  is nearly always a paragraph: the parser opens an implicit `\p` for
+  anything written outside one, so even a `\` between blocks has one.
+  **`textDocument/codeAction`** (`actions.rs`) offers one `quickfix` per
+  diagnostic in the request's `context.diagnostics` — matched back to the
+  parse's own by code *and* range, so the edit is computed from the
+  toolchain's span and never from a protocol position — for the five codes
+  whose fix is the repair written into the file: `unknown-marker` (delete the
+  marker and the spaces after it), `character-style-not-closed` (insert the
+  closer), `missing-note-caller` (insert ` +`),
+  `attribute-value-not-quoted` (quote the value),
+  `empty-milestone-attribute-list` (delete the `|` and the space before it).
+  Every other code has none: `missing-id` would invent a book code,
+  `verse-out-of-order` a renumbering. Each fix has a test that applies it,
+  re-parses, and requires the code to be reported once less with no new code
+  at all. Two spans do not say enough on their own and the tree finishes the
+  job: `character-style-not-closed` points at the *opening* marker, and the
+  `Char` node's span runs to wherever the style was closed — past the outer
+  `\em*` in `\em a \+nd b\em*` — so the closer goes at the end of the node's
+  **last child**, with the line break the text run swept up trimmed off; the
+  closer itself is spelled from the source (`\+nd` closes with `\+nd*`)
 - **Formatting and hover in the language server (ticket 31, M6).** Two
   capabilities, each a pure function with its own module and the wiring in
   `main.rs`. `textDocument/formatting` is `usfm_codegen`'s text of the stored
@@ -590,11 +652,13 @@ Priority areas, next: the route is `.scratch/oxc-layout/spec.md` (decision in
 Milestones in order: M1 workspace builds clean, M2 benchmarks + Miri + fuzz, M3
 crate split, M4 `usfm_semantic`, M5 `usfm_codegen`, M6 language server. M1–M5
 closed (exit criteria recorded in the spec; M5 on 2026-09-20, tickets 25–27
-and 34–36). Ticket 37 paid back the M5 parse regression, and **M6 is under
-way**: the language server is rebuilt in `apps/usfm_language_server`
-(ticket 30, diagnostics) with formatting and hover on it (ticket 31), and
-**next is ticket 32** (symbols, completion, code actions), then 33 (delete
-`wip/`).
+and 34–36). Ticket 37 paid back the M5 parse regression, and **M6's agent
+tickets are done**: the language server is rebuilt in
+`apps/usfm_language_server` with diagnostics (ticket 30), formatting and
+hover (31) and symbols, completion and code actions (32). What remains is
+**ticket 33** — delete `wip/`, and the question of whether the lexicon
+feature is wanted back — which is **ready-for-human** and not an agent's to
+pick up; until it is answered, `wip/` stays parked and M6 stays open.
 Tickets are in
 `.scratch/oxc-layout/issues/`, written one milestone ahead. Unattended
 sessions follow `docs/agents/loop.md`; `scripts/gate.sh` is the gate before every push.
@@ -628,7 +692,9 @@ usfm-tools/
 │   ├── usfm_parser/       # Lexer + parser. A library, no binary
 │   ├── usfm_semantic/     # Checks over a finished tree: analyze(&Document)
 │   │                      #   -> Vec<Diagnostic>. Reports, never repairs.
-│   │                      #   Also ReferenceIndex, the chapter/verse index
+│   │                      #   Also ReferenceIndex, the chapter/verse index,
+│   │                      #   and `placement::check`, the `OccursUnder` rule
+│   │                      #   the checks and the server's completion share
 │   ├── usfm_usx/          # AST -> USX: the XML tree, its writer and reader
 │   ├── usfm_html/         # AST -> HTML: ToHtml, SerializeHtml, Context
 │   ├── usfm_json/         # AST -> JSON: the tree as it is, one object per node
@@ -646,7 +712,9 @@ usfm-tools/
 │   └── usfm_language_server/ # The `usfm-language-server` binary (M6): LSP
 │                          #   over stdio on tower-lsp-server + tokio. Keeps
 │                          #   the open text, publishes `usfm::parse_with`'s
-│                          #   diagnostics. `vscode/` spawns it
+│                          #   diagnostics, and answers formatting, hover,
+│                          #   symbols, completion and code actions.
+│                          #   `vscode/` spawns it
 ├── tasks/
 │   ├── conformance/       # tcdocs + usfm-grammar runner (the `usfm_tests` crate),
 │   │                      #   its fixtures, patches, baseline and the

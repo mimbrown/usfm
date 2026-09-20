@@ -24,7 +24,7 @@ described).
 
 ## Answer
 
-Landed via PR #39 (2026-09-20). The server now advertises
+Landed in `03e619b` (PR #39, 2026-09-20). The server now advertises
 `documentFormattingProvider` and `hoverProvider` beside full sync and
 UTF-16 positions.
 
