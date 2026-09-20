@@ -141,6 +141,13 @@ pub struct ParserImpl<'a> {
     /// `Arc::make_mut` means a document needing no derived style pays no
     /// clone at all.
     pub(crate) style_sheet: Arc<StyleSheet>,
+    // Stylesheet indices of the markers the parser has to recognise, resolved
+    // once here so the hot paths compare a `usize` instead of a marker string
+    // — `marker_name` allocates, and on a per-node path that allocation was
+    // two thirds of ticket 37's regression. `usize::MAX` stands for a sheet
+    // without the marker, which no style id equals; and `add_rule` only
+    // appends and never renames, so a style derived while parsing can take
+    // neither one of these indices nor one of these names.
     id: usize,
     c: usize,
     tr: usize,
@@ -149,6 +156,9 @@ pub struct ParserImpl<'a> {
     esbe: usize,
     cat: usize,
     periph: usize,
+    va: usize,
+    vp: usize,
+    cp: usize,
     should_insert_end_milestones: bool,
     diagnostics: Vec<Diagnostic>,
     /// Stack of open character styles and notes, innermost last.
@@ -376,6 +386,9 @@ impl<'a> ParserImpl<'a> {
             esbe: index("esbe"),
             cat: index("cat"),
             periph: index("periph"),
+            va: index("va"),
+            vp: index("vp"),
+            cp: index("cp"),
             should_insert_end_milestones: true,
             diagnostics: Vec::new(),
             open: Vec::new(),
@@ -1202,9 +1215,7 @@ impl<'a> ParserImpl<'a> {
         // number and goes). So hand it to the chapter, reading it exactly as
         // `parse_chapter` would have. The round-trip fuzz target found this
         // (ticket 27).
-        if self.marker_name(marker) == "cp"
-            && matches!(blocks.last(), Some(Block::ChapterStart(_)))
-        {
+        if marker == self.cp && matches!(blocks.last(), Some(Block::ChapterStart(_))) {
             self.fold_published_number_into_chapter(blocks, para);
             return self.block_closer(closer);
         }
@@ -1530,9 +1541,9 @@ impl<'a> ParserImpl<'a> {
         context: &mut ParserInlineContext<'a>,
         char: Char<'a>,
     ) -> Option<Char<'a>> {
-        let name = self.marker_name(char.style.index());
-        let alternate = name == "va";
-        if !alternate && name != "vp" {
+        let style = char.style.index();
+        let alternate = style == self.va;
+        if !alternate && style != self.vp {
             return Some(char);
         }
         if !matches!(context.children().last(), Some(Inline::VerseStart(_))) {

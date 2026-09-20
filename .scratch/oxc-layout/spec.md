@@ -177,7 +177,11 @@ at `2440a92`:
   `f181eab`): `parse` −3.9%, over the 3% threshold, so **ticket 37** is
   written and M6's first ticket is blocked on it, as the loop's invariant
   asks; `parse_semantic` −3.4% and `parse_html` −3.1% ride on it; everything
-  else within noise.
+  else within noise. **Ticket 37 closed it** ("After ticket 37"): two thirds
+  of the loss was `marker_name`'s owned `String` on two new per-node paths
+  and the rest `add_child`'s rule-6 check asking the child list before the
+  child, and with ids cached and the check reordered `parse` is +1.4% on the
+  M4 close, no tree or diagnostic changed.
 Also in M5: the writer's spellings are the idiomatic ones (notes unclosed,
 `\cp` on its own line, ticket 34); the `\periph` title line drops nothing
 silently (35); nothing nests inside `\xo` without `\+`, from the references
