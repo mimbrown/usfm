@@ -25,7 +25,7 @@ Done when the gate is green.
 
 ## Answer
 
-Landed via PR #40 (2026-09-20). Three more capabilities, each a module of
+Landed in `e304772` (PR #40, 2026-09-20). Three more capabilities, each a module of
 pure functions with unit tests and the wiring in `main.rs`:
 
 - `documentSymbolProvider` (`symbols.rs`): one walk, not `ReferenceIndex`
