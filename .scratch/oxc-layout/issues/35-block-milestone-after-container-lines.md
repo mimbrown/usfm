@@ -1,6 +1,6 @@
 # 35. A `Block::Milestone` after a sidebar, a table or a `\periph` line is not writable
 
-Status: ready-for-agent
+Status: resolved
 Milestone: M5
 Blocked by: 27
 
@@ -63,3 +63,41 @@ is why it was written up rather than half-fixed.
 
 Done when the gate is green, the three inputs round-trip, `findings/` is
 empty or gone, and `roundtrip` has run ten minutes clean.
+
+## Answer
+
+Landed via PR #34 (2026-09-20). No reference file in either conformance
+root puts an `<ms>` after `</sidebar>` or `</table>` or first in a periph
+(the only block-level `<ms>` are `usfmjsTests/ts` and `ts_2`, after a
+`<chapter>`), so the rule from the findings README is adopted and recorded
+on `Block::Milestone`: one stands between blocks only when the block before
+it is one the writer gives a line of its own (`Book`, `ChapterStart`,
+`ChapterEnd`, another block milestone, or nothing at the head of the
+document's list); after a `Para`, `Table`, `Sidebar` or `Periph`, and at the
+head of a sidebar's or periph's own list, it belongs to an implicit `\p`.
+`place_block_milestone` implements it (a `content-outside-paragraph` naming
+the written form's line, `\esbe`/`\tr`/`\periph`, the same code the
+`\esbe`-then-milestone spelling already reported), and `parse_blocks` carries
+a `BlockListHead` for the head case. The `\periph` title line keeps only its
+text as the title and gives everything else (a milestone, a style, a note, a
+`\v`) to the division's implicit `\p` through `place_periph_title_leftovers`
+instead of dropping it silently (the D1 hole); `\periph T` + `\qt-s\*` and
+`\periph T` + `\p \qt-s\*` are one tree. One existing expectation changed
+for that reason: `verse_ends.rs::a_verse_on_a_periph_line_opens_no_verse_end`
+keeps the `VerseStart` (still no end: verses stay suspended across a periph).
+
+The next run found one more: `\v 1\vp\`, a published verse number written
+raw whose `\` ran into the `\vp*` after it. `\vp`'s number is now written as
+text; `\cp`'s stays verbatim (its reader takes one `Word` token), and the
+`\cp`-paragraph fold of ticket 27 gives up a first word only when a `Word`
+token could be it. Test: `usfm_codegen`'s
+`a_published_number_is_written_the_way_its_marker_reads_it`.
+
+`roundtrip` then ran ten minutes clean from the pruned seeds (56 987 runs in
+601 s, 94 exec/s, cov 4636, no crash), recorded in `tasks/fuzz/README.md`;
+`tasks/fuzz/findings/` is deleted; the committed corpora are the 295 seeds
+again (ticket 27 had committed 1634 grown inputs under `corpus/roundtrip/`).
+New snapshots: `recovery__block_milestone_after_a_sidebar`, `…_after_a_table`,
+`…_at_the_head_of_a_periph`, `…_on_a_periph_title_line`;
+`usx_text.rs::a_milestone_on_a_periph_title_line_reaches_the_output`. Gate
+exit 0. The spec's M5 section records that ticket 27's open criterion is met.

@@ -1,3 +1,0 @@
-\id GLO
-\c 1
-\p \v 1 something \p  \w word |keyword\w2 something \p  \w word |lemma="keyword"\w* definition

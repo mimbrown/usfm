@@ -1,10 +1,0 @@
-\id GENGL_c 0
-\\id GENs somÿÿÿ
-\c 1
-\p \v 1 something
-\v 2 something
-\c 2
-\p \v 1 somÿÿÿÿÿ\p
-\v 1 verse text \rb tex\v 1 verse textething
-\v 2 \rb tt\rb* somethin
-g

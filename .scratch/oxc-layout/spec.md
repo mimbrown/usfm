@@ -141,12 +141,21 @@ nodes (M6 revisits if the language server wants narrower diagnostics).
 Ticketed 2026-09-20 at the M4 boundary: 25 (`usfm_codegen` and the
 round-trip property test on the `pass` corpus), 26 (`usfm format` and
 `--format usfm`), 27 (the round trip as a fuzz target and a gated
-conformance step).
+conformance step). Two more came out of 27: 34 (the idiomatic note spelling
+and `\cp` on its own line) and 35 (which blocks may precede a
+`Block::Milestone`, the one finding 27 left open).
 
 `usfm_codegen` writes USFM from the AST.
 
 Exit: property test parse -> codegen -> parse yields an equal tree on the tcdocs
 `pass` corpus; a `format` subcommand in the CLI.
+
+Ticket 27 left one criterion of its own open — `tasks/fuzz`'s `roundtrip`
+target had never run ten minutes clean, its last finding being a
+`Block::Milestone` the writer had no line to put on. **Met on 2026-09-20 by
+ticket 35**: the rule is recorded on `Block::Milestone`, that finding and the
+one the next run turned up are fixed, `tasks/fuzz/findings/` is gone, and
+`roundtrip` ran 56 987 execs in 601 s from the pruned seeds with no crash.
 
 ## M6. Language server (hardening Phase 5)
 

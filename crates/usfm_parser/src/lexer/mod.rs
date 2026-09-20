@@ -130,7 +130,7 @@ fn is_name_byte(byte: u8) -> bool {
 }
 
 #[inline]
-fn is_word_byte_terminator(byte: u8) -> bool {
+pub(crate) fn is_word_byte_terminator(byte: u8) -> bool {
     matches!(byte, b'\\' | b'*' | b'|' | b'=' | b'"')
 }
 

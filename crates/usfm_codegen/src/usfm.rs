@@ -431,6 +431,14 @@ impl<W: Write> Visit for UsfmWriter<'_, '_, W> {
             self.push_fmt(format_args!("\\ca {alt}\\ca*"));
             self.newline();
         }
+        // Verbatim, unlike `\vp`'s: `\cp` has no closing marker and the parser
+        // reads a raw source word after it, so what the tree holds is what the
+        // source spelled and writing it back unchanged is what reads back
+        // unchanged. Escaping it would not — `\cp ~` would come back as the
+        // one-character number `~` rather than as a no-break space. The
+        // parser keeps its side of that: a `\cp` *paragraph* folded into the
+        // chapter before it only gives up a first word the source spells
+        // verbatim (ticket 35).
         if let Some(published) = &chapter.pub_number {
             self.push_fmt(format_args!("\\cp {published}"));
             self.newline();
@@ -508,12 +516,22 @@ impl<W: Write> Visit for UsfmWriter<'_, '_, W> {
 
     fn visit_verse_start(&mut self, verse: &VerseStart<'_>) {
         self.push_fmt(format_args!("\\v {}", verse.number));
+        // An alternate number is a `NumberList`, whose `Display` writes digits,
+        // alphabetic modifiers and `,-`: nothing to escape. A *published*
+        // number is text, and is whatever stood between `\vp` and its closing
+        // marker, so a `\` or a `|` in it has to be escaped the way text is or
+        // the next parse reads something else. Written raw, the `\` of
+        // `\v 1\vp\` and the `\` of the `\vp*` after it made one `\\`, the
+        // closing marker was gone and the number came back as `\vp*`. The
+        // round-trip fuzz target found it (ticket 35).
         if let Some(alt) = &verse.alt_number {
             self.push_fmt(format_args!(" \\va {alt}\\va*"));
         }
         if let Some(published) = &verse.pub_number {
             // Unlike `\cp`, `\vp` is a character style and has to be closed.
-            self.push_fmt(format_args!(" \\vp {published}\\vp*"));
+            self.push(" \\vp ");
+            self.write_text(published);
+            self.push("\\vp*");
         }
         // The space after the number is the marker's, never content.
         self.push(" ");
@@ -632,6 +650,46 @@ mod tests {
             "\\p \\v 1 \\va 2\\va*\\vp 1 (2)\\vp* text\n",
             "\\p \\v 1 \\va 2\\va* \\vp 1 (2)\\vp* text\n",
         );
+    }
+
+    /// A published number is text, not a number — and the two markers that
+    /// carry one read it differently, so the writer spells it differently.
+    ///
+    /// `\vp` is a character style with a closing marker, so its number is a
+    /// text run and is written as text: a `\` as `\\`, a `|` as `\|`.
+    /// `\v 1\vp\` leaves a published number of one backslash, and writing it
+    /// raw made `\` + `\vp*` into `\\` + `vp*` — the closing marker was
+    /// swallowed by the escape it accidentally completed and the number came
+    /// back as `\vp*`. The round-trip fuzz target found it (ticket 35).
+    ///
+    /// `\cp` has no closing marker and its reader takes one `Word` token, so
+    /// its number is written verbatim; escaping it would be the mismatch
+    /// instead. The parser holds up the other end: the `\cp` paragraph that
+    /// only a dropped marker can produce (ticket 27) gives up a first word
+    /// only when a `Word` token could be it.
+    #[test]
+    fn a_published_number_is_written_the_way_its_marker_reads_it() {
+        writes_body("\\p \\v 1\\vp\\\n", "\\p \\v 1 \\vp \\\\\\vp* \n");
+        // A `|` only reaches a published number escaped, and goes back the
+        // same way: unescaped it would open an attribute list.
+        writes_body("\\p \\v 1 \\vp \\|\\vp* a\n", "\\p \\v 1 \\vp \\|\\vp* a\n");
+        // A chapter's published number is the other way round: `\cp` has no
+        // closing marker and its reader takes a raw source word, so the
+        // writer spells it verbatim — and the `\cp` paragraph of ticket 27
+        // gives up only a first word the source spells verbatim. A stray `\`
+        // and a no-break space are not, so the paragraph stays a paragraph.
+        writes(
+            "\\id GEN\n\\c 3\\c\n\\cp \\ x\n\\p t\n",
+            "\\id GEN\n\\c 3\n\\p \\\\ x\n\\p t\n",
+        );
+        // A no-break space *is* a word character, so it folds — and is written
+        // as itself, since `\cp ~` would read back as the one-character
+        // number `~`.
+        writes(
+            "\\id GEN\n\\c 3\\c\n\\cp ~ x\n\\p t\n",
+            "\\id GEN\n\\c 3\n\\cp \u{a0}\n\\p x\n\\p t\n",
+        );
+        writes("\\id GEN\n\\c 3 \\cp ~\n\\p t\n", "\\id GEN\n\\c 3\n\\cp ~\n\\p t\n");
     }
 
     /// The end milestones the parser synthesizes are not written: parsing the

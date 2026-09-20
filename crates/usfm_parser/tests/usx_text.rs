@@ -172,3 +172,19 @@ fn a_verse_after_esbe_closes_the_verse_before_the_sidebar() {
     let explicit = usx("\\id GEN\n\\c 1\n\\p \\v 1 a\n\\esb\n\\p side\n\\esbe\n\\p \\v 2 b");
     assert_eq!(implicit, explicit);
 }
+
+/// Ticket 35: only text is a `\periph` title, and what else the line held used
+/// to be dropped without a word — a `\qt-s\*` there reached no output at all.
+/// It opens the division's implicit `\p` now, so the two spellings of the same
+/// thing write the same USX, exactly as they do for `\esbe` above.
+#[test]
+fn a_milestone_on_a_periph_title_line_reaches_the_output() {
+    let implicit = usx("\\id FRT\n\\periph Title|id=\"title\"\n\\qt-s |who=\"x\"\\*\n\\p a");
+    assert!(
+        implicit.contains(r#"<ms style="qt-s" who="x" />"#),
+        "{implicit}"
+    );
+    let explicit = usx("\\id FRT\n\\periph Title|id=\"title\"\n\\p \\qt-s |who=\"x\"\\*\n\\p a");
+    assert_eq!(implicit, explicit);
+    XmlDocument::from(implicit.as_bytes()).expect("well-formed XML");
+}

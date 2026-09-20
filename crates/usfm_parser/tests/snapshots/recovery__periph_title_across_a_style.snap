@@ -4,5 +4,9 @@ description: "\\id GEN\n\\periph Title\n\\w a\\w*\nmore\n"
 ---
 Book GEN "" @0..7
 Periph periph@8..35 title="Title more"@16..35
+  Para p@22..29
+    Char w@22..29
+      Text "a"@25..26
 --- diagnostics
 info[character-style-nested-without-plus] @22..24: `\w` is nested without `+`; treated as `\+w`
+error[content-outside-paragraph] @22..29: content after `\periph` is outside a paragraph; an implicit `\p` was opened

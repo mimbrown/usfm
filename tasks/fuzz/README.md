@@ -138,16 +138,16 @@ final code, and the first (106 298 runs in 601 s, 177 exec/s, from the 295
 seeds) was clean as well. Its corpus row is larger because the second run
 started from what the first one had found; `./seed.sh --prune` puts the
 committed corpus back to the seeds afterwards. `roundtrip`'s row is from its
-twenty-first run, which started from the pruned seeds; the twenty before it had
-grown the corpus to about 2900 files, which is how they kept reaching further
-in.
+twenty-third run, the first that was clean; each run before it started from the
+pruned seeds too, so the depth in the table is what ten minutes reaches from
+them.
 
 | Target | exec/s | corpus at the end | cov | ft | crashes |
 | --- | --- | --- | --- | --- | --- |
 | `parse_lossy` | 49 (29 749 runs in 601 s) | 1647 files, 14.9 MB | 4175 | 22 337 | none |
 | `parse_utf8` | 83 (50 097 runs in 601 s) | 1622 files, 13.7 MB | 4200 | 22 225 | none |
 | `parse_html` | 166 (100 068 runs in 601 s) | 2110 files, 16 MB | 3408 | 20 830 | none |
-| `roundtrip` | 119 (35 101 runs in 601 s) | 1824 files, 17 MB | 4429 | 21 032 | **one**, below |
+| `roundtrip` | 94 (56 987 runs in 601 s) | 2256 files, 22 MB | 4636 | 23 380 | none |
 
 `parse_html` found nothing in either run: the escaping it checks for went in
 with the target (ticket 14), so the hole ticket 06 left in the HTML writer was
@@ -159,22 +159,21 @@ the twenty ten-minute runs after it found one more. Twenty-one findings,
 nineteen bugs — two of the bugs were found
 twice, by different inputs, and the second of those took two goes: the first
 fix moved the blocks after parsing and left a verse end dangling, which is what
-the second finding was. They fall out as four in `usfm_ast` (three in
-`add_child`, one in `NumberRange`'s display), fourteen in the parser and one in
-`usfm_codegen`'s attribute writer — and eighteen of the nineteen are fixed.
-The one that is not is a `Block::Milestone` the writer has no line to put on:
-after a `Sidebar` or a `Table`, or first in a `\periph` division, the line
-before it reaches out and takes it back. Three inputs spell it and they are all
-in `findings/`, with `findings/README.md` on why the fix is an AST-shape
-question rather than a repair at one site.
+the second finding was. The runs got deeper as they went, because each started
+from the corpus the one before had left: the first finding was 487 execs in,
+the twentieth 34 553. The twenty-first, from the 295 committed seeds again
+after `./seed.sh --prune`, found a twenty-second input at 35 101 execs — a
+second spelling of the one finding ticket 27 left open, the `Block::Milestone`
+the writer had no line to put on.
 
-The runs got deeper as they went, because each started from the corpus the one
-before had left: the first finding was 487 execs in, the twentieth 34 553. The
-run in the table above is the twenty-first, from the 295 committed seeds again
-after `./seed.sh --prune` — and it is **not clean**: at 35 101 execs it found
-`\esb\c\sh\*`, a second spelling of the open finding, which went to
-`findings/` beside the first. So `roundtrip` has never yet run ten minutes
-clean; every other target has.
+Ticket 35 closed that one (the rule is on `Block::Milestone`) and the
+twenty-second run, from the pruned seeds, found one more at about 38 700
+execs: `\v 1\vp\`, a published verse number holding a backslash, written raw.
+The twenty-third is the clean one in the table. Twenty-three findings, twenty bugs in all, falling out as four in
+`usfm_ast` (three in `add_child`, one in `NumberRange`'s display), fourteen in
+the parser and two in `usfm_codegen`'s writers — **and every one of them is
+fixed**, so `findings/` is gone. Recreate it only when a finding cannot be
+fixed in the sitting it was found in; nothing is left there now.
 
 Found on the way there, each fixed with the test named:
 
@@ -188,8 +187,8 @@ Found on the way there, each fixed with the test named:
 | `\rb b\|"h=c"` | two bare values both became `gloss`, so the USX had one attribute twice | `recovery.rs::duplicate_attribute`, `usx_text.rs::repeated_attributes_are_written_once` |
 | `\w a\|b<c="1"\w*` | an attribute name that is not an XML name went into the output verbatim | `recovery.rs::malformed_attribute_name`, `usx_text.rs::attributes_that_are_not_xml_names_are_dropped` |
 
-And `roundtrip`'s eighteen fixed ones (ticket 27; the nineteenth is in
-`findings/`). All but the first are in `usfm_codegen`'s
+And `roundtrip`'s twenty, all of them fixed (tickets 27 and 35). All but the
+first are in `usfm_codegen`'s
 `roundtrip.rs::the_fuzz_findings_round_trip`, which checks the property they
 were found by; the first is a whole file, covered there by
 `the_machine_py_fixtures_round_trip`. The rule each one broke has its own test
@@ -201,7 +200,7 @@ in the crate that was wrong.
 | `\ \* i` | a `\*` that ends no milestone leaves the whitespace on both sides of it, and the two text runs merged into a `Text` holding two spaces — which rule 1 says no `Text` holds (AST fix, in `add_child`) | `whitespace.rs::whitespace_collapses_across_a_dropped_marker` |
 | `\p\* n` | the same drop with nothing to merge with: the whitespace stayed as the paragraph's first text's leading space, which rule 6 gives to the marker (AST fix) | `whitespace.rs::leading_whitespace_after_a_dropped_marker_is_not_text_either` |
 | `\v 3\* x` | the same, one node along: `\v N` is always written with its space, so the text's own leading space made two (AST fix) | same |
-| ` i\periph\v 2` | a `\v` on a `\periph` line opened a verse whose start was thrown away with the rest of the line while its end was emitted — into the paragraph before the periph (parser fix: peripheral matter has no verses, the title line included) | `verse_ends.rs::a_verse_on_a_periph_line_opens_no_verse` |
+| ` i\periph\v 2` | a `\v` on a `\periph` line opened a verse whose start was thrown away with the rest of the line while its end was emitted — into the paragraph before the periph (parser fix: peripheral matter closes no verse, the title line included) | `verse_ends.rs::a_verse_on_a_periph_line_opens_no_verse_end` |
 | `\v 4-4t` | a verse range whose ends are the same number is written as that number — but the `t` on the end had nowhere else to go, so `4-4t` came back as `4`, a different verse (`usfm_ast` fix, in `NumberRange`'s `Display`) | `usfm_ast`'s `a_collapsed_range_keeps_an_end_modifier` |
 | `\periph\|: `, `\periph\|s \` | a default attribute value that ends a `\periph` attribute list kept its trailing whitespace, and the writer's own line break read it back without (parser fix: the list ends with the line, so that whitespace is the line's) | `attributes.rs::a_periph_default_value_that_ends_the_list_drops_its_trailing_whitespace` |
 | `\z\|"a=\*` | the separator the writer put between a default attribute and the pair after it was read back as part of the default's verbatim value (codegen fix: nothing is written after a default pair) | `usfm_codegen`'s `a_default_attribute_gets_no_separator_after_it` |
@@ -215,3 +214,5 @@ in the crate that was wrong.
 | `r\id\-\*` | a block-level milestone whose paragraph was closed by an `\id` the parser then dropped: nothing stood between them in the tree, and written out the paragraph ran on and swallowed the milestone (parser fix: such a milestone goes inside the paragraph) | `recovery.rs::a_block_milestone_after_a_paragraph_that_nothing_closed_is_inline` |
 | `\v 1\v\vp` | a `\va` or `\vp` that reached a paragraph as a character style, because the `\v` between it and the verse was dropped: a writer has nowhere to put `alt_number` and `pub_number` but right after the number, so the written form read them back as those (parser fix: so does the parser now, wherever they come from) | `recovery.rs::a_va_or_vp_after_a_verse_is_its_number_however_it_got_there` |
 | `\v 1\vp x` | an unclosed `\vp` after `\v N` stayed beside the verse as a `Char`, a tree no USFM spells: closing it, as the writer must, reads it back as the published number (parser fix: it is lifted whether or not it is closed) | `recovery.rs::published_verse_number_not_closed` |
+| `\esb\c\sh\*`, `\p x\n\tr \tc1 y\n\c\n\zaln-s\*`, `\periph\id\e\*` | a `Block::Milestone` the writer has no line to put on: `\esbe`, a `\tr` row and a `\periph` title all run to the next paragraph marker, so the written form takes the milestone back — and the `\periph` title, which keeps only text, dropped it without a diagnostic (ticket 35, parser fix: such a milestone opens an implicit `\p`, the rule is on `Block::Milestone`) | `recovery.rs::a_block_milestone_after_a_sidebar_is_inside_an_implicit_paragraph`, `…_after_a_table_…`, `…_at_the_head_of_a_periph_…`, `usx_text.rs::a_milestone_on_a_periph_title_line_reaches_the_output` |
+| `\v 1\vp\` | a published verse number holding a backslash, written raw: it and the `\` of the `\vp*` after it made one escape, the closing marker was gone and the number came back as `\vp*` (ticket 35, codegen fix: `\vp`'s number is written as text; `\cp`'s stays verbatim, and the parser now folds a `\cp` paragraph only when a `Word` token could carry its first word) | `usfm_codegen`'s `a_published_number_is_written_the_way_its_marker_reads_it` |
