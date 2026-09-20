@@ -254,8 +254,10 @@ export async function activate(context: ExtensionContext) {
   // Create the language client and start the client.
   client = new LanguageClient(languageClientName, serverOptions, clientOptions);
 
-  // The server sends `window/showMessage` for one thing only: a project
-  // stylesheet it could not read (ticket 30). Show it, and log the rest.
+  // The server sends `window/showMessage` for two things: a project
+  // stylesheet it could not read (ticket 30), and a formatting request it
+  // refused because the file has an error (ticket 31). Show them, and log the
+  // rest.
   const onNotificationDispose = client.onNotification(
     ShowMessageNotification.type,
     (params) => {

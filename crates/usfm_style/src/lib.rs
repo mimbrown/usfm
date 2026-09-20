@@ -144,6 +144,8 @@ pub trait Marker {
 
 #[derive(Debug, Default)]
 pub struct StyleRuleBuilder {
+    name: Option<String>,
+    description: Option<String>,
     style_type: Option<StyleType>,
     text_type: Option<TextType>,
     text_properties: Option<TextProperties>,
@@ -160,6 +162,15 @@ impl StyleRuleBuilder {
 #[derive(Debug, Clone)]
 pub struct StyleRule {
     pub marker: String,
+    /// `\Name`: the marker's title, as Paratext's sheet writes it
+    /// (`"p - Paragraph - Normal - First Line Indent"`). `None` for a rule
+    /// from a sheet that does not say, and for one the parser derived
+    /// (`\k-s` from `\k`, an unknown milestone). Nothing in the toolchain
+    /// decides anything by it: it is documentation, which is what the
+    /// language server shows on hover (ticket 31).
+    pub name: Option<String>,
+    /// `\Description`: one sentence on what the marker is for.
+    pub description: Option<String>,
     pub style_type: StyleType,
     pub text_type: TextType,
     pub text_properties: TextProperties,
@@ -177,6 +188,8 @@ impl StyleRule {
     ) -> Result<Self, StyleParseError> {
         Ok(Self {
             marker,
+            name: builder.name.take(),
+            description: builder.description.take(),
             style_type: builder
                 .style_type
                 .take()
@@ -189,6 +202,12 @@ impl StyleRule {
     }
 
     fn apply_builder(&mut self, builder: &mut StyleRuleBuilder) {
+        if let Some(name) = builder.name.take() {
+            self.name = Some(name);
+        }
+        if let Some(description) = builder.description.take() {
+            self.description = Some(description);
+        }
         if let Some(style_type) = builder.style_type.take() {
             self.style_type = style_type;
         }
@@ -321,6 +340,23 @@ impl FromStr for StyleSheetBuilder {
                         builder.cut_rule()?;
                         builder.current_marker = value.trim().to_string();
                     }
+                    // Documentation, kept so that a tool can show it: the
+                    // language server's hover is the stylesheet's own words
+                    // about the marker under the cursor (ticket 31). An empty
+                    // value is no value, the way a missing line is.
+                    "Name" => {
+                        let name = value.trim();
+                        if !name.is_empty() {
+                            builder.current_marker_builder.name = Some(name.to_string());
+                        }
+                    }
+                    "Description" => {
+                        let description = value.trim();
+                        if !description.is_empty() {
+                            builder.current_marker_builder.description =
+                                Some(description.to_string());
+                        }
+                    }
                     "StyleType" => {
                         builder.current_marker_builder.style_type =
                             Some(StyleType::from_str(value)?);
@@ -415,5 +451,53 @@ impl FromStr for StyleSheet {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let builder = StyleSheetBuilder::from_str(s)?;
         Ok(StyleSheet::from_builder(builder))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `\Name` and `\Description` are kept as the sheet writes them, and a
+    /// repeated `\Marker` amends them like every other field (which is how
+    /// `usfm-extra.sty` corrects an entry of Paratext's sheet).
+    #[test]
+    fn a_rule_keeps_its_name_and_description() {
+        let sheet = StyleSheet::from_str(
+            "\\Marker p\n\
+             \\Name p - Paragraph - Normal - First Line Indent\n\
+             \\Description Paragraph text, with first line indent\n\
+             \\StyleType Paragraph\n\
+             \\OccursUnder id c\n\
+             \n\
+             \\Marker zx\n\
+             \\StyleType Character\n\
+             \n\
+             \\Marker p\n\
+             \\Description Amended\n",
+        )
+        .expect("a well-formed sheet");
+
+        let p = sheet.get_rule_by_marker("p").expect("the `p` rule");
+        assert_eq!(
+            p.name.as_deref(),
+            Some("p - Paragraph - Normal - First Line Indent")
+        );
+        assert_eq!(p.description.as_deref(), Some("Amended"));
+        assert_eq!(p.occurs_under, ["id", "c"]);
+
+        // A sheet that says neither leaves both unset rather than empty.
+        let zx = sheet.get_rule_by_marker("zx").expect("the `zx` rule");
+        assert_eq!(zx.name, None);
+        assert_eq!(zx.description, None);
+    }
+
+    /// A `\Name` with nothing after it is no name: the hover has nothing to
+    /// show either way, and `Some("")` would print an empty line.
+    #[test]
+    fn an_empty_name_is_no_name() {
+        let sheet = StyleSheet::from_str("\\Marker p\n\\Name\n\\StyleType Paragraph\n")
+            .expect("a well-formed sheet");
+        assert_eq!(sheet.get_rule_by_marker("p").unwrap().name, None);
     }
 }

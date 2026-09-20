@@ -2390,6 +2390,9 @@ impl<'a> ParserImpl<'a> {
 
         let rule = StyleRule {
             marker: name.to_string(),
+            // A derived rule has no sheet entry to take documentation from.
+            name: None,
+            description: None,
             style_type: StyleType::Milestone,
             text_type,
             text_properties: TextProperties::default(),

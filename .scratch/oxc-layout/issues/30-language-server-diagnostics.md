@@ -45,7 +45,7 @@ extension shows the server's diagnostics on a file with an unknown marker
 
 ## Answer
 
-Landed via PR #38 (2026-09-20). `apps/usfm_language_server` (binary
+Landed in `c258619` (PR #38, 2026-09-20). `apps/usfm_language_server` (binary
 `usfm-language-server`) on `tower-lsp-server` 0.23 and `tokio` (workspace
 dependencies again, tokio with the four features an stdio loop needs), on
 the facade with `default-features = false`. Four modules: `main.rs`
