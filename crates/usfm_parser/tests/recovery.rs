@@ -163,6 +163,55 @@ fn a_block_milestone_after_a_paragraph_that_nothing_closed_is_inline() {
     snapshot("block_milestone_after_an_unclosed_paragraph", source);
 }
 
+/// The same rule, completed for the other three constructs whose written form
+/// runs to the next *paragraph* marker (ticket 35, and the rule is on
+/// `Block::Milestone`). `\esbe`, a `\tr` row and a `\periph` title each take in
+/// a milestone written on the line after them, so a `Block::Milestone` there is
+/// a tree no USFM spells; it opens an implicit `\p` instead, reported like any
+/// other content outside a paragraph.
+///
+/// Each of the three needs a dropped marker to arise at all — here a `\c` with
+/// no number and an `\id` with no book code — which is why the `roundtrip` fuzz
+/// target found them and nothing else had.
+#[test]
+fn a_block_milestone_after_a_sidebar_is_inside_an_implicit_paragraph() {
+    let source = "\\esb\\c\\sh\\*";
+    let rendered = common::render(source);
+    assert!(
+        rendered.contains("Sidebar esb") && !rendered.contains("\nMilestone"),
+        "the milestone should be in a paragraph after the sidebar:\n{rendered}"
+    );
+    snapshot("block_milestone_after_a_sidebar", source);
+}
+
+#[test]
+fn a_block_milestone_after_a_table_is_inside_an_implicit_paragraph() {
+    let source = "\\p x\n\\tr \\tc1 y\n\\c\n\\zaln-s\\*";
+    let rendered = common::render(source);
+    assert!(
+        rendered.contains("Table") && !rendered.contains("\nMilestone"),
+        "the milestone should be in a paragraph after the table:\n{rendered}"
+    );
+    snapshot("block_milestone_after_a_table", source);
+}
+
+/// Two spellings of the same thing: the milestone reaches the head of the
+/// division's block list through a dropped `\id`, and it stands on the
+/// `\periph` title line itself. Only text is the title, so the second used to
+/// drop the milestone without a word — a hole in "recovery is never silent"
+/// (`docs/plans/hardening.md` D1). Both open the division's implicit `\p`, and
+/// that is what `usfm_codegen` writes for either.
+#[test]
+fn a_block_milestone_at_the_head_of_a_periph_is_inside_an_implicit_paragraph() {
+    let after_a_dropped_id = common::render("\\periph\\id\\e\\*");
+    assert!(
+        after_a_dropped_id.contains("Periph periph") && !after_a_dropped_id.contains("\nMilestone"),
+        "the milestone should be in the division's first paragraph:\n{after_a_dropped_id}"
+    );
+    snapshot("block_milestone_at_the_head_of_a_periph", "\\periph\\id\\e\\*");
+    snapshot("block_milestone_on_a_periph_title_line", "\\id FRT\n\\periph T\n\\qt-s |who=\"x\"\\*\n\\p a");
+}
+
 #[test]
 fn unmatched_closing_marker() {
     check(

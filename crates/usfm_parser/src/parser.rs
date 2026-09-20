@@ -22,7 +22,7 @@ use crate::style::Style;
 use usfm_ast::string_parser::ParseStr;
 
 use crate::{
-    lexer::{Kind, Lexer},
+    lexer::{Kind, Lexer, is_word_byte_terminator},
     parser_parse::UniquePromise,
 };
 
@@ -292,6 +292,19 @@ fn verse_end<'a>(number: NumberList) -> Inline<'a> {
     Inline::VerseEnd(VerseEnd { number, span: SPAN })
 }
 
+/// An inline node's own span, whichever variant it is.
+fn inline_span(inline: &Inline<'_>) -> Span {
+    match inline {
+        Inline::Text(text) => text.span,
+        Inline::VerseStart(verse) => verse.span,
+        Inline::VerseEnd(verse) => verse.span,
+        Inline::Char(char) => char.span,
+        Inline::Note(note) => note.span,
+        Inline::Milestone(milestone) => milestone.span,
+        Inline::OptBreak(opt_break) => opt_break.span,
+    }
+}
+
 enum InnerListCloser {
     /// A table cell marker (already consumed) with its span; only produced
     /// inside a table cell.
@@ -317,6 +330,21 @@ impl InnerListCloser {
             InnerListCloser::Paragraph(..) | InnerListCloser::TableCell(..) | InnerListCloser::Eof
         )
     }
+}
+
+/// What stands before the first block of the list [`ParserImpl::parse_blocks`]
+/// is filling, which decides whether a [`Block::Milestone`] may open it. See
+/// [`ParserImpl::place_block_milestone`].
+#[derive(Clone, Copy)]
+enum BlockListHead {
+    /// The document's own block list: nothing precedes it, so a milestone
+    /// written first is read back as a milestone.
+    Free,
+    /// A `Sidebar`'s or a `Periph`'s list. The writer opens it with a line of
+    /// its own — `\esb`, `\periph Title` — and that line runs to the next
+    /// paragraph marker, so a milestone written first would be read back as
+    /// part of it. The name is the marker that opens the line.
+    AfterOpeningLine(&'static str),
 }
 
 /// What the block loop found when it needed a block marker.
@@ -423,7 +451,7 @@ impl<'a> ParserImpl<'a> {
 
     pub fn parse(mut self) -> ParseResult<'a> {
         let mut blocks = vec![];
-        let closer = self.parse_blocks(&mut blocks, None, |_| false);
+        let closer = self.parse_blocks(&mut blocks, None, BlockListHead::Free, |_| false);
         debug_assert!(closer.is_none(), "nothing stops the top-level block loop");
         // End of input closes the open verse and chapter.
         self.end_verse_before_block(&mut blocks);
@@ -448,6 +476,7 @@ impl<'a> ParserImpl<'a> {
         &mut self,
         blocks: &mut Vec<Block<'a>>,
         mut pending: Option<(usize, Span)>,
+        head: BlockListHead,
         stop: impl Fn(usize) -> bool,
     ) -> Option<(usize, Span)> {
         loop {
@@ -456,7 +485,7 @@ impl<'a> ParserImpl<'a> {
                 None => match self.parse_block_start() {
                     BlockStart::Marker(marker, span) => (marker, span),
                     BlockStart::Milestone(milestone) => {
-                        self.place_block_milestone(blocks, milestone);
+                        self.place_block_milestone(blocks, milestone, head);
                         continue;
                     }
                     BlockStart::Eof => return None,
@@ -507,29 +536,72 @@ impl<'a> ParserImpl<'a> {
         }
     }
 
-    /// A milestone found between blocks, placed where the source puts it.
+    /// A milestone found between blocks, placed where a writer could put it
+    /// back.
     ///
-    /// Normally that is beside the paragraphs, as `Block::Milestone` — USX
-    /// writes `<ms>` next to `<para>`, and the milestone reached this point
-    /// precisely because no paragraph was open. But "no paragraph was open"
-    /// can also mean *the marker that closed the last one left no node*: an
-    /// `\id` with no book code, an unknown marker, anything the block loop
-    /// skipped. Nothing then stands between the paragraph and the milestone in
-    /// the tree, and no USFM spells that — written out, the paragraph runs on
-    /// and swallows the milestone as an inline one. So it goes inside the
-    /// paragraph, which is what the remaining text says. The round-trip fuzz
-    /// target found this (`r\id\-\*`, ticket 27).
+    /// USX writes `<ms>` next to `<para>`, so a milestone with no paragraph
+    /// open is normally a `Block::Milestone`. But USFM has no marker that ends
+    /// a line, and several block constructs are written as a line that runs to
+    /// the next *paragraph* marker: a `\p` and its content, an `\esbe`, a `\tr`
+    /// row, a `\periph` title. Write a milestone on the line after one of those
+    /// and the parser reads it back as part of that line — so a
+    /// `Block::Milestone` standing there is a tree no USFM spells. The rule is
+    /// on [`Block::Milestone`]: only a `Book`, a `ChapterStart`, a
+    /// `ChapterEnd`, another block milestone or the head of the document's own
+    /// block list may precede one.
     ///
-    /// A milestone that really does stand between blocks always has a block
-    /// between it and the paragraph before it — the `\c`, `\id` or `\esb` that
-    /// ended that paragraph — so this never fires on one.
-    fn place_block_milestone(&mut self, blocks: &mut Vec<Block<'a>>, milestone: Milestone<'a>) {
+    /// Everything else takes the milestone in, which is what the written form
+    /// says:
+    ///
+    /// * after a `Para` it is that paragraph's last child. The paragraph is
+    ///   only ever *last* here because the marker that closed it left no node —
+    ///   an `\id` with no book code, an unknown marker, anything the block loop
+    ///   skipped (`r\id\-\*`, ticket 27).
+    /// * after a `Table`, a `Sidebar` or a `Periph`, and at the head of a
+    ///   sidebar's or a periph's own list, it opens an implicit `\p`, reported
+    ///   like any other content outside a paragraph. Those spellings also need
+    ///   a dropped marker to arise — `\esb\c\sh\*`, `\tr \tc1 y\c` then
+    ///   `\zaln-s\*`, `\periph\id\e\*` (ticket 35).
+    fn place_block_milestone(
+        &mut self,
+        blocks: &mut Vec<Block<'a>>,
+        milestone: Milestone<'a>,
+        head: BlockListHead,
+    ) {
         if let Some(Block::Para(para)) = blocks.last_mut() {
             para.span.end = milestone.span.end;
             para.add_child(Inline::Milestone(milestone));
             return;
         }
-        blocks.push(Block::Milestone(milestone));
+        // The marker that ends the line the writer would put the milestone
+        // on — which is the line that would swallow it. It names the *written*
+        // form, so a sidebar the source never closed is still `\esbe`: that is
+        // what `usfm_codegen` writes for it. `Block::Para` is not among them,
+        // being handled above.
+        let runs_on: Option<&'static str> = match blocks.last() {
+            Some(Block::Table(_)) => Some("tr"),
+            Some(Block::Sidebar(_)) => Some("esbe"),
+            Some(Block::Periph(_)) => Some("periph"),
+            // A `Book`, a `ChapterStart`, a `ChapterEnd` and a block milestone
+            // each end their own line, so a milestone may follow one.
+            Some(_) => None,
+            None => match head {
+                BlockListHead::Free => None,
+                BlockListHead::AfterOpeningLine(marker) => Some(marker),
+            },
+        };
+        let Some(runs_on) = runs_on else {
+            blocks.push(Block::Milestone(milestone));
+            return;
+        };
+        let span = milestone.span;
+        let mut para = Para {
+            style: StyleId::new(self.p as u32),
+            children: vec![],
+            span,
+        };
+        para.add_child(Inline::Milestone(milestone));
+        self.content_after_marker(blocks, para, runs_on);
     }
 
     /// `\esb` … `\esbe`. The `\esb` line may carry a `\cat` category and
@@ -556,9 +628,12 @@ impl<'a> ParserImpl<'a> {
         }
 
         let (esb, esbe, c) = (self.esb, self.esbe, self.c);
-        pending = self.parse_blocks(&mut sidebar.blocks, pending, |marker| {
-            marker == esbe || marker == esb || marker == c
-        });
+        pending = self.parse_blocks(
+            &mut sidebar.blocks,
+            pending,
+            BlockListHead::AfterOpeningLine("esb"),
+            |marker| marker == esbe || marker == esb || marker == c,
+        );
         self.verses_suspended -= 1;
         match pending {
             Some((marker, span)) if marker == esbe => {
@@ -639,11 +714,22 @@ impl<'a> ParserImpl<'a> {
         let ParserInlineContext::Char(head) = head else {
             unreachable!("context variant does not change");
         };
+        // Only the line's *text* is the title. Anything else it holds — a
+        // character style, a note, a milestone — used to be read and then
+        // thrown away without a word, which "recovery is never silent"
+        // (`docs/plans/hardening.md` D1) does not allow, and which no writer
+        // could reproduce: written back it would be gone. Take it out now and
+        // give it an implicit `\p` at the head of the division, which is where
+        // the writer puts a milestone that belongs there anyway
+        // (`Block::Milestone`'s rule, ticket 35).
+        let (runs, over): (Vec<Inline<'a>>, Vec<Inline<'a>>) = head
+            .children
+            .into_iter()
+            .partition(|inline| matches!(inline, Inline::Text(_)));
         // The title's span is its text run, up to the `|`. Only text read from
         // the source counts: a node the line synthesized carries `SPAN`,
         // which would put the end of the title at offset 0.
-        let title_end = head
-            .children
+        let title_end = runs
             .iter()
             .rev()
             .find_map(|inline| match inline {
@@ -651,8 +737,7 @@ impl<'a> ParserImpl<'a> {
                 _ => None,
             })
             .unwrap_or(marker_span.end);
-        let title: String = head
-            .children
+        let title: String = runs
             .iter()
             .filter_map(|inline| match inline {
                 Inline::Text(text) => Some(text.content.as_ref()),
@@ -670,8 +755,7 @@ impl<'a> ParserImpl<'a> {
         let mut periph = Periph {
             style: StyleId::new(self.periph as u32),
             title: (!title.is_empty()).then(|| {
-                let start = head
-                    .children
+                let start = runs
                     .iter()
                     .find_map(|inline| match inline {
                         Inline::Text(text) if text.span != SPAN => Some(text.span.start),
@@ -684,6 +768,7 @@ impl<'a> ParserImpl<'a> {
             blocks: vec![],
             span: marker_span,
         };
+        self.place_periph_title_leftovers(&mut periph.blocks, over, marker_span);
         let pending = match closer {
             InnerListCloser::Paragraph(marker, span) => Some((marker, span)),
             InnerListCloser::Eof => None,
@@ -713,14 +798,20 @@ impl<'a> ParserImpl<'a> {
         let mut id_span = None;
         let mut pending = pending;
         loop {
-            pending = self.parse_blocks(&mut periph.blocks, pending, |marker| {
-                // `outer_stop` too: whatever ends the container this division
-                // is in ends the division. Without it a `\periph` inside a
-                // sidebar swallowed the `\esbe` that closes it — and a
-                // sidebar the writer cannot close is a tree it cannot write
-                // (ticket 27). At the top level `outer_stop` is never true.
-                marker == periph_marker || marker == id || outer_stop(marker)
-            });
+            pending = self.parse_blocks(
+                &mut periph.blocks,
+                pending,
+                BlockListHead::AfterOpeningLine("periph"),
+                |marker| {
+                    // `outer_stop` too: whatever ends the container this
+                    // division is in ends the division. Without it a `\periph`
+                    // inside a sidebar swallowed the `\esbe` that closes it —
+                    // and a sidebar the writer cannot close is a tree it
+                    // cannot write (ticket 27). At the top level `outer_stop`
+                    // is never true.
+                    marker == periph_marker || marker == id || outer_stop(marker)
+                },
+            );
             let Some((marker, span)) = pending else { break };
             if marker != id {
                 break;
@@ -744,6 +835,41 @@ impl<'a> ParserImpl<'a> {
             blocks.push(block);
         }
         pending
+    }
+
+    /// Everything on a `\periph` line that the title is not. The line is read
+    /// as a character style so that `|` introduces attributes, so it can hold
+    /// any inline node; only the text runs become the title. The rest opens an
+    /// implicit `\p` at the head of the division, in source order — the same
+    /// place `place_block_milestone` gives a milestone that follows the line,
+    /// so the two spellings of `\periph` + `\qt-s\*` read the same and the
+    /// writer can put either back.
+    fn place_periph_title_leftovers(
+        &mut self,
+        blocks: &mut Vec<Block<'a>>,
+        over: Vec<Inline<'a>>,
+        marker_span: Span,
+    ) {
+        if over.is_empty() {
+            return;
+        }
+        // The implicit `\p` has no marker of its own, so its span is the
+        // content it holds (`span_check`'s `MarkerOrImplicit`). A node the
+        // line synthesized carries `SPAN` and is not source to point at.
+        let read = || over.iter().map(inline_span).filter(|span| *span != SPAN);
+        let span = match (read().next(), read().next_back()) {
+            (Some(first), Some(last)) => Span::new(first.start, last.end),
+            _ => marker_span,
+        };
+        let mut para = Para {
+            style: StyleId::new(self.p as u32),
+            children: vec![],
+            span,
+        };
+        for inline in over {
+            para.add_child(inline);
+        }
+        self.content_after_marker(blocks, para, "periph");
     }
 
     /// Content on a marker line that takes none (`\esb`, `\esbe`): keep it
@@ -1100,14 +1226,26 @@ impl<'a> ParserImpl<'a> {
             let end = content
                 .find(|c: char| c.is_ascii_whitespace())
                 .unwrap_or(content.len());
-            pub_number = Some(Cow::Owned(content[..end].to_string()));
-            let rest = content[end..]
-                .trim_start_matches(|c: char| c.is_ascii_whitespace())
-                .to_string();
-            if rest.is_empty() {
-                para.children.remove(0);
-            } else {
-                text.content = Cow::Owned(rest);
+            let word = &content[..end];
+            // `\cp`'s own reader takes one `Word` token, so a published number
+            // is only ever a word the lexer would hand back whole — and
+            // `usfm_codegen` writes it verbatim for the same reason. This
+            // paragraph's text can hold what a word cannot: a stray `\`, a
+            // `"`, a `|`. Written as `\cp <that>`, the line would read back
+            // differently or not at all, so such a first word stays text and
+            // the whole paragraph becomes the implicit `\p` below (ticket 35).
+            let readable_as_a_word = !word.is_empty()
+                && !word.bytes().any(is_word_byte_terminator);
+            if readable_as_a_word {
+                pub_number = Some(Cow::Owned(word.to_string()));
+                let rest = content[end..]
+                    .trim_start_matches(|c: char| c.is_ascii_whitespace())
+                    .to_string();
+                if rest.is_empty() {
+                    para.children.remove(0);
+                } else {
+                    text.content = Cow::Owned(rest);
+                }
             }
         }
         if let Some(Block::ChapterStart(chapter)) = blocks.last_mut() {

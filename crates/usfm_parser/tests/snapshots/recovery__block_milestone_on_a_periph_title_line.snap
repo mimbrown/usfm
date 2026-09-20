@@ -1,0 +1,12 @@
+---
+source: crates/usfm_parser/tests/recovery.rs
+description: "\\id FRT\n\\periph T\n\\qt-s |who=\"x\"\\*\n\\p a"
+---
+Book FRT "" @0..7
+Periph periph@8..39 title="T"@16..18
+  Para p@18..34
+    Milestone qt-s@18..34 who="x"
+  Para p@35..39
+    Text "a"@38..39
+--- diagnostics
+error[content-outside-paragraph] @18..34: content after `\periph` is outside a paragraph; an implicit `\p` was opened

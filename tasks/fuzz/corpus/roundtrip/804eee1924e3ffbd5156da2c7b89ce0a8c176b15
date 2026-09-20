@@ -1,7 +1,0 @@
-Üid GLYO
-\c 1
-p \v 1 something \p  \cd GLYO
-\c 1
-p \v 1 something \p  \c 2
-\p \v 1 something \p  \k keyword\1* ndfiniti2on\ 2
-\p \v 1 something \p  \k keyword\1* ndfiniti2on\k keyword\k* definition

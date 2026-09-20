@@ -143,6 +143,27 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **Where a `Block::Milestone` may stand (ticket 35, M5).** The rule is on
+  `Block::Milestone`: one stands between blocks only when the block before it
+  is one the writer gives a line of its own — a `Book`, a `ChapterStart`, a
+  `ChapterEnd`, another block milestone, or nothing at the head of the
+  *document's* block list. After a `Para`, a `Table`, a `Sidebar` or a
+  `Periph`, and at the head of a sidebar's or a periph's own list, it belongs
+  to an implicit `\p`, because `\p`, `\esbe`, a `\tr` row and a `\periph`
+  title all run to the next *paragraph* marker and take back a milestone
+  written on the line after them. USFM has no marker that ends a line, so
+  there is nothing else to write. `place_block_milestone` implements it,
+  `parse_blocks` carries a `BlockListHead` for the head case, and no reference
+  file disagrees: the only block-level `<ms>` in either conformance root
+  (`usfmjsTests/ts`, `ts_2`) follows a `<chapter>`. With it, the `\periph`
+  title line stopped swallowing things: only its text is the title, and
+  whatever else stood on it — a milestone, a character style, a note, a `\v` —
+  opens the division's implicit `\p` instead of vanishing (a hole in D1), so
+  `\periph T` + `\qt-s\*` and `\periph T` + `\p \qt-s\*` are one tree. Also in
+  the ticket, from the fuzz run that followed: `\vp`'s published number is
+  written as text (a `\` in it ran into the `\vp*` after it), while `\cp`'s
+  stays verbatim — `\cp` reads one `Word` token, so the `\cp`-paragraph fold
+  of ticket 27 now gives up a first word only when a `Word` token could be it.
 - **The round trip as an invariant (ticket 27, M5).** parse -> USFM -> parse is
   now asserted in three places off one definition
   (`usfm_tests::roundtrip::check`): the trees are equal ignoring spans, the
@@ -156,17 +177,13 @@ Recent progress:
   books and now the seven machine.py fixtures), the gate's
   `--roundtrip tasks/conformance/roundtrip-known.txt` step over every
   conformance case of both roots, and `tasks/fuzz`'s `roundtrip` target.
-  **Twenty bugs came out of it** — nineteen the `roundtrip` target found over
-  twenty-one findings in as many runs (one of them on a seed, which is ticket
-  28) and ticket 29, which the ticket named. Nineteen of the twenty are fixed;
-  the one that is not is written up in `tasks/fuzz/findings/` — a
-  `Block::Milestone` the writer has no line to put on (after a `Sidebar` or a
-  `Table`, or first in a `\periph` division, the line before it takes it back),
-  which is a question about which blocks may precede one at all rather than a
-  repair at one site. **`roundtrip` has therefore not run ten minutes clean**:
-  its twenty-first run found that one at 35 101 execs, and each run before it
-  found one more bug, the first 487 execs in.
-  Each fixed one became a test first and then a fix in the crate that was
+  **Twenty-one bugs came out of it** — twenty the `roundtrip` target found,
+  over twenty-three findings (one of them on the seed scan, which is ticket
+  28), and ticket 29, which the ticket named. **All of them are fixed**, the
+  last two by ticket 35, and `roundtrip` then ran ten minutes clean from the
+  seeds on its twenty-third run (56 987 runs, 94 exec/s), so
+  `tasks/fuzz/findings/` is gone and every target has had a clean run.
+  Each one became a test first and then a fix in the crate that was
   wrong; the full table, input by input, is in `tasks/fuzz/README.md`, and
   every input is in
   `usfm_codegen`'s `roundtrip.rs::the_fuzz_findings_round_trip`. They are
@@ -190,9 +207,10 @@ Recent progress:
     the parser drops is not one, so the division simply carries on — and
     whatever ends the container a division is in ends the division, or a
     `\periph` in a sidebar swallows the `\esbe` that closes it);
-  - `\periph` lines: no verses on them at all (a `\v` there opened one whose
-    start was then thrown away with the rest of the line while its end landed
-    in the paragraph before the periph), and a default attribute value that
+  - `\periph` lines close no verse (a `\v` there emitted an end into the
+    paragraph before the periph while its own start was thrown away with the
+    rest of the line; verses are suspended across a periph now, and ticket 35
+    keeps the start), and a default attribute value that
     ends one drops its trailing whitespace, which the line break the writer
     ends that line with eats anyway;
   - two writers were wrong rather than the parser: `usfm_codegen` wrote a
@@ -478,7 +496,8 @@ Milestones in order: M1 workspace builds clean, M2 benchmarks + Miri + fuzz, M3
 crate split, M4 `usfm_semantic`, M5 `usfm_codegen`, M6 language server. M1–M4
 closed (exit criteria recorded in the spec; M4 on 2026-09-20). **M5 is in
 progress**: tickets 25 (the crate and the round trip), 26 (`usfm format`),
-27 (the round trip as an invariant) and 34 (idiomatic note spelling) are done.
+27 (the round trip as an invariant), 34 (idiomatic note spelling) and 35 (where
+a `Block::Milestone` may stand, which closed 27's last open finding) are done.
 Tickets are in
 `.scratch/oxc-layout/issues/`, written one milestone ahead. Unattended
 sessions follow `docs/agents/loop.md`; `scripts/gate.sh` is the gate before every push.
