@@ -217,6 +217,26 @@ pub enum Block<'a> {
     /// A milestone between blocks rather than inside a paragraph, such as the
     /// `\\ts\\*` translator section marker that unfoldingWord writes between
     /// `\\c` and the first `\\p`. USX puts these at the same level as `<para>`.
+    ///
+    /// **Not every position between blocks can hold one.** USFM has no marker
+    /// that ends a line, so a milestone written on a line of its own is read
+    /// as part of the line before it whenever that line runs to the next
+    /// *paragraph* marker — and `\esbe`, a `\tr` row and a `\periph` title all
+    /// do. A `Block::Milestone` is therefore only well-formed when the block
+    /// before it is one the writer gives a line of its own:
+    ///
+    /// * a [`Book`] (`\id GEN`),
+    /// * a [`ChapterStart`] or a [`ChapterEnd`] (`\c 1`),
+    /// * another `Block::Milestone`,
+    /// * or nothing at all, at the head of a [`Document`]'s own block list.
+    ///
+    /// Everywhere else — after a [`Para`], a [`Table`], a [`Sidebar`] or a
+    /// [`Periph`], and at the head of a `Sidebar`'s or a `Periph`'s block
+    /// list, whose opening line (`\esb`, `\periph Title`) runs on — the
+    /// milestone belongs to an implicit `\p` and is an
+    /// [`Inline::Milestone`] inside it. That is what USFM spells there, so it
+    /// is what the parser builds and what `usfm_codegen` writes back
+    /// (ticket 35; the round-trip fuzz target found all three shapes).
     Milestone(Milestone<'a>),
     /// `\esb` … `\esbe`: a block that contains blocks.
     Sidebar(Sidebar<'a>),

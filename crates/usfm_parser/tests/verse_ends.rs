@@ -321,24 +321,31 @@ p: v2 "the earth" /2
     );
 }
 
-/// Peripheral matter has no verses, and that has to include the `\periph`
-/// line itself. A `\v` there opened a verse whose `VerseStart` was then thrown
-/// away with the rest of the title line — only the title's text survives — but
-/// whose end was still emitted, and it landed in the paragraph *before* the
-/// periph. A `VerseEnd` with no `VerseStart` is a tree no source produces and
-/// no writer can write back; the round-trip fuzz target found it on
-/// `" i\periph\v 2"`.
+/// Peripheral matter closes no verse, and that has to include the `\periph`
+/// line itself. A `\v` there used to emit the open verse's end into the
+/// paragraph *before* the periph while its own `VerseStart` was thrown away
+/// with the rest of the title line, leaving a `VerseEnd` with no `VerseStart`
+/// — a tree no source produces and no writer can write back. The round-trip
+/// fuzz target found it on `" i\periph\v 2"`, and verse tracking is suspended
+/// across a periph since (ticket 27).
+///
+/// The `VerseStart` itself is kept now (ticket 35): only text is the title,
+/// and everything else on the line opens an implicit `\p` at the head of the
+/// division rather than vanishing. That is the same tree `\periph` followed by
+/// `\p \v 2` has always given, which is what the writer writes — and no end
+/// comes with it either way, because the periph suspends tracking.
 #[test]
-fn a_verse_on_a_periph_line_opens_no_verse() {
-    check(
-        "\\id GEN\n\\c 1\n\\p a\n\\periph\\v 2",
-        r#"
+fn a_verse_on_a_periph_line_opens_no_verse_end() {
+    let expected = r#"
 id Gen
 c1
 p: "a"
 periph:
-/c1"#,
-    );
+  p: v2
+/c1"#;
+    check("\\id GEN\n\\c 1\n\\p a\n\\periph\\v 2", expected);
+    // The spelling the writer produces, which must read back the same.
+    check("\\id GEN\n\\c 1\n\\p a\n\\periph\n\\p \\v 2", expected);
 }
 
 #[test]

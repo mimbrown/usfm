@@ -157,17 +157,17 @@ fn the_machine_py_fixtures_round_trip() {
     report("machine.py fixtures", count, failures);
 }
 
-/// The inputs the `roundtrip` fuzz target found (ticket 27), minimised with
-/// `cargo fuzz tmin`: twenty-two inputs, seventeen bugs — two of the bugs
-/// turned up twice, under different spellings — and one more, ticket 28's
-/// verse end, which is a whole file and is covered by
+/// The inputs the `roundtrip` fuzz target found (ticket 27, and the last three
+/// of them fixed by ticket 35), minimised with `cargo fuzz tmin`: twenty-five
+/// inputs, eighteen bugs — one of the bugs turned up three times and another
+/// twice, under different spellings — and one more, ticket 28's verse end,
+/// which is a whole file and is covered by
 /// [`the_machine_py_fixtures_round_trip`] instead. Three were in `usfm_ast`'s
-/// `add_child`, one in its `NumberRange` display, twelve in the parser and one
-/// here. Each is fixed, and each is listed so a regression is a failing
+/// `add_child`, one in its `NumberRange` display, thirteen in the parser and
+/// one here. Each is fixed, and each is listed so a regression is a failing
 /// `cargo test` rather than the next ten-minute fuzz run; the rule each one
 /// broke has its own test in the crate that was wrong, and this checks the
-/// property they were found by. The target's one finding that is *not* fixed
-/// is in `tasks/fuzz/findings/`, with a README saying why.
+/// property they were found by.
 #[test]
 fn the_fuzz_findings_round_trip() {
     let cases: Vec<(String, String)> = [
@@ -236,6 +236,19 @@ fn the_fuzz_findings_round_trip() {
         ("default_attribute_then_named_pair", "\\z|\"a=\\*"),
         // The same shape on a character style rather than a milestone.
         ("default_attribute_then_named_pair_on_a_char", "\\p \\w x|\"a=\\w*"),
+        // A block-level milestone standing where the construct before it is
+        // written as a line that runs on — after a `Sidebar`, after a `Table`,
+        // at the head of a `\periph` division — so the written form reads it
+        // back inside that line (ticket 35). The last of the three was worse:
+        // the `\periph` title keeps only text, so the milestone was dropped
+        // without a diagnostic.
+        ("block_milestone_after_a_sidebar", "\\esb\\c\\sh\\*"),
+        ("block_milestone_after_a_table", "\\p x\n\\tr \\tc1 y\n\\c\n\\zaln-s\\*"),
+        ("block_milestone_at_the_head_of_a_periph", "\\periph\\id\\e\\*"),
+        // A published verse number holding a backslash, written raw: the `\`
+        // and the `\` of the `\vp*` after it made one escape, and the number
+        // came back as `\vp*`.
+        ("published_verse_number_that_is_a_backslash", "\\v 1\\vp\\"),
     ]
     .into_iter()
     .map(|(name, source)| (name.to_string(), source.to_string()))

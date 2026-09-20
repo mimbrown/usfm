@@ -517,9 +517,10 @@ and `unlisted-book-code` is the first check to have moved.
       sharing `usfm_parser::span_check` with `crates/usfm_parser/tests/spans.rs`; see
       `tasks/fuzz/README.md` for the runs and the findings they produced
       (two span-invariant wordings, control characters, duplicate attributes,
-      attribute names that are not XML names, and `roundtrip`'s nineteen, which
-      are mostly what a *dropped* marker does to a tree; one of those is still
-      open, in `tasks/fuzz/findings/`). Run on demand, not in CI:
+      attribute names that are not XML names, and `roundtrip`'s twenty, which
+      are mostly what a *dropped* marker does to a tree; the last of them was
+      ticket 35's, after which every target has run ten minutes clean and
+      `tasks/fuzz/findings/` is gone). Run on demand, not in CI:
       a useful run is minutes long and needs nightly plus a sanitizer.
 - [ ] **Malformed corpus.** Directory of real-world broken files (with permission)
       plus the synthetic ones from the assessment. Snapshot the diagnostics and
