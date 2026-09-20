@@ -1,6 +1,6 @@
 # 32. Document symbols, completion and code actions
 
-Status: ready-for-agent
+Status: claimed
 Milestone: M6
 Blocked by: 31
 
