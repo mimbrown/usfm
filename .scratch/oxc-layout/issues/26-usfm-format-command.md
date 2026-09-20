@@ -1,6 +1,6 @@
 # 26. `usfm format` and `--format usfm`
 
-Status: ready-for-agent
+Status: resolved
 Milestone: M5
 Blocked by: 25
 
@@ -26,3 +26,19 @@ Done when the gate is green and `usfm format --check` passes on the whole
 benchmark corpus (which is the parser's own output shape by construction:
 if it does not, the corpus converter and codegen disagree on a whitespace
 rule; fix codegen, never the corpus).
+
+## Answer
+
+Landed via PR #31 (2026-09-20). `usfm format <FILES>...` (per file, through
+the facade; stdout by default, `--write` in place refusing a file with an
+Error diagnostic unless `--force`, `--check` exiting 1 with `would reformat
+<path>`; `--write`/`--check` conflict), `usfm parse --format usfm`, and
+`OutputFormat::Usfm` in the pipeline (the facade's `pipeline` feature pulls
+`codegen`). Six CLI tests and two unit tests.
+
+The corpus `--check` criterion as written does not hold: 78 of 86 books
+differ, all because the writer closes note-internal styles explicitly
+(`\ft text\ft*\f*`) and puts `\cp` on the `\c` line; both are legal
+spellings ticket 25 chose, the corpus round-trips, and `--check` passes on
+all 86 after one `format --write` pass (idempotence). Making the writer
+idiomatic is ticket 34, not a whitespace fix; the corpus was not touched.

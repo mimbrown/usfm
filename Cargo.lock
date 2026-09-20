@@ -754,6 +754,7 @@ dependencies = [
  "regex",
  "regex-automata",
  "usfm_ast",
+ "usfm_codegen",
  "usfm_html",
  "usfm_json",
  "usfm_parser",

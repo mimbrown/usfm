@@ -64,7 +64,9 @@ impl<T: Default> Loaded<T> {
     }
 }
 
-fn read_source(path: &Path) -> Result<String, Error> {
+/// The bytes of one file, as a string. Shared with [`crate::format`], which
+/// reads each of its files the same way.
+pub fn read_source(path: &Path) -> Result<String, Error> {
     std::fs::read_to_string(path).map_err(Error::from)
 }
 
@@ -72,7 +74,11 @@ fn read_rules(path: &Path) -> Result<TextReplacement, Error> {
     Ok(TextReplacement::from_rules(&read_source(path)?))
 }
 
-fn read_stylesheet(path: &Path) -> Result<Option<Arc<StyleSheet>>, Error> {
+/// A `--stylesheet` file, if one was named. The `Option` is what [`Loaded`]
+/// needs (a failed read leaves `None`); [`crate::format`] reads its own
+/// `--stylesheet` through the same function so the two commands accept the
+/// same sheets.
+pub fn read_stylesheet(path: &Path) -> Result<Option<Arc<StyleSheet>>, Error> {
     StyleSheet::from_file(path)
         .map(|sheet| Some(Arc::new(sheet)))
         .map_err(Error::from)
@@ -92,6 +98,28 @@ pub struct DiagnosticOptions {
     flag: &'static str,
 }
 
+/// Print every diagnostic to standard error, `label` being the name the lines
+/// are filed under. Shared with [`crate::format`], which prints the same lines
+/// per file.
+pub fn print_diagnostics(
+    label: &str,
+    source: &str,
+    diagnostics: &[usfm::Diagnostic],
+    format: DiagnosticFormat,
+) {
+    // One index for the whole file: the alternative is a scan from the start
+    // of the source per diagnostic.
+    let index = LineIndex::new(source);
+    for diagnostic in diagnostics {
+        // The lines themselves are `usfm_diagnostics`' (ticket 12), so the CLI
+        // and the language server position and name things the same way.
+        match format {
+            DiagnosticFormat::Text => eprintln!("{}", diagnostic.render(label, &index)),
+            DiagnosticFormat::Json => eprintln!("{}", diagnostic.to_json_line(label, &index)),
+        }
+    }
+}
+
 /// Print every diagnostic to stderr and hand back the document, unless the
 /// run has a threshold and something reached it.
 fn report<'a>(
@@ -100,17 +128,7 @@ fn report<'a>(
     result: ParseResult<'a>,
     options: &DiagnosticOptions,
 ) -> Result<Document<'a>, Error> {
-    // One index for the whole file: the alternative is a scan from the start
-    // of the source per diagnostic.
-    let index = LineIndex::new(source);
-    for diagnostic in &result.diagnostics {
-        // The lines themselves are `usfm_diagnostics`' (ticket 12), so the CLI
-        // and the language server position and name things the same way.
-        match options.format {
-            DiagnosticFormat::Text => eprintln!("{}", diagnostic.render(label, &index)),
-            DiagnosticFormat::Json => eprintln!("{}", diagnostic.to_json_line(label, &index)),
-        }
-    }
+    print_diagnostics(label, source, &result.diagnostics, options.format);
     match options.threshold {
         None => Ok(result.document),
         Some(threshold) => result.strict_with(threshold).map_err(|diagnostics| {

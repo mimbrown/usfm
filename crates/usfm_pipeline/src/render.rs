@@ -20,6 +20,10 @@ pub enum OutputFormat {
     Html,
     /// The AST as JSON, one object per node (ticket 16).
     Json,
+    /// USFM again, in the writer's canonical shape (ticket 26). This is what
+    /// `usfm format` writes; as a `--format` it is the way to normalise a
+    /// document assembled from several files.
+    Usfm,
     /// SILE's flavour of USX.
     Sile,
     /// Two translations woven section by section, for a language model.
@@ -43,6 +47,7 @@ impl OutputFormat {
             OutputFormat::Usx => "usx",
             OutputFormat::Html => "html",
             OutputFormat::Json => "json",
+            OutputFormat::Usfm => "usfm",
             OutputFormat::Sile => "sile",
             OutputFormat::Prompt => "prompt",
         }
@@ -101,6 +106,7 @@ pub fn render(
             json.push('\n');
             Ok(json)
         }
+        OutputFormat::Usfm => Ok(usfm_codegen::to_usfm_string(document)),
         OutputFormat::Sile => Ok(to_sile_string(document)),
         OutputFormat::Prompt => Err(RenderError::NeedsDiglot(OutputFormat::Prompt)),
     }
@@ -127,7 +133,7 @@ pub fn render_diglot(
             right,
             right_style_sheet,
         )),
-        OutputFormat::Usx | OutputFormat::Json | OutputFormat::Sile => {
+        OutputFormat::Usx | OutputFormat::Json | OutputFormat::Usfm | OutputFormat::Sile => {
             Err(RenderError::NoDiglotForm(format))
         }
     }
@@ -154,6 +160,8 @@ mod tests {
         assert!(json.starts_with('{'), "{json}");
         assert!(json.ends_with("}\n"), "{json}");
         assert!(json.contains(r#""type":"document""#), "{json}");
+        let usfm = render(&document, &style_sheet, OutputFormat::Usfm).unwrap();
+        assert_eq!(usfm, "\\id GEN\n\\c 1\n\\p \\v 1 verse one\n", "{usfm}");
     }
 
     /// The combinations that used to be `todo!()` and `unimplemented!()` are
@@ -173,7 +181,12 @@ mod tests {
                 .to_string()
                 .contains("--diglot")
         );
-        for format in [OutputFormat::Usx, OutputFormat::Json, OutputFormat::Sile] {
+        for format in [
+            OutputFormat::Usx,
+            OutputFormat::Json,
+            OutputFormat::Usfm,
+            OutputFormat::Sile,
+        ] {
             assert_eq!(
                 render_diglot(&document, &style_sheet, &other, &other_sheet, format),
                 Err(RenderError::NoDiglotForm(format))
@@ -190,6 +203,7 @@ mod tests {
             OutputFormat::Usx,
             OutputFormat::Html,
             OutputFormat::Json,
+            OutputFormat::Usfm,
             OutputFormat::Sile,
             OutputFormat::Prompt,
         ] {

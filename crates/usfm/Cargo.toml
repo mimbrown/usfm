@@ -34,8 +34,8 @@ usx = ["dep:usfm_usx"]
 html = ["dep:usfm_html"]
 json = ["dep:usfm_json"]
 codegen = ["dep:usfm_codegen"]
-# The pipeline dispatches to all three writers, so it pulls them in.
-pipeline = ["dep:usfm_pipeline", "usx", "html", "json"]
+# The pipeline dispatches to all four writers, so it pulls them in.
+pipeline = ["dep:usfm_pipeline", "usx", "html", "json", "codegen"]
 
 # Forwarded to `usfm_parser`, off by default like the features they forward to.
 # `tasks/benchmark` needs `UniquePromise` to build a `Lexer` for the `lex`

@@ -40,6 +40,14 @@ fn input(name: &str, contents: &str) -> PathBuf {
     path
 }
 
+/// A path under the system temporary directory that no other test, and no
+/// other run of this one, writes to. The `format` tests need it: they rewrite
+/// their inputs, so two of them sharing a file would depend on the order the
+/// harness ran them in.
+fn scratch(name: &str) -> PathBuf {
+    std::env::temp_dir().join(format!("usfm-cli-{}-{name}", std::process::id()))
+}
+
 /// Run `usfm` with `args`.
 fn usfm<I, S>(args: I) -> Output
 where
@@ -287,5 +295,166 @@ fn an_unwritable_combination_is_an_error() {
         stdout(&output).contains("<lang dialect=\"a\">One.</lang>"),
         "{}",
         stdout(&output)
+    );
+}
+
+/// What `usfm_codegen` writes for a file, parsed the way the CLI parses it,
+/// with the trailing newline the formatter guarantees.
+fn formatted_in_process(path: &Path) -> String {
+    let source = std::fs::read_to_string(path).expect("reading the input");
+    let mut text = usfm::codegen::to_usfm_string(&usfm::parse(&source).document);
+    if !text.is_empty() && !text.ends_with('\n') {
+        text.push('\n');
+    }
+    text
+}
+
+/// `format` with no mode flag prints the writer's own output, and
+/// `parse --format usfm` prints the same bytes for the same document
+/// (ticket 26).
+#[test]
+fn format_writes_the_codegen_output() {
+    let path = tcdocs("footnote");
+    let expected = formatted_in_process(&path);
+
+    let output = usfm(["format".as_ref(), path.as_os_str()]);
+    assert!(output.status.success(), "{}", stderr(&output));
+    assert_eq!(stdout(&output), expected);
+    assert!(expected.ends_with('\n'), "{expected:?}");
+
+    let output = usfm([
+        "parse".as_ref(),
+        "--format".as_ref(),
+        "usfm".as_ref(),
+        path.as_os_str(),
+    ]);
+    assert!(output.status.success(), "{}", stderr(&output));
+    assert_eq!(stdout(&output), expected);
+}
+
+/// Several files are printed one after another, each ending with a newline, in
+/// the order they were given — not concatenated into one document the way
+/// `parse` concatenates its inputs.
+#[test]
+fn format_prints_each_file_in_turn() {
+    let one = input("format-one.usfm", "\\id GEN\n\\p \\v 1 one\n");
+    let two = input("format-two.usfm", "\\id EXO\n\\p \\v 1 two\n");
+    let output = usfm(["format".as_ref(), one.as_os_str(), two.as_os_str()]);
+    assert!(output.status.success(), "{}", stderr(&output));
+    assert_eq!(
+        stdout(&output),
+        "\\id GEN\n\\p \\v 1 one\n\\id EXO\n\\p \\v 1 two\n"
+    );
+}
+
+/// `--check` writes nothing and says, with its exit code, whether every file
+/// is already formatted.
+///
+/// The tcdocs `footnote` input is *not*: it puts each verse on its own line,
+/// and the writer puts a whole paragraph on one. So it is the dirty file, and
+/// the formatted copy of it made here is the clean one.
+#[test]
+fn check_reports_a_file_that_is_not_formatted() {
+    let dirty = tcdocs("footnote");
+    let expected = formatted_in_process(&dirty);
+    assert_ne!(
+        std::fs::read_to_string(&dirty).expect("reading the input"),
+        expected,
+        "the tcdocs input is expected to differ from its formatted text"
+    );
+
+    let output = usfm(["format".as_ref(), "--check".as_ref(), dirty.as_os_str()]);
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+    assert!(stdout(&output).is_empty(), "--check writes nothing");
+    assert!(
+        stderr(&output).contains(&format!("would reformat {}", dirty.display())),
+        "{}",
+        stderr(&output)
+    );
+
+    // The same file once it is in the writer's shape.
+    let clean = scratch("check-clean.usfm");
+    std::fs::write(&clean, &expected).expect("writing the formatted copy");
+    let output = usfm(["format".as_ref(), "--check".as_ref(), clean.as_os_str()]);
+    assert!(output.status.success(), "{}", stderr(&output));
+    assert!(stderr(&output).is_empty(), "{}", stderr(&output));
+    assert!(stdout(&output).is_empty(), "--check writes nothing");
+}
+
+/// `--write` will not put a repaired tree over the author's file: an input
+/// whose parse reported an error is left alone, reported, and the run exits 1.
+/// `--force` says to do it anyway, and then the repair — here a dropped
+/// `\foo` — is what lands.
+#[test]
+fn write_refuses_an_error_without_force() {
+    let source = "\\id GEN\n\\c 1\n\\p \\v 1 a \\foo c\n";
+    let path = scratch("write-error.usfm");
+    std::fs::write(&path, source).expect("writing a test input");
+
+    let output = usfm(["format".as_ref(), "--write".as_ref(), path.as_os_str()]);
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+    assert!(
+        stderr(&output).contains("error[unknown-marker]"),
+        "{}",
+        stderr(&output)
+    );
+    assert!(stderr(&output).contains("--force"), "{}", stderr(&output));
+    assert_eq!(
+        std::fs::read_to_string(&path).expect("reading it back"),
+        source,
+        "the file was rewritten despite the error"
+    );
+
+    let output = usfm([
+        "format".as_ref(),
+        "--write".as_ref(),
+        "--force".as_ref(),
+        path.as_os_str(),
+    ]);
+    assert!(output.status.success(), "{}", stderr(&output));
+    let written = std::fs::read_to_string(&path).expect("reading it back");
+    assert_ne!(written, source);
+    assert!(!written.contains("\\foo"), "{written:?}");
+    // And what it wrote is formatted: a second run has nothing to do.
+    let output = usfm(["format".as_ref(), "--check".as_ref(), path.as_os_str()]);
+    assert!(output.status.success(), "{}", stderr(&output));
+}
+
+/// `--write` over a file that needs it rewrites it, and `--check` then passes:
+/// one pass is enough, which is what makes the formatter usable in CI.
+#[test]
+fn write_formats_a_file_in_place() {
+    let path = scratch("write-clean.usfm");
+    std::fs::write(&path, "\\id GEN\n\\c 1\n\\p\n\\v 1 one\n\\v 2 two\n")
+        .expect("writing a test input");
+
+    let output = usfm(["format".as_ref(), "--write".as_ref(), path.as_os_str()]);
+    assert!(output.status.success(), "{}", stderr(&output));
+    assert!(stdout(&output).is_empty(), "--write writes no output");
+    assert_eq!(
+        std::fs::read_to_string(&path).expect("reading it back"),
+        "\\id GEN\n\\c 1\n\\p \\v 1 one \\v 2 two\n"
+    );
+
+    let output = usfm(["format".as_ref(), "--check".as_ref(), path.as_os_str()]);
+    assert!(output.status.success(), "{}", stderr(&output));
+}
+
+/// `--write` and `--check` ask for opposite things, so clap refuses the pair
+/// outright: exit 2, the usage code, not a run with one of them winning.
+#[test]
+fn write_and_check_together_is_a_usage_error() {
+    let path = input("format-conflict.usfm", "\\id GEN\n\\p \\v 1 a\n");
+    let output = usfm([
+        "format".as_ref(),
+        "--write".as_ref(),
+        "--check".as_ref(),
+        path.as_os_str(),
+    ]);
+    assert_eq!(output.status.code(), Some(2), "{}", stderr(&output));
+    assert!(
+        stderr(&output).contains("cannot be used with"),
+        "{}",
+        stderr(&output)
     );
 }

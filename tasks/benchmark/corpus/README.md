@@ -178,6 +178,29 @@ note text, because a bare `*` lexes as `Kind::Star`. Ticket 07 taught
 `<note caller="*" style="f">` and the corpus parses with **zero** error
 diagnostics.
 
+### 3. It is not in the formatter's shape, but it is a fixed point
+
+`usfm format --check tasks/benchmark/corpus/web/*.usfm` (ticket 26) reports
+**78 of the 86 files**. The corpus is `usfx_to_usfm.py`'s output, not
+`usfm_codegen`'s, and the two spell two constructs differently:
+
+| | `usfx_to_usfm.py` (here) | `usfm_codegen` |
+| --- | --- | --- |
+| a note's content runs | `\f + \ft text\f*` | `\f + \ft text\ft*\f*` |
+| `\cp` (once, `85-PS2.usfm`) | on its own line after `\c 151` | `\c 151 \cp 151` |
+
+Both are ticket 25's canonical spellings — the writer emits the one spelling
+of each construct that a reparse cannot read two ways — and both parse to the
+same tree as what is committed here, which is why the round-trip test
+(`crates/usfm_codegen/tests/roundtrip.rs`) passes over all 86 files. So
+nothing here is regenerated to match the writer: the converter's output is the
+input the benches and fuzz seeds are measured on.
+
+What does hold is the property a formatter is judged by. After one
+`usfm format --write` pass over a *copy* of `web/`, `usfm format --check`
+exits 0 on all 86 files and prints no diagnostic: one pass reaches the fixed
+point.
+
 ## File classes
 
 Ticket 04's benches report throughput per class and over the whole corpus.
