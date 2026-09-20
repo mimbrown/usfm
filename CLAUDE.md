@@ -216,14 +216,33 @@ Recent progress:
   `read_source`, `read_stylesheet` and the new `print_diagnostics` with
   `driver.rs`. `usfm_pipeline::OutputFormat::Usfm` is the same writer behind
   `usfm parse --format usfm` (no diglot form), and the facade's `pipeline`
-  feature pulls in `codegen`. **`format --check` does not pass on
-  `tasks/benchmark/corpus/web/` as it stands** (78 of 86 files): the corpus was
-  written by `usfx_to_usfm.py`, which leaves a note's content runs implicitly
-  closed (`\f + \ft text\f*`) where the writer closes them (`\ft text\ft*\f*`),
-  and puts `\cp` on its own line where the writer puts it after `\c N`. Both
-  are ticket 25's deliberate canonical spellings, not whitespace bugs; the
-  honest criterion holds instead — **after one `format --write` pass, `--check`
-  exits 0 on all 86 files with no diagnostic**, so the formatter is idempotent
+  feature pulls in `codegen`. **`format --check` exits 0 over all 86 books of
+  `tasks/benchmark/corpus/web/`** since ticket 34, which moved the writer to
+  the two spellings the corpus (and every other USFM writer) uses; when this
+  ticket closed it reported 78 of them, and the criterion recorded here was the
+  weaker one — after a `format --write` pass, `--check` exits 0 with no
+  diagnostic. Both hold now, the second because the first does.
+  `apps/usfm_cli/tests/cli.rs`'s `check_passes_on_the_whole_benchmark_corpus`
+  guards it (one process, under a second)
+- **Idiomatic notes, and `\cp` on its own line (ticket 34, M5).** Two writer
+  spellings changed, both in `crates/usfm_codegen/src/usfm.rs`, neither of them
+  a tree change. A note's content runs are no longer closed:
+  `\f + \fr 1.1 \ft the note\f*`, not `\ft the note\ft*\f*`. The styles this
+  applies to are the stylesheet's, not a list in the crate — a
+  `\StyleType Character` entry whose `\TextType` is `NoteText`, which is `\fr`,
+  `\ft`, `\fq`, `\xo`, `\xt`, `\cat` and eighteen more — and the closer goes
+  only when what follows is another of them or the note's own closer, since
+  anything else (text, a milestone, a style from outside the note vocabulary)
+  would be read as content. Two more keep it: an attribute list runs to the
+  closing marker, and `\xt` is the only note-internal marker with `NEST`, so a
+  sibling in front of a *closed* `\xt` keeps its own closer or the `\xt`
+  becomes its child (`omitted_closers` decides the note's children from the
+  right for exactly that reason). The parser reports nothing for an implicit
+  close inside a note — `parse_char_body` is silent when `note_depth > 0` —
+  so the second parse gains no code and the round trip holds unchanged.
+  `\ca` and `\cp` now go on lines of their own after `\c N`, which is what the
+  spec's own example (`tcdocs/tests/specExamples/chapter-verse`) and every
+  corpus in the repo spell; `\c` already looked past the line break for both
 - **`usfm_codegen`: USFM from the AST (ticket 25, M5).** `to_usfm_string(&Document)`
   (and `write_usfm` into any `fmt::Write`), a `Visit` writing into a `String`,
   re-exported as `usfm::codegen` behind the default-on `codegen` feature. M5's
@@ -458,8 +477,8 @@ Priority areas, next: the route is `.scratch/oxc-layout/spec.md` (decision in
 Milestones in order: M1 workspace builds clean, M2 benchmarks + Miri + fuzz, M3
 crate split, M4 `usfm_semantic`, M5 `usfm_codegen`, M6 language server. M1–M4
 closed (exit criteria recorded in the spec; M4 on 2026-09-20). **M5 is in
-progress**: tickets 25 (the crate and the round trip) and 26 (`usfm format`)
-are done, 27 is next.
+progress**: tickets 25 (the crate and the round trip), 26 (`usfm format`),
+27 (the round trip as an invariant) and 34 (idiomatic note spelling) are done.
 Tickets are in
 `.scratch/oxc-layout/issues/`, written one milestone ahead. Unattended
 sessions follow `docs/agents/loop.md`; `scripts/gate.sh` is the gate before every push.

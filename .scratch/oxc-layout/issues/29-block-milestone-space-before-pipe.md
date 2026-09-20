@@ -23,7 +23,7 @@ Done when the gate is green.
 
 ## Answer
 
-Fixed by ticket 27 (PR #32, 2026-09-20). `parse_milestone_node` and
+Fixed by ticket 27 (`eab58a3`, PR #32, 2026-09-20). `parse_milestone_node` and
 `take_unknown_milestone` call `eat_whitespace()` before looking for the pipe
 (the latter after its checkpoint, so a non-milestone gives the whitespace
 back), matching the inline path. `usfm_codegen` now writes `\qt-s |who="…"\*`

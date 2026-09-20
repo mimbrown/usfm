@@ -178,28 +178,27 @@ note text, because a bare `*` lexes as `Kind::Star`. Ticket 07 taught
 `<note caller="*" style="f">` and the corpus parses with **zero** error
 diagnostics.
 
-### 3. It is not in the formatter's shape, but it is a fixed point
+### 3. It is already in the formatter's shape
 
-`usfm format --check tasks/benchmark/corpus/web/*.usfm` (ticket 26) reports
-**78 of the 86 files**. The corpus is `usfx_to_usfm.py`'s output, not
-`usfm_codegen`'s, and the two spell two constructs differently:
+`usfm format --check tasks/benchmark/corpus/web/*.usfm` exits 0 on all 86
+files, and `apps/usfm_cli/tests/cli.rs`'s
+`check_passes_on_the_whole_benchmark_corpus` keeps it that way.
 
-| | `usfx_to_usfm.py` (here) | `usfm_codegen` |
+It did not, when ticket 26 first asked: the writer then reported **78 of the
+86**, because it spelled two constructs differently from `usfx_to_usfm.py`,
+which produced this corpus.
+
+| | `usfx_to_usfm.py` (here) | `usfm_codegen`, before ticket 34 |
 | --- | --- | --- |
 | a note's content runs | `\f + \ft text\f*` | `\f + \ft text\ft*\f*` |
 | `\cp` (once, `85-PS2.usfm`) | on its own line after `\c 151` | `\c 151 \cp 151` |
 
-Both are ticket 25's canonical spellings — the writer emits the one spelling
-of each construct that a reparse cannot read two ways — and both parse to the
-same tree as what is committed here, which is why the round-trip test
-(`crates/usfm_codegen/tests/roundtrip.rs`) passes over all 86 files. So
-nothing here is regenerated to match the writer: the converter's output is the
-input the benches and fuzz seeds are measured on.
-
-What does hold is the property a formatter is judged by. After one
-`usfm format --write` pass over a *copy* of `web/`, `usfm format --check`
-exits 0 on all 86 files and prints no diagnostic: one pass reaches the fixed
-point.
+Both spellings parse to the same tree, so the round-trip test
+(`crates/usfm_codegen/tests/roundtrip.rs`) passed over all 86 files either
+way; what the corpus showed is that ticket 25 had picked the shape no USFM
+writer uses. Ticket 34 moved the writer to the corpus's spelling for both.
+Nothing here was regenerated to match the writer, then or now: the converter's
+output is the input the benches and fuzz seeds are measured on.
 
 ## File classes
 

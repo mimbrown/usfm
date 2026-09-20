@@ -30,7 +30,7 @@ round trip over both roots.
 
 ## Answer
 
-Landed via PR #32 (2026-09-20). The property is defined once, in
+Landed in `eab58a3` (PR #32, 2026-09-20). The property is defined once, in
 `tasks/conformance/src/roundtrip.rs` (`usfm_tests::roundtrip::check`): the
 trees are equal ignoring spans, the second parse gains no diagnostic code the
 first did not report, and writing the second tree gives the same bytes. It is
