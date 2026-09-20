@@ -1,6 +1,6 @@
 # 25. `usfm_codegen`: USFM from the AST
 
-Status: ready-for-agent
+Status: resolved
 Milestone: M5
 
 The ADR's `usfm_codegen` (AST -> USFM) does not exist. M5's exit is a
@@ -43,3 +43,23 @@ property test: parse -> codegen -> parse yields an equal tree on the tcdocs
 
 Done when the round-trip test passes on every `pass` input (or the `KNOWN`
 list is documented and ticketed) and the gate is green.
+
+## Answer
+
+Landed via PR #30 (2026-09-20). `crates/usfm_codegen` (depends on `usfm_ast`
+and `usfm_style` only): `to_usfm_string` / `write_usfm`, a `Visit` writing
+bytes straight into a `String`; whole-corpus 233 MiB/s, the cheapest output.
+Escapes: `\\`, `\|`, `~` in text, `\\` and `\"` in quoted values, the
+default attribute bare and verbatim, `|` flush against a milestone marker
+(forced by parser bug 29), `\+` iff the container is a `Char`.
+`usfm_ast::eq_ignoring_spans` compares trees by value with markers resolved
+through each document's own sheet, since derived `StyleId`s are not stable
+across parses. Round trip over 223 conformance `pass` cases and the 86 WEB
+books: all pass first time, `KNOWN` empty; the second parse never gains a
+code (five lose only `character-style-nested-without-plus`, which is the
+writer normalising a spelling), and the output is a fixed point. Facade
+feature `codegen`, on by default.
+
+Found on the way, ticketed: 28 (verse end dropped after `\esbe` with no
+paragraph marker; the one input in the repo that does not round-trip) and
+29 (a block-level milestone with a space before `|` is not a milestone).

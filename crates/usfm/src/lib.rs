@@ -17,9 +17,10 @@
 //! | [`usx`] | `usfm_usx` | AST to USX (feature `usx`) |
 //! | [`html`] | `usfm_html` | AST to HTML (feature `html`) |
 //! | [`json`] | `usfm_json` | AST to JSON (feature `json`) |
+//! | [`codegen`] | `usfm_codegen` | AST back to USFM (feature `codegen`) |
 //! | [`pipeline`] | `usfm_pipeline` | text replacements, sectioning, diglot, output dispatch (feature `pipeline`) |
 //!
-//! The four output features are on by default; turning them off leaves a
+//! The five output features are on by default; turning them off leaves a
 //! parser-only build. `semantic` has no feature of its own: [`parse`] is a
 //! parse *and* the checks over what it produced, so the semantic pass is part
 //! of this crate's idea of parsing rather than an output to switch off. The
@@ -37,6 +38,8 @@ pub use usfm_semantic as semantic;
 pub use usfm_span as span;
 pub use usfm_style as style;
 
+#[cfg(feature = "codegen")]
+pub use usfm_codegen as codegen;
 #[cfg(feature = "html")]
 pub use usfm_html as html;
 #[cfg(feature = "json")]
