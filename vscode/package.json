@@ -42,6 +42,14 @@
           "type": "boolean",
           "default": true,
           "description": "enable usfm language server"
+        },
+        "usfm.stylesheet": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "description": "Path to the project's USFM stylesheet (.sty), absolute or relative to the workspace folder. It extends the default stylesheet rather than replacing it. When unset, a custom.sty beside the open file is used if there is one."
         }
       }
     },
@@ -114,8 +122,8 @@
     "package": "vsce package --no-dependencies -o usfm_language_server.vsix",
     "install-extension": "code --install-extension usfm_language_server.vsix --force",
     "reinstall": "npm run build && npm run install-extension",
-    "server:build:debug": "cargo build -p usfm_cli",
-    "server:build:release": "cross-env CARGO_TARGET_DIR=./target cargo build -p usfm_cli --release"
+    "server:build:debug": "cargo build -p usfm_language_server",
+    "server:build:release": "cross-env CARGO_TARGET_DIR=./target cargo build -p usfm_language_server --release"
   },
   "devDependencies": {
     "@types/minimatch": "^6.0.0",

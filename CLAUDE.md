@@ -11,14 +11,18 @@ This project has three parallel work streams, all in progress:
    - Handle edge cases and malformed input gracefully
    - Expand grammar coverage
 
-2. **Language Server** (`wip/usfm_language_server/`) — parked until M6
-   - Power VS Code extension for editing USFM
-   - Validation, diagnostics, formatting
-   - Eventually: completion, hover, go-to-definition
-   - Parked outside the workspace in `wip/` (ticket 01) and does not build;
-     M6 (tickets 30–33, ticketed 2026-09-20) rebuilds it in `apps/` on
-     `ParseResult`, `usfm_semantic` and `usfm_codegen`, and ticket 33 then
-     deletes the parked copy. Work this stream through those tickets only.
+2. **Language Server** (`apps/usfm_language_server/`) — M6, in progress
+   - Powers the VS Code extension in `vscode/` (binary `usfm-language-server`)
+   - Live since ticket 30 (2026-09-20): full text sync, a document store and
+     `publishDiagnostics` from `usfm::parse_with` — the parser's diagnostics
+     and `usfm_semantic`'s, the same list `usfm parse` prints
+   - Next: formatting and hover (ticket 31), then document symbols,
+     completion and code actions (32). Advertise a capability only once it
+     works, and keep the diagnostics path as it is — the server holds no rules
+     of its own, it publishes the toolchain's
+   - `wip/usfm_language_server/` is the old, parked server: outside the
+     workspace, does not build, replaced rather than fixed, and deleted by
+     ticket 33. Do not work on it.
 
 3. **Output Generation** (`crates/usfm_style/`, future crates)
    - Transform AST to HTML, Dart, XML, etc.
@@ -92,7 +96,9 @@ Conformance status (276 tests across two roots, 2026-09-19):
 - CI (`.github/workflows/ci.yml`) runs the unit and integration suites
   (`recovery`, `snapshot`, `spans`, `whitespace`, `attributes`, `verse_ends`, `usx_text`,
   `usfm_html`'s `footnotes`, `usfm_json`'s `json` and `coverage`,
-  `usfm_semantic`'s `checks`, `usfm_codegen`'s lib and `roundtrip`, parser lib),
+  `usfm_semantic`'s `checks`, `usfm_codegen`'s lib and `roundtrip`,
+  `usfm_language_server`'s unit tests and its `lsp` conversation with the
+  built binary, parser lib),
   gates lint with
   `cargo clippy --workspace --all-targets -- -D warnings` (in `scripts/gate.sh`
   since 2026-09-19, ticket 02: the workspace is clippy-clean, so a new warning
@@ -145,6 +151,37 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **The language server, rebuilt (ticket 30, M6).**
+  `apps/usfm_language_server` is a new workspace member on the `usfm` facade
+  (`default-features = false`: the parser, the semantic pass and the
+  diagnostics are all it needs), `tower-lsp-server` 0.23 and `tokio` — both
+  workspace dependencies again. The binary is `usfm-language-server` and
+  speaks LSP over stdio. It advertises exactly what it implements: full text
+  synchronisation and UTF-16 positions, no hover, no formatting, no
+  completion. `did_open`/`did_change` replace the document's text in a
+  `HashMap<Uri, String>` behind a `tokio::sync::RwLock` and publish
+  `usfm::parse_with`'s diagnostics — the union, so an editor shows the
+  semantic checks too — with the kebab-case `Code` name as `code`, `"usfm"` as
+  `source` and the severity mapped one to one. An empty list is published as
+  readily as a full one, which is how the squiggles are cleared. Nothing is
+  debounced: a book is milliseconds. Positions go through
+  `usfm_span::LineIndex::line_col_utf16`, new beside `line_col` (the protocol
+  counts a column in UTF-16 code units, so an emoji is two), and the
+  conversion is `convert.rs`, a pure function of a `LineIndex` that tickets 31
+  and 32 reuse. A project stylesheet — `initializationOptions.stylesheet`, or
+  a `custom.sty` beside the open file — **extends** the default sheet the way
+  `recovery.rs`'s `machine_py_custom_stylesheet` does (where
+  `usfm parse --stylesheet` replaces it), is read once per path, and warns
+  through `window/showMessage` once if it cannot be read rather than failing
+  the parse. `tests/lsp.rs` spawns the built binary and speaks
+  `Content-Length`-framed JSON-RPC by hand, with a reader thread and a timeout
+  so a hang fails instead of blocking CI. In `vscode/`: `server:build:*` build
+  `-p usfm_language_server`, `extension.ts` spawns the new binary name and its
+  `LanguageClient` is constructed and started again (it had been commented
+  out, so the extension shipped no server at all); the extension never had
+  diagnostics of its own to retire. Not run under Miri, for the reason
+  `scripts/miri.sh` now gives: tokio and a spawned process, and no byte
+  handling of its own
 - **The M5 parse regression, paid back (ticket 37).** `parse/whole-corpus`
   was −3.9% at the M5 boundary and is **+1.4%** on the M4 close now, with no
   tree, diagnostic or snapshot changed and no check removed. Attributed by
@@ -516,8 +553,10 @@ Priority areas, next: the route is `.scratch/oxc-layout/spec.md` (decision in
 Milestones in order: M1 workspace builds clean, M2 benchmarks + Miri + fuzz, M3
 crate split, M4 `usfm_semantic`, M5 `usfm_codegen`, M6 language server. M1–M5
 closed (exit criteria recorded in the spec; M5 on 2026-09-20, tickets 25–27
-and 34–36). Ticket 37 paid back the M5 parse regression, so **next is M6**,
-the language server rebuilt in `apps/` (tickets 30–33, starting with 30).
+and 34–36). Ticket 37 paid back the M5 parse regression, and **M6 is under
+way**: the language server is rebuilt in `apps/usfm_language_server`
+(ticket 30, diagnostics), and **next is ticket 31** (formatting and hover),
+then 32 (symbols, completion, code actions) and 33 (delete `wip/`).
 Tickets are in
 `.scratch/oxc-layout/issues/`, written one milestone ahead. Unattended
 sessions follow `docs/agents/loop.md`; `scripts/gate.sh` is the gate before every push.
@@ -565,7 +604,11 @@ usfm-tools/
 │                          #   usfm_semantic's. `apps/` and `tasks/` depend on
 │                          #   this, not on the pieces
 ├── apps/
-│   └── usfm_cli/          # The `usfm` binary: clap, watch mode, diagnostics
+│   ├── usfm_cli/          # The `usfm` binary: clap, watch mode, diagnostics
+│   └── usfm_language_server/ # The `usfm-language-server` binary (M6): LSP
+│                          #   over stdio on tower-lsp-server + tokio. Keeps
+│                          #   the open text, publishes `usfm::parse_with`'s
+│                          #   diagnostics. `vscode/` spawns it
 ├── tasks/
 │   ├── conformance/       # tcdocs + usfm-grammar runner (the `usfm_tests` crate),
 │   │                      #   its fixtures, patches, baseline and the
@@ -574,8 +617,9 @@ usfm-tools/
 │   ├── benchmark/         # criterion benches over a committed corpus
 │   └── fuzz/              # cargo-fuzz targets (own workspace, nightly)
 ├── tcdocs/                # Git submodule: official USFM test suite
-└── wip/                   # Outside the workspace, parked until M6, does not build
-    ├── usfm_language_server/  # LSP server (parked)
+└── wip/                   # Outside the workspace, does not build; ticket 33
+    │                       #   deletes it now that M6 is under way
+    ├── usfm_language_server/  # The old LSP server, replaced by `apps/`
     └── data_layer/            # Data persistence (parked)
 ```
 
