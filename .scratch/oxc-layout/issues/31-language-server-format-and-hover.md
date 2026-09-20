@@ -1,6 +1,6 @@
 # 31. Formatting and hover in the language server
 
-Status: ready-for-agent
+Status: claimed
 Milestone: M6
 Blocked by: 30
 
