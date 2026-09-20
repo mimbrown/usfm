@@ -1,6 +1,6 @@
 # 30. `apps/usfm_language_server`: rebuilt on `usfm::parse`, diagnostics first
 
-Status: ready-for-agent
+Status: claimed
 Milestone: M6
 Blocked by: 37
 
