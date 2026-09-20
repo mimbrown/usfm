@@ -66,7 +66,7 @@ empty or gone, and `roundtrip` has run ten minutes clean.
 
 ## Answer
 
-Landed via PR #34 (2026-09-20). No reference file in either conformance
+Landed in `beac640` (PR #34, 2026-09-20). No reference file in either conformance
 root puts an `<ms>` after `</sidebar>` or `</table>` or first in a periph
 (the only block-level `<ms>` are `usfmjsTests/ts` and `ts_2`, after a
 `<chapter>`), so the rule from the findings README is adopted and recorded

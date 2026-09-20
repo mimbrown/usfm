@@ -49,6 +49,16 @@ regressed six tests: `NEST` alone nests `\xo 1.1 \xt Gen 1\x*`; the closer alone
 nests `\ft … \fqa quote\fqa* \f*`. `character-style-nested-without-plus` (Info)
 reports the nesting so tooling can offer the `+`.
 
+Amended 2026-09-20 (ticket 36) with a third condition: the style being nested
+*into* must not be `\xo`, whose content is a reference and takes no un-plussed
+child however it is closed. `paratextTests/NestingInCrossReferencesInvalid`
+says so in its `metadata.xml` and its reference USX, as do
+`CrossReferencesQuoteOutsideNote` and `CrossReferencesInsideCharacterMarker`;
+it is that one style and not "note-internal inside note-internal" because
+`biblica/CategoriesOnNotes` nests a closed `\xt` inside `\ft`,
+`specExamples/extended/contentCatogories1` nests `\sc BC\sc*` inside `\ft`,
+and `usfmjsTests/usfmBodyTestD` nests `\dc` inside both.
+
 | # | Group | Root cause |
 |---|-------|-----------|
 | 11 | Whitespace / text | 6 are a missing trailing space after a closing marker; 3 are non-breaking/ideographic space handling (`~`, U+3000); 2 are invisible-character differences in t4t files. |
@@ -411,7 +421,9 @@ ordering or naming mismatches, 4 missing children.
       stylesheet and Paratext's own output have a sibling, usfm-js `vid` on a
       paragraph that starts its verse) and one accepted deviation
       (`NestingInCrossReferencesInvalid`: `\em` nests under `\xo`; no stylesheet
-      rule separates it from `\ft … \sc BC\sc*`, where the reference nests). The
+      rule separates it from `\ft … \sc BC\sc*`, where the reference nests —
+      ticket 36 took the reference's reading instead, and that patch is now a
+      reference quirk about Paratext's `status="invalid"` attribute). The
       harness fails a patch that no longer applies and one the parser no longer
       needs, so the directory cannot go stale. `tasks/conformance/tcdocs-patches/README.md`
       has the rules. Three parser gaps the exercise exposed were fixed, not

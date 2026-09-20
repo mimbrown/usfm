@@ -188,3 +188,43 @@ fn a_milestone_on_a_periph_title_line_reaches_the_output() {
     assert_eq!(implicit, explicit);
     XmlDocument::from(implicit.as_bytes()).expect("well-formed XML");
 }
+
+/// Ticket 36: a closed `\xt` after `\xo` is the note's next run, not the
+/// `\xo`'s child, so the USX has two `<char>` siblings — the shape every
+/// reference file in the conformance roots writes for a cross reference,
+/// whatever closing markers the source spells. `\+xt` is the one way to ask
+/// for a child, and it still gets one.
+#[test]
+fn a_closed_xt_after_xo_is_a_sibling_in_usx() {
+    let closed = usx("\\id GEN\n\\c 1\n\\p \\v 1 a\\x - \\xo 1.1 \\xt Gen 1.1\\xt*\\x*");
+    assert!(
+        closed.contains(
+            r#"<note caller="-" style="x"><char style="xo">1.1 </char><char style="xt">Gen 1.1</char></note>"#
+        ),
+        "{closed}"
+    );
+    let open = usx("\\id GEN\n\\c 1\n\\p \\v 1 a\\x - \\xo 1.1 \\xt Gen 1.1\\x*");
+    assert_eq!(closed, open);
+
+    let plussed = usx("\\id GEN\n\\c 1\n\\p \\v 1 a\\x - \\xo 1.1 \\+xt Gen 1.1\\+xt*\\x*");
+    assert!(
+        plussed.contains(
+            r#"<note caller="-" style="x"><char style="xo">1.1 <char style="xt">Gen 1.1</char></char></note>"#
+        ),
+        "{plussed}"
+    );
+    XmlDocument::from(closed.as_bytes()).expect("well-formed XML");
+}
+
+/// The rule is about `\xo` alone, not about note-internal styles in general:
+/// `biblica/CategoriesOnNotes` and `specExamples/extended/contentCatogories1`
+/// both nest a closed style inside `\ft`, and the references keep the text
+/// after the closing marker inside the `\ft` with it.
+#[test]
+fn a_closed_style_inside_ft_still_nests_in_usx() {
+    let output = usx("\\id GEN\n\\c 1\n\\p \\v 1 a\\f + \\ft In 597 \\sc BC\\sc* King\\f*");
+    assert!(
+        output.contains(r#"<char style="ft">In 597 <char style="sc">BC</char> King</char>"#),
+        "{output}"
+    );
+}
