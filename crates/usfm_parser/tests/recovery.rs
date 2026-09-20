@@ -113,6 +113,56 @@ fn unknown_custom_milestone() {
     );
 }
 
+/// Ticket 29: a milestone between blocks, written with a space before the
+/// pipe. USFM 3 spells a milestone's attribute list `\qt-s |who="…"\*`, and
+/// unfoldingWord's aligned texts write `\zaln-s |x-strong="H1"\*` on a line of
+/// its own — but the block path used to reach for the pipe without eating the
+/// space first, so the marker was dropped as unknown and `|x-strong="H1"`
+/// became text in an implicit `\p`. The two spellings are one milestone, and
+/// the only difference between these trees and `unknown_custom_milestone`'s is
+/// where the milestone sits.
+#[test]
+fn a_block_milestone_is_the_same_with_or_without_a_space_before_the_pipe() {
+    let with_space = common::render("\\id GEN\n\\c 1\n\\zaln-s |x-strong=\"H1\"\\*\n\\p \\v 1 a");
+    let without_space = common::render("\\id GEN\n\\c 1\n\\zaln-s|x-strong=\"H1\"\\*\n\\p \\v 1 a");
+    assert!(
+        with_space.contains("Milestone zaln-s"),
+        "the milestone was not read as one:\n{with_space}"
+    );
+    // The spans differ by the one space, so compare the shape rather than the
+    // rendering: `render` prints `@start..end` on every node.
+    let strip = |rendered: String| {
+        rendered
+            .lines()
+            .map(|line| match line.find('@') {
+                Some(at) => line[..at].to_string(),
+                None => line.to_string(),
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+    assert_eq!(strip(with_space), strip(without_space));
+    snapshot("block_milestone_with_space_before_pipe", "\\id GEN\n\\c 1\n\\zaln-s |x-strong=\"H1\"\\*\n\\p \\v 1 a");
+}
+
+/// A milestone between blocks is a `Block::Milestone` — but only when
+/// something really does stand between it and the paragraph before it. Here
+/// the `\id` that closed the paragraph is dropped for want of a book code, so
+/// nothing does, and the milestone goes inside the paragraph instead: a
+/// `Block::Milestone` straight after a `Block::Para` is a tree no USFM spells,
+/// because a paragraph written out runs on and swallows it. The round-trip
+/// fuzz target found it (ticket 27).
+#[test]
+fn a_block_milestone_after_a_paragraph_that_nothing_closed_is_inline() {
+    let source = "\\p a\n\\id\n\\zaln-s\\*";
+    let rendered = common::render(source);
+    assert!(
+        rendered.contains("Para p") && !rendered.contains("\nMilestone"),
+        "the milestone should be inside the paragraph:\n{rendered}"
+    );
+    snapshot("block_milestone_after_an_unclosed_paragraph", source);
+}
+
 #[test]
 fn unmatched_closing_marker() {
     check(
@@ -285,6 +335,14 @@ fn formatted_published_verse_number_stays_a_char() {
     snapshot("formatted_published_verse_number_stays_a_char", source);
 }
 
+/// An unclosed `\vp` swallows the rest of the paragraph, and what it swallowed
+/// becomes the published number — `pub="1b text"` here, which is nonsense, but
+/// so is the input, and the diagnostic says so. It used to stay beside the
+/// verse as a `Char` instead, and that is a tree no USFM spells: `\vp …\vp*`
+/// after `\v N` *is* the published number, so closing the `Char` — which every
+/// writer must — reads it back as one. The round-trip fuzz target found it
+/// (ticket 27); `usfm_codegen`'s `the_fuzz_findings_round_trip` keeps it
+/// fixed.
 #[test]
 fn published_verse_number_not_closed() {
     check_variant(
@@ -578,6 +636,127 @@ fn periph_divisions() {
     let source = "\\id FRT\n\\periph Title Page|id=\"title\"\n\\p one\n\\periph Preface|preface\n\\p two";
     assert_eq!(common::codes(source), Vec::<Code>::new());
     snapshot("periph_divisions", source);
+}
+
+/// The `\periph` title is the *text* of its line, so a character style on that
+/// line contributes nothing to it — and used to leave the whitespace on both
+/// sides of it next to each other, giving a title with a run of two spaces.
+/// Rule 1 on `Text` applies to a title as to any other run: the fuzz target
+/// found the double space when the writer wrote it out and the parser read it
+/// back as one (ticket 27).
+#[test]
+fn periph_title_collapses_whitespace_across_a_style() {
+    let source = "\\id GEN\n\\periph Title\n\\w a\\w*\nmore\n";
+    snapshot("periph_title_across_a_style", source);
+}
+
+/// `\va` and `\vp` directly after `\v N` are the verse's alternate and
+/// published numbers, whatever put them there. `parse_verse` absorbs the ones
+/// on the `\v` line; these got past it because the second `\v` has no number
+/// and is dropped, and they are read the same way — a writer has nowhere to
+/// put `alt_number` and `pub_number` but right after the number, so a `Char`
+/// styled `\va` or `\vp` sitting there is a tree no USFM spells. The
+/// round-trip fuzz target found it (ticket 27).
+#[test]
+fn a_va_or_vp_after_a_verse_is_its_number_however_it_got_there() {
+    let source = "\\v 1\\v\\va 3\\va*\\vp 1b\\vp* text";
+    let rendered = common::render(source);
+    assert!(
+        rendered.contains("alt=3") || rendered.contains("alt 3") || rendered.contains("3"),
+        "{rendered}"
+    );
+    assert!(
+        !rendered.contains("Char va") && !rendered.contains("Char vp"),
+        "neither should stay a character style:\n{rendered}"
+    );
+    snapshot("va_and_vp_after_a_dropped_verse", source);
+}
+
+/// Whatever ends the container a `\periph` division is in ends the division
+/// too. A periph inside a sidebar used to swallow the `\esbe` that closes the
+/// sidebar — as an empty paragraph styled `\esbe` — which left a sidebar no
+/// writer could close. The round-trip fuzz target found it (ticket 27).
+#[test]
+fn a_periph_inside_a_sidebar_ends_with_the_sidebar() {
+    let source = "\\esb\n\\periph T\n\\p x\n\\esbe\n\\p after";
+    let rendered = common::render(source);
+    assert!(
+        !rendered.contains("esbe"),
+        "`\\esbe` should close the sidebar, not land in the periph:\n{rendered}"
+    );
+    snapshot("periph_inside_a_sidebar", source);
+}
+
+/// A `\periph` division runs to the next `\periph` or `\id` — but only to an
+/// `\id` that *is* one. This one has no book code and is dropped, and a
+/// dropped marker ends nothing, so the blocks after it are still the
+/// division's. (A block left beside the periph would be swallowed by it when
+/// the tree is written out, which is how the round-trip fuzz target found
+/// this, ticket 27.) Verses stay suspended across the continuation, as they
+/// are anywhere in peripheral matter: the `\v` below opens no verse, so
+/// nothing goes looking for its end.
+#[test]
+fn a_block_after_a_periph_that_nothing_ended_is_inside_it() {
+    let source = "\\periph\\id\n\\p x \\v 3 y";
+    let rendered = common::render(source);
+    assert!(
+        rendered.contains("periph") && rendered.contains("  Para p"),
+        "the paragraph should be inside the periph:\n{rendered}"
+    );
+    assert!(
+        !rendered.contains("VerseEnd"),
+        "a verse inside a periph is not tracked:\n{rendered}"
+    );
+    snapshot("block_after_a_periph_that_nothing_ended", source);
+}
+
+/// Two tables with nothing between them are one table: consecutive `\tr` rows
+/// belong to the same `<table>`, so a writer cannot put two side by side. They
+/// only arise when the marker that split them was dropped — here a `\c` with
+/// no number — and the round-trip fuzz target found it (ticket 27).
+#[test]
+fn two_tables_with_a_dropped_marker_between_them_are_one() {
+    let source = "\\tr \\tc1 x\\c\n\\tr \\tc1 y";
+    let rendered = common::render(source);
+    assert_eq!(
+        rendered.matches("Table").count(),
+        1,
+        "the rows should be one table:\n{rendered}"
+    );
+    snapshot("two_tables_with_a_dropped_marker", source);
+}
+
+/// A `\cp` paragraph cannot follow a chapter start — `\c` absorbs a `\cp`
+/// that comes after it — so one that gets there, because the marker between
+/// them was dropped, is read as the chapter's published number instead. The
+/// two spellings give the same tree apart from the dropped marker's
+/// diagnostic. The round-trip fuzz target found it (ticket 27).
+#[test]
+fn a_cp_paragraph_after_a_chapter_is_its_published_number() {
+    let strip = |rendered: String| {
+        rendered
+            .lines()
+            .filter(|line| !line.contains("missing-chapter-number"))
+            .map(|line| match line.find('@') {
+                Some(at) => line[..at].to_string(),
+                None => line.to_string(),
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+    assert_eq!(
+        strip(common::render("\\c 3\\c\n\\cp A B")),
+        strip(common::render("\\c 3 \\cp A B"))
+    );
+    snapshot("cp_paragraph_after_a_chapter", "\\c 3\\c\n\\cp A B");
+}
+
+/// The same joining rule for a note's `\cat` category, which is built the
+/// same way and used to double the whitespace at the seam in the same way.
+#[test]
+fn note_category_collapses_whitespace_across_a_style() {
+    let source = "\\id GEN\n\\c 1\n\\p \\v 1 \\ef - \\cat a \\rb b\\rb* c\\cat* note\\ef*";
+    snapshot("note_category_across_a_style", source);
 }
 
 /// A verse starting inside a paragraph that is not verse text (`\lit`) ends

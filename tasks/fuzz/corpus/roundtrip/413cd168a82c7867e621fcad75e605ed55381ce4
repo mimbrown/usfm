@@ -1,0 +1,9 @@
+\id GEN
+\c 1
+\p
+\v 1
+\k-s | x-tw="rc://*/tw/dict/bible/kt/jesus"
+\w Ἰησοῦ|lemma="Ἰησ��ῦς" strong="G24840" x-morph="Gr,N,,,,,SMG\"w,*
+\w Χριστοῦ|lemma="χριστός" strong="G554-e" x-motrong="G24840" x-morph="Gr,N,,,,,SMG\"w,*
+\w Χριστοῦ|lemma="χριστός" strong="G554-e" xrph="Gr,N,,,,,GMS," x-tw="rc://*/tw/dact/bible/k|/christ"\w*
+\k-e\*,

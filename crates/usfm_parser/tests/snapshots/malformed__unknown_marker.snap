@@ -1,12 +1,12 @@
 ---
-source: usfm_parser/tests/snapshot.rs
+source: crates/usfm_parser/tests/snapshot.rs
 description: "\\id GEN\n\\c 1\n\\p \\v 2 \\zzz custom \\zzz* after\n"
 ---
 Book GEN "" @0..7
 ChapterStart 1@8..12
 Para p@13..45
   VerseStart 2@16..20
-  Text "custom  after"@26..45
+  Text "custom after"@26..45
   VerseEnd 2
 ChapterEnd 1
 --- diagnostics

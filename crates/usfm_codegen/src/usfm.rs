@@ -22,7 +22,7 @@
 //! | `VerseStart` | `\v 1 \va 2\va* \vp K\vp* ` | always a trailing space, which a paragraph-level trim drops when nothing follows |
 //! | `Char` | `\nd Lord\nd*`, `\+nd Lord\+nd*` inside another `Char` | nesting is not recorded in the AST: a `Char` inside a `Char` is nested |
 //! | `Note` | `\f + \cat People\cat*\ft text\f*` | the category is a leading `\cat`, which is how the parser reads one back |
-//! | `Milestone` | `\qt-s\|who="God"\*`, `\ts\*` | no `\|` at all when `attributes` is `None` |
+//! | `Milestone` | `\qt-s \|who="God"\*`, `\ts\*` | no `\|` at all when `attributes` is `None` |
 //! | `Attributes` | `\|lemma="grace" strong="H1234"`, `\|Speaker` | the default attribute is written bare |
 //! | `Table` | `\tr \tc1 a \tcr2 b`, `\tc1-2` for a colspan | `\th`/`\thr` for a header cell |
 //! | `Sidebar` | `\esb \cat People\cat*` … `\esbe` | |
@@ -50,14 +50,21 @@
 //! source `~` is U+00A0 by the time it reaches a `Text` — so this only
 //! affects a tree built by hand.
 //!
-//! # `|` is written flush against its marker
+//! # Where the `|` goes
 //!
-//! `\qt-s|who="God"\*`, not `\qt-s |who="God"\*`. A milestone *between
-//! blocks* is read by the parser's `parse_block_start`, which consumes the
-//! marker and looks for `|` straight away with no whitespace eaten in
-//! between; a space there would leave an unknown marker rather than a
-//! milestone. Inside a paragraph both spellings parse alike, so the writer
-//! uses the one that works in both places.
+//! A milestone's list is written the way USFM 3 spells it, with a space:
+//! `\qt-s |who="God"\*`. The space is the marker's own whitespace, which the
+//! parser eats before looking for the pipe — between blocks as well as inside
+//! a paragraph, since ticket 29. (Until that fix the block path looked for the
+//! pipe straight after the marker, so this writer had to put the `|` flush
+//! against it: the spelling every real aligned text uses,
+//! `\zaln-s |x-strong="H1"\*` on a line of its own, was the one the parser got
+//! wrong. Both spellings read back as the same milestone now, and the writer
+//! uses the one the spec shows.)
+//!
+//! A *character style's* list is a different thing and stays flush:
+//! `\w grace|lemma="grace"\w*`. There the `|` ends the word, and a space
+//! before it would be part of the word.
 
 use std::fmt::{self, Write};
 
@@ -200,9 +207,20 @@ impl<'s, W: Write> UsfmWriter<'s, '_, W> {
     /// bare, whether or not it is the only one: the name is not in the tree to
     /// write, and the parser reads a bare value as the default wherever it
     /// stands in the list. Its value goes out verbatim, because that is how
-    /// the parser read it in — quotes, inner spaces and the space before the
-    /// next pair included — which is also why the separator is skipped after
-    /// one that already ends in whitespace.
+    /// the parser read it in — quotes, inner spaces and, when there was one,
+    /// the space before the next pair.
+    ///
+    /// Which is why **nothing is written after a default pair**, not even when
+    /// its value does not end in whitespace. The parser reads the default as
+    /// the source from where it starts up to the `name=` that ends it, so any
+    /// separator is already in the value; adding one puts it in the value a
+    /// second time on the way back in. `\w x|"a=\w*` is the case that does not
+    /// end in whitespace — the `"` and the `a` are separate tokens with
+    /// nothing between them, so the default is `"` and the next pair is `a` —
+    /// and writing `|" a=""` read back as the default `" `. Two runs of
+    /// *words* cannot meet without a space (the lexer would have made them one
+    /// word), so leaving the separator out can never merge a value into the
+    /// name after it. The round-trip fuzz target found this.
     fn write_attributes(&mut self, attributes: &Attributes<'_>) {
         self.push("|");
         let mut separate = false;
@@ -212,7 +230,7 @@ impl<'s, W: Write> UsfmWriter<'s, '_, W> {
             }
             if pair.name.is_empty() {
                 self.push(&pair.value);
-                separate = !pair.value.ends_with(|c: char| c.is_ascii_whitespace());
+                separate = false;
             } else {
                 self.push(&pair.name);
                 self.push("=\"");
@@ -409,6 +427,11 @@ impl<W: Write> Visit for UsfmWriter<'_, '_, W> {
         let marker = self.marker(milestone.style);
         self.open_marker(marker, false);
         if let Some(attributes) = &milestone.attributes {
+            // The space USFM 3 spells (`\qt-s |who="God"\*`). It is the
+            // marker's own whitespace, so the parser eats it before looking
+            // for the pipe, between blocks as well as inside a paragraph
+            // (ticket 29).
+            self.push(" ");
             self.write_attributes(attributes);
         }
         self.push("\\*");
@@ -554,6 +577,20 @@ mod tests {
         writes_body("\\p \\w grace|\\w*\n", "\\p \\w grace|\\w*\n");
     }
 
+    /// Nothing separates a default attribute from the pair after it: the space
+    /// that did is already inside the verbatim value, and where there was none
+    /// adding one changes the value. `|"a=` is the second case — the `"` and
+    /// the `a` are separate tokens — and it goes back out as it came in. See
+    /// `write_attributes`.
+    #[test]
+    fn a_default_attribute_gets_no_separator_after_it() {
+        writes_body(
+            "\\p \\w x|a special concept strong=\"G1\"\\w*\n",
+            "\\p \\w x|a special concept strong=\"G1\"\\w*\n",
+        );
+        writes_body("\\p \\w x|\"a=\"\"\\w*\n", "\\p \\w x|\"a=\"\"\\w*\n");
+    }
+
     #[test]
     fn a_milestone_with_no_pipe_keeps_none() {
         writes_body("\\p \\ts-s\\*text\\ts-e\\*\n", "\\p \\ts-s\\*text\\ts-e\\*\n");
@@ -561,21 +598,30 @@ mod tests {
         // pair unnamed, so it goes back out bare.
         writes_body(
             "\\p \\qt-s |Pilate\\*text\\qt-e\\*\n",
-            "\\p \\qt-s|Pilate\\*text\\qt-e\\*\n",
+            "\\p \\qt-s |Pilate\\*text\\qt-e\\*\n",
         );
         writes_body(
             "\\p \\qt-s |who=\"Pilate\"\\*text\\qt-e\\*\n",
-            "\\p \\qt-s|who=\"Pilate\"\\*text\\qt-e\\*\n",
+            "\\p \\qt-s |who=\"Pilate\"\\*text\\qt-e\\*\n",
         );
     }
 
-    /// A milestone between blocks: the `|` has to be flush against the marker
-    /// there, since the parser looks for it with no whitespace eaten first.
+    /// A milestone between blocks, written the way USFM 3 spells it and the
+    /// way unfoldingWord's aligned texts do: a space before the `|`. Before
+    /// ticket 29 the parser read that as an unknown marker followed by text,
+    /// so the writer had to leave the space out; now the two spellings give
+    /// the same milestone and this one goes out unchanged.
     #[test]
     fn a_milestone_between_blocks_is_on_its_own_line() {
         writes(
+            "\\id GEN\n\\c 1\n\\zaln-s |x-strong=\"H1\"\\*\n\\p text\n",
+            "\\id GEN\n\\c 1\n\\zaln-s |x-strong=\"H1\"\\*\n\\p text\n",
+        );
+        // The spelling with no space is the same milestone and is written
+        // back with one.
+        writes(
             "\\id GEN\n\\c 1\n\\zaln-s|x-strong=\"H1\"\\*\n\\p text\n",
-            "\\id GEN\n\\c 1\n\\zaln-s|x-strong=\"H1\"\\*\n\\p text\n",
+            "\\id GEN\n\\c 1\n\\zaln-s |x-strong=\"H1\"\\*\n\\p text\n",
         );
     }
 

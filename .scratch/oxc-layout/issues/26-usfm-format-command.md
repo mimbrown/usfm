@@ -29,7 +29,7 @@ rule; fix codegen, never the corpus).
 
 ## Answer
 
-Landed via PR #31 (2026-09-20). `usfm format <FILES>...` (per file, through
+Landed in `f5a3853` (PR #31, 2026-09-20). `usfm format <FILES>...` (per file, through
 the facade; stdout by default, `--write` in place refusing a file with an
 Error diagnostic unless `--force`, `--check` exiting 1 with `would reformat
 <path>`; `--write`/`--check` conflict), `usfm parse --format usfm`, and

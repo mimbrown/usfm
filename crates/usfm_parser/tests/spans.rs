@@ -154,11 +154,15 @@ fn implicit_nodes_span_the_content_they_hold() {
     check(table);
 }
 
-/// A `\v` on a `\periph` title line leaves a verse end and a synthesized
-/// space among the title's children. A synthesized node carries `SPAN`, so
-/// taking the title's end from the last text child put the end at offset 0 and
-/// inverted the span. The fuzzer found it; only text read from the source
-/// counts now.
+/// A `\v` on a `\periph` title line used to leave a verse end and a
+/// synthesized space among the title's children. A synthesized node carries
+/// `SPAN`, so taking the title's end from the last text child put the end at
+/// offset 0 and inverted the span. The fuzzer found it; only text read from
+/// the source counts now. The verse end is gone too — peripheral matter has no
+/// verses, and since the round-trip fuzz target that now includes the
+/// `\periph` line itself — so this input no longer reaches the case it was
+/// written for, and is kept because it costs nothing and the rule it checks
+/// (a synthesized child does not move a span) still holds for the rest.
 #[test]
 fn periph_title_span_ignores_synthesized_text() {
     check("\\id GEN\n\\c 1\n\\periph T \\v 2 b \\v 3\n");

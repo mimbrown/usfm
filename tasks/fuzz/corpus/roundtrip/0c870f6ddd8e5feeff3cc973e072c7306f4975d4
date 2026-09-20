@@ -1,0 +1,7 @@
+\id GEN
+\c 1
+\s some text
+\p
+\v 2 versa text \ftext
+\p
+\v 2 versa text \fig caption|alt="Description" src="ipimage.jpg" size="large"ig caption|alt="Description" src="ipimage.jpg" size="large" loc="col" copverse-outside-chapter1"\fig*"

@@ -98,23 +98,33 @@ Conformance status (276 tests across two roots, 2026-09-19):
   gates tcdocs on `tasks/conformance/tcdocs-baseline.txt`, the list of known failures
   (currently empty). It fails on a regression *and* on a stale entry, so when
   you fix a tcdocs case, remove it from the baseline (or regenerate with
-  `--write-baseline`) in the same commit. Last in the gate is `scripts/miri.sh`
+  `--write-baseline`) in the same commit. After it (ticket 27) comes
+  `cargo run -p usfm_tests -- --roundtrip tasks/conformance/roundtrip-known.txt`:
+  the round trip (parse -> USFM -> parse) over every conformance case of every
+  root, `pass` and `fail` alike, about a second. `roundtrip-known.txt` is
+  empty, has the baseline's semantics — an unlisted failure is a regression, a
+  listed case that round-trips is a stale entry, both fail — and every entry
+  needs a reason naming the bug. Last in the gate is `scripts/miri.sh`
   (ticket 05): `cargo +nightly miri test` over the `usfm_span`, `usfm_ast` and
   `usfm_diagnostics` libs, `usfm_usx`'s lib, `usfm_html`'s `escape` tests, the
   parser lib
   and the `whitespace`, `attributes`, `usx_text`, `verse_ends`, `spans` and
-  (10 of 82) `recovery` suites, about 3 min 50 s. It needs a nightly toolchain
+  (10 of 85) `recovery` suites, about 3 min 50 s. It needs a nightly toolchain
   with `miri` and `rust-src`, which CI installs in its own step and
   `scripts/session-start.sh` installs on a fresh VM; `rust-toolchain.toml`
   stays pinned at 1.98.0 for everything else.
 - Fuzzing is on demand, not in the gate or CI (ticket 06): `cargo +nightly fuzz
   run --fuzz-dir tasks/fuzz parse_lossy -- -max_total_time=600 -max_len=65536`,
-  and the same for `parse_utf8` and `parse_html`. The first two assert no panic,
+  and the same for `parse_utf8`, `parse_html` and `roundtrip`. The first two
+  assert no panic,
   the span invariants (`usfm_parser::span_check`, shared with `crates/usfm_parser/tests/spans.rs`
   behind the `testing` feature) and that the USX output is well-formed XML;
   `parse_html` (ticket 14) asserts no panic and that the HTML output is balanced
   and properly escaped, checked by a scanner in `tasks/fuzz/src/lib.rs` rather
-  than by an HTML parser. `tasks/fuzz` is
+  than by an HTML parser; `roundtrip` (ticket 27) parses, writes USFM and parses
+  again, asserting the same three things the gate's `--roundtrip` step does —
+  the tree is equal ignoring spans, the second parse gains no diagnostic code,
+  and the output is a fixed point. `tasks/fuzz` is
   outside the workspace, so run its clippy separately; see `tasks/fuzz/README.md`.
 
 **Traversal API (Phase 3, complete 2026-09-12)** lives in `usfm_ast`:
@@ -133,6 +143,67 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **The round trip as an invariant (ticket 27, M5).** parse -> USFM -> parse is
+  now asserted in three places off one definition
+  (`usfm_tests::roundtrip::check`): the trees are equal ignoring spans, the
+  second parse gains no diagnostic **code the first did not**, and writing the
+  second tree gives the same bytes. It is deliberately not "the second parse
+  reports no error" — measured: 21 of the 275 conformance cases keep one, and
+  each is a document still wrong after being written out faithfully
+  (`missing-id`, `verse-outside-chapter`, `empty-book`, …), which a writer
+  could only "fix" by editing the document. The three places are
+  `crates/usfm_codegen/tests/roundtrip.rs` (the `pass` corpus, the 86 benchmark
+  books and now the seven machine.py fixtures), the gate's
+  `--roundtrip tasks/conformance/roundtrip-known.txt` step over every
+  conformance case of both roots, and `tasks/fuzz`'s `roundtrip` target.
+  **Twenty bugs came out of it** — nineteen the `roundtrip` target found over
+  twenty-one findings in as many runs (one of them on a seed, which is ticket
+  28) and ticket 29, which the ticket named. Nineteen of the twenty are fixed;
+  the one that is not is written up in `tasks/fuzz/findings/` — a
+  `Block::Milestone` the writer has no line to put on (after a `Sidebar` or a
+  `Table`, or first in a `\periph` division, the line before it takes it back),
+  which is a question about which blocks may precede one at all rather than a
+  repair at one site. **`roundtrip` has therefore not run ten minutes clean**:
+  its twenty-first run found that one at 35 101 execs, and each run before it
+  found one more bug, the first 487 execs in.
+  Each fixed one became a test first and then a fix in the crate that was
+  wrong; the full table, input by input, is in `tasks/fuzz/README.md`, and
+  every input is in
+  `usfm_codegen`'s `roundtrip.rs::the_fuzz_findings_round_trip`. They are
+  almost all one shape: **a marker the parser drops leaves a tree no USFM
+  spells**, because what the writer writes to stand in its place is read back
+  differently. So the parser now keeps the document writable —
+  - whitespace a dropped marker left behind obeys rules 1 and 6 again
+    (`usfm_ast`'s `InlineContainer::add_child`, the one place runs merge and
+    children are added: `\ \* i` had made a `Text` of two spaces, `\p\* n`
+    and `\v 3\* x` one with a leading space), and so does text joined across
+    a child that contributes none (`parse_periph`'s title and a note's `\cat`,
+    both through `collapse_ascii_whitespace`);
+  - a node that the construct before it would absorb goes into that construct
+    instead of standing beside it: a `Block::Milestone` after a `Block::Para`,
+    a `\cp` paragraph after a `ChapterStart`, a `\va`/`\vp` `Char` after a
+    `VerseStart` (they are the verse's numbers wherever they came from), an
+    unclosed `\vp` after `\v N`
+    (now lifted into `pub_number` closed or not), a second `Table` after a
+    `Table` (consecutive `\tr` rows are one table), a block after a `Periph`
+    (a `\periph` division runs to the next `\periph` or `\id`, and an `\id`
+    the parser drops is not one, so the division simply carries on — and
+    whatever ends the container a division is in ends the division, or a
+    `\periph` in a sidebar swallows the `\esbe` that closes it);
+  - `\periph` lines: no verses on them at all (a `\v` there opened one whose
+    start was then thrown away with the rest of the line while its end landed
+    in the paragraph before the periph), and a default attribute value that
+    ends one drops its trailing whitespace, which the line break the writer
+    ends that line with eats anyway;
+  - two writers were wrong rather than the parser: `usfm_codegen` wrote a
+    separator after a default attribute that the parser read back into the
+    value, and `NumberRange`'s `Display` dropped an end modifier on a range
+    whose ends are the same number (`\v 4-4t` came back as `\v 4`).
+  Ticket 28's own fix is in `parse_sidebar` (the sidebar is pushed before the
+  `\esbe` line is parsed, so the verse end lands before it), with the `\esbe`
+  line now placing verse ends as the implicit `\p` it becomes; ticket 29's is
+  `eat_whitespace()` before the pipe on the block milestone path, after which
+  `usfm_codegen` writes `\qt-s |who="…"\*` with the space USFM 3 spells.
 - **`usfm format` and `--format usfm` (ticket 26, M5).** `usfm format <files>`
   parses each file on its own through the facade and writes it back with
   `usfm_codegen`: to stdout by default, `--write` in place, `--check` for CI
@@ -439,7 +510,9 @@ usfm-tools/
 │   └── usfm_cli/          # The `usfm` binary: clap, watch mode, diagnostics
 ├── tasks/
 │   ├── conformance/       # tcdocs + usfm-grammar runner (the `usfm_tests` crate),
-│   │                      #   its fixtures, patches and baseline
+│   │                      #   its fixtures, patches, baseline and the
+│   │                      #   round-trip property (`roundtrip.rs`) all three
+│   │                      #   round-trip checks share
 │   ├── benchmark/         # criterion benches over a committed corpus
 │   └── fuzz/              # cargo-fuzz targets (own workspace, nightly)
 ├── tcdocs/                # Git submodule: official USFM test suite
@@ -470,6 +543,10 @@ cargo run --package usfm_tests -- --baseline tasks/conformance/tcdocs-baseline.t
 
 # Regenerate the list after fixing or regressing cases
 cargo run --package usfm_tests -- --write-baseline tasks/conformance/tcdocs-baseline.txt
+
+# The round trip over every case of every root, gated the same way (ticket 27)
+cargo run --package usfm_tests -- --roundtrip tasks/conformance/roundtrip-known.txt
+cargo run --package usfm_tests -- --write-roundtrip-known tasks/conformance/roundtrip-known.txt
 
 # Run as cargo test (with output)
 cargo test --package usfm_tests -- --nocapture

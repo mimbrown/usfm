@@ -16,13 +16,15 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
-# The facade (ticket 17). `usfm::usx` and `usfm::html` are the two writers the
-# targets check; `testing` forwards to `usfm_parser` for `span_check`, the span
-# invariants the targets assert. JSON and pipeline stay off: no target uses
-# them, and every dependency here is also a dependency of the sanitizer build.
+# The facade (ticket 17). `usfm::usx`, `usfm::html` and `usfm::codegen` are the
+# three writers the targets check; `testing` forwards to `usfm_parser` for
+# `span_check`, the span invariants the targets assert. JSON and pipeline stay
+# off: no target uses them, and every dependency here is also a dependency of
+# the sanitizer build.
 usfm = { path = "../../crates/usfm", default-features = false, features = [
   "usx",
   "html",
+  "codegen",
   "testing",
 ] }
 xml-rs = "0.8.26"
@@ -44,6 +46,13 @@ bench = false
 [[bin]]
 name = "parse_html"
 path = "fuzz_targets/parse_html.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "roundtrip"
+path = "fuzz_targets/roundtrip.rs"
 test = false
 doc = false
 bench = false

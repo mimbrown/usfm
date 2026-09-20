@@ -1,0 +1,5 @@
+# Conformance cases that do not round-trip through usfm_codegen.
+# One `name # reason` per line; the reason must name the bug, because
+# every entry here is a ticket rather than a licence. The aim is an
+# empty file.
+# Regenerate with: cargo run --package usfm_tests -- --write-roundtrip-known tasks/conformance/roundtrip-known.txt

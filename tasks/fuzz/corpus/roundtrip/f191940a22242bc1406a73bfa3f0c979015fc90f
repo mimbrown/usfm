@@ -1,0 +1,32 @@
+\id PSA Unlocked Literal Bible
+\ide UTF-8
+\h Psalms
+\toc1 The Book of Psalms
+\toc2 Psalms
+\toc3 Psa
+\mt The Book of Psalms
+\cl Psalm
+\c 1
+\p
+\ms Book One
+\q
+\v 1 Blessed is the man who does not walk in the advice of the wicked,
+\q or stand in the pathway with sinners,
+\q or sit in the assembly of mockers.
+\q
+\v 2 But his delight is in the law of YahTITweh,
+\q and on his law he meditates d"Gr,RD,,,,GNP,"\w*
+\w σαλευομένων|lemma="σαλεύω" strong="G45310" x-morph="Gr,V,PPP,GNP,"\w*
+\w μετάθεσι\id GEN
+\c 1
+\p
+\v 27
+\w τὸ|lemmad GEN
+\c 1
+\p\v 1 somethi="ὁ" str-morph="Gr,RD,,,,NNP,"\w*
+\w μὴ|lemma="μή" strong="G33610" x-morph="Gr,D,,,,,,,,,"\w*
+a="μετάθεσις" strong="G33310" x-morph="Gr,N,,,,,AFS,"\w*,
+\w ὡς|lemma="ὡς" strong="G56130" x-morph="Gr,CS,,,,,\,,," x-tw="rc://*/tw/dict/bible/other/li\q
+\v 5 So the ww σαλευόμενα|lemma="σαλεύω" strong="G45310" x-micked will not stand in the judgment,
+\q nor orph="Gsinners in the assembly r,V,PPof the rP,NNP,"\wighteou*.s.
+

@@ -1,0 +1,176 @@
+\id MAT - Test
+\h Matthew
+\mt Matthew
+\ip An introduction to Matthew\fe- Test
+\h Matthew
+\mt Matthew
+\ip An introduction to Matthew\fe + \ft This is an endnote.\fe*
+\p \rq MAT 1\rq* Here is another paragraph.
+\p and with a \w keyword|a special concept\w* in it.
+\p and a \weirdtaglookingthiíòﬂèhat is not an actual tag.
+\c 1
+\s Chapter One
+\v 1 Chapter \pn one\+pro WON\+pro*\pn*, verse one.\f + \fr 1:1: \ft This is a footnote for v1.\f*
+\li1
+\v 2 \bd C\bd*hapter one,
+\li2 verse\f + \fr 1:2: \ft TFhis is a footnote for v2.\f* two.
+\v 3 Chapter one \w*,
+\li2 verse three.
+\v 4 Chapter one with odd whitespacze,‚Äâ
+\li2 verse four,
+\v 5 Chapter one,
+\li2 verse \fig Figure 1|src=\BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBid GEN
+\c 1
+\s some text
+\p
+\vXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXT
+\periph My Title|id="title"
+\p this is t 1 \qt-s|Speaker\*verse text 
+\v 2 verse text\qt-e\*
+ft This is a footnote.\f*one.
+\v 2-3 Chapter two, // verse \fm ‚àÜ\fm*two.
+\esb
+\ms This is a sidebar
+\p Here is some sidebar // content.
+\esbe
+\v 3-4a Chapter two, verse \w three|lemma\w*.
+\v 4b Chapter two, verse four.
+\p
+\v 6 Chapter two, verse \w six|strong="12345" \w*.
+\p
+\v 6 Bad verse. \x - \xo abc\xt 123\x* and more content.
+\p
+\v 5 Chapter two, verse five \rq (MAT 3:1)\rq*.
+\v 7a Chapter two, verse seven A,
+\s Section header \ts-s\*
+\p
+\v 7b verse seven B.
+\p
+\v 8 This is a list: \ts-e\*
+\b
+\tr \tc1
+\v 9 Chapter\tcr2 2\tc3 verse\tcr4 9
+\tr \tc1-2
+\v 10 \tc3-4 \qt-s |Jesus\*Chapter 2 verse 10\qt-e\*
+\v 11- + \ft This is an endnote.\fe*
+\p \rq MAT 1\rq* Here is another paragraph.
+\p and with a \w keyword|a special concept\w* in it.
+\p and a \weirdtaglookingthiíòﬂèhat is not an actual tag.
+\c 1
+\s Chapter One
+\v 1 Chapter \pn one\+pro WON\+pro*\pn*, verse one.\f + \fr 1:1: \ft This is a footnote for v1.\f*
+\li1
+\v 2 \bd C\bd*hapter one, \w three|lemma\w*.
+\v 4b Chapter two, verse four.
+\p
+\v 6 Chapter two, verse \w six|strong="12345" \w*.
+\p
+\v 6 Bad verse. \x - \xo abc\xt 123\x* and more content.
+\p
+\v 5 Chapter two, verse five \rq (MAT 3:1)\rq*.
+\v 7a Chapter two, verse seven A,
+\s Section header \ts-s\*
+\p
+\v 7b verse seven B.
+\p
+\v 8 This is a list: \ts-e\*
+\b
+\tr \tc1
+\v 9 Chapter\tcr2 2\tc3 verse\tcr4 9
+\tr \tc1-2
+\v 10 \tc3-4 \qt-s |Jesus\*Chapter 2 verse 10\qt-e\*
+\v 11- + \ft This is an endnote.\fe*
+\p \rq MAT 1\rq* Here is another paragraph.
+\p and with a \w keyword|a special concept\w* in it.
+\p and a \weirdtaglookingthiíòﬂèhat is not an actual tag.
+\c 1
+\s Chapter One
+\v 1 Chapter \pn one\+pro WON\+pro*\pn*, verse one.\f + \fr 1:1: \ft This is a footnote for v1.\f*
+\li1
+\v 2 \bd C\bd*hapter one,
+\li4 verse\f + \fr 1:2: \ft TFhis is a footnote for v2.\f* two.
+\v 3 Chapter one \w*,
+\li2 verse three.
+\v 4 Chapter  Chapter one \w*,
+\li2 verse three.
+\v 4 Chapter one with odd whitespacze,‚Äâ
+\li2 verse four,
+\v 5 Chapter one,
+\li2 verse \fig Figure 1|src=\BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBid GEN
+\c 1
+\s some text
+\p
+\vXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXT
+\periph My Title|id="title"
+\p this is t 1 \qt-s|Speaker\*verse text 
+\v 2 verse text\qt-e\*
+ft This is a footnote.\f*one.
+\v 2-3 Chapter two, // verse \fm ‚àÜ\fm*two.
+\esb
+\ms This is a sidebar
+\p Here is some sidebar // content.
+\esbe
+\v 3-4a Chapter two, verse \w three|lemma\w*.
+\1 4b Chapter two, verse four.
+\p
+\v 6 Chapter two, verse \w six|strong="12345" \w*.
+\p
+\v 6 Bad verse. \x - \xo abc\xt 123\x* and more content.
+\p
+\v 5 Chapter two, verse five \rq (MAT 3:1)\rq*.
+\v 7a Chapter two, verse seven A,
+\s Section header \ts-s\*
+\p
+\v 7b verse seven B.
+\p
+\v 8 This is a list: \ts-e\*
+\b
+\tr \tc1
+\v 9 Chapter\tcr2 2\tc3 verse\tcr4 9
+\tr \tc1-2
+\v 10 \tc3-4 \qt-s |Jesus\*Chapter 2 verse 10\qt-e\*
+\v 11- + \ft This is an endnote.\fe*
+\p \rq MAT 1\rq* Here is another paragraph.
+\p and with a \w keyword|a special concept\w* in it.
+\p and a \weirdtaglookingthiíòﬂèhat is not+pro WON\+pro*\pn*, verse one.\f + \fr 1:1: \ft This is a footnote for v1.\f*
+\li1
+\v 2 \bd C\bd*hapter one, \w three|lemma\w*.
+\v 4b Chapter two, verse four.
+\p
+\v 6 Chapter two, verse \w six|strong="12345" \w*.
+\p
+\v 6 Bad verse. \x - \xo abc\xt 123\x* and more content.
+\p
+\v 5 Chapter two, verse five \rq (MAT 3:1)\rq*.
+\v 7a Chapter two, verse seven A,
+\s Section header \ts-s\*
+\p
+\v 7b verse seven B.
+\p
+\v 8 This is a list: \ts-e\*
+\b
+\tr \tc1
+\v 9 Chapter\tcr2 2\tc3 verse\tcr4 9
+\tr \tc1-2
+\v 10 \tc3-4 \qt-s |Jesus\*Chapter 2 verse 10\qt-e\*
+\v 11- + \ft This is an endnote.\fe*
+\p \rq MAT 1\rq* Here is one with odd whitespacze,‚Äâ
+\li2 verse four,
+\v 5 Chapter one,
+\li2 verse \fig Figure 1|src=\BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBtr \tc1-2
+\v 10 \tc3-4 \qt-s |Jesus\*Chapter 2 verse 10\qt-e\*
+\v 11-12
+\restore restore information
+\c 3
+\cl PSALM 3
+\s1 Section 1
+\mt1 Major Title 1
+\d \va (1)\va* Description
+\q1
+\v 1 \va 2\va*\vp 1 (2)\vp* Chapter 3 verse 1.
+\q1 3.1 part 2
+\b
+\q1 3.1 part 3
+\q1 3.1 part 4
+\c 4
+\v 1
