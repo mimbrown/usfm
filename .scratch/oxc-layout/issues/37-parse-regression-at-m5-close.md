@@ -1,6 +1,6 @@
 # 37. `parse` is 3.9% slower at the M5 close than at the M4 close
 
-Status: ready-for-agent
+Status: claimed
 Milestone: M5
 
 Found at the M5 boundary by the rerun `docs/agents/loop.md` prescribes
