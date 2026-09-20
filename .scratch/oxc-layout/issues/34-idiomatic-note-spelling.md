@@ -33,7 +33,7 @@ Done when the gate is green and the corpus `--check` passes.
 
 ## Answer
 
-Landed via PR #33 (2026-09-20). Both spellings changed in
+Landed in `4e95440` (PR #33, 2026-09-20). Both spellings changed in
 `crates/usfm_codegen/src/usfm.rs`, neither a tree change:
 
 - A note's content runs are written without their closing marker

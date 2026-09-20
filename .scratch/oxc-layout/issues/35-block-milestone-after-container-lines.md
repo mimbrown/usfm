@@ -1,6 +1,6 @@
 # 35. A `Block::Milestone` after a sidebar, a table or a `\periph` line is not writable
 
-Status: ready-for-agent
+Status: claimed
 Milestone: M5
 Blocked by: 27
 
