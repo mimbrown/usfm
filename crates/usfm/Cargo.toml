@@ -20,18 +20,20 @@ usfm_span = { path = "../usfm_span" }
 usfm_style = { path = "../usfm_style" }
 
 # The output and pipeline crates, each behind the feature named after it. All
-# four are on by default, so `usfm = { path = "…" }` is the whole toolchain and
+# five are on by default, so `usfm = { path = "…" }` is the whole toolchain and
 # `default-features = false` is a parser-only build.
+usfm_codegen = { path = "../usfm_codegen", optional = true }
 usfm_html = { path = "../usfm_html", optional = true }
 usfm_json = { path = "../usfm_json", optional = true }
 usfm_pipeline = { path = "../usfm_pipeline", optional = true }
 usfm_usx = { path = "../usfm_usx", optional = true }
 
 [features]
-default = ["usx", "html", "json", "pipeline"]
+default = ["usx", "html", "json", "codegen", "pipeline"]
 usx = ["dep:usfm_usx"]
 html = ["dep:usfm_html"]
 json = ["dep:usfm_json"]
+codegen = ["dep:usfm_codegen"]
 # The pipeline dispatches to all three writers, so it pulls them in.
 pipeline = ["dep:usfm_pipeline", "usx", "html", "json"]
 

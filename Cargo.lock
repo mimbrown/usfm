@@ -658,6 +658,7 @@ name = "usfm"
 version = "0.1.0"
 dependencies = [
  "usfm_ast",
+ "usfm_codegen",
  "usfm_diagnostics",
  "usfm_html",
  "usfm_json",
@@ -692,6 +693,18 @@ dependencies = [
  "clap",
  "notify",
  "usfm",
+]
+
+[[package]]
+name = "usfm_codegen"
+version = "0.1.0"
+dependencies = [
+ "usfm",
+ "usfm_ast",
+ "usfm_benchmark",
+ "usfm_parser",
+ "usfm_style",
+ "usfm_tests",
 ]
 
 [[package]]

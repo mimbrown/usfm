@@ -6,15 +6,16 @@ license = "MIT"
 publish = false
 
 [dependencies]
-# The facade (ticket 17). `usfm::usx`, `usfm::html` and `usfm::json` are the
-# three writers the `parse_usx`, `parse_html` and `parse_json` groups measure;
-# `pipeline` is off because nothing here renders through it, and `benchmarking`
-# forwards to `usfm_parser` for the `UniquePromise` the `lex` group needs to
-# build a `Lexer` directly.
+# The facade (ticket 17). `usfm::usx`, `usfm::html`, `usfm::json` and
+# `usfm::codegen` are the four writers the `parse_usx`, `parse_html`,
+# `parse_json` and `codegen` groups measure; `pipeline` is off because nothing
+# here renders through it, and `benchmarking` forwards to `usfm_parser` for the
+# `UniquePromise` the `lex` group needs to build a `Lexer` directly.
 usfm = { path = "../../crates/usfm", default-features = false, features = [
   "usx",
   "html",
   "json",
+  "codegen",
   "benchmarking",
 ] }
 

@@ -1,0 +1,33 @@
+[package]
+name = "usfm_codegen"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+# An output crate in `docs/adr/0001-oxc-style-crate-layout.md`: it turns a
+# `Document` back into USFM. "No output crate depends on another output crate",
+# and no output crate depends on the parser — this one reads the AST and the
+# stylesheet the document carries, so neither `usfm_parser` nor any of
+# `usfm_usx` / `usfm_html` / `usfm_json` is in the list below.
+[dependencies]
+# The tree it walks, its `Visit` trait, and `Alignment`/`StyleId`.
+usfm_ast = { path = "../usfm_ast" }
+# `StyleSheet`, to resolve a node's `StyleId` to the marker it is written as.
+usfm_style = { path = "../usfm_style" }
+# `usfm_span` is deliberately absent: the writer reads no span at all — a
+# marker is written from the stylesheet and a text run from its content — and
+# `usfm_ast::span` re-exports the crate for anything that does.
+
+[dev-dependencies]
+# Every test here starts from a parsed document, which only the parser can
+# build, and the round-trip test parses the output again. Dev-dependencies
+# only: the shipped code parses nothing.
+usfm_parser = { path = "../usfm_parser" }
+# The round-trip test parses through the facade, so it sees the diagnostics a
+# caller sees (the parser's *and* `usfm_semantic`'s). A dev-dependency cycle
+# cargo allows, the same one `usfm_semantic`'s own tests use.
+usfm = { path = "../usfm" }
+# The tcdocs and usfm-grammar corpora the round-trip test walks.
+usfm_tests = { path = "../../tasks/conformance" }
+# The benchmark corpus (`web/`, 86 files), also walked by the round-trip test.
+usfm_benchmark = { path = "../../tasks/benchmark" }

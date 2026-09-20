@@ -1,6 +1,7 @@
 mod book;
 mod chapter;
 pub mod cursor;
+mod eq;
 pub mod fold;
 mod inline_container;
 mod into_owned;
@@ -43,6 +44,7 @@ use usfm_style::{StyleRule, StyleSheet};
 pub use book::*;
 pub use chapter::*;
 pub use cursor::*;
+pub use eq::eq_ignoring_spans;
 pub use inline_container::*;
 pub use into_owned::*;
 pub use number::*;

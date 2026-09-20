@@ -16,8 +16,16 @@
 # Miri interprets the program on one host thread, so the test harness's threads
 # buy nothing and the wall time is the sum of the suites. Local wall time on the
 # 4-vCPU Xeon @ 2.80GHz the agent loop runs on, with the Miri build already
-# done: **about 3 min 50 s** (per-suite times in the comments below). The
+# done: **about 4 min 5 s** (per-suite times in the comments below). The
 # budget for the CI step is 5 minutes, so a suite added here has to earn it.
+#
+# Not run in full, on purpose:
+# * `usfm_codegen` (ticket 25) — four of its 19 lib tests, the ones that drive
+#   the two byte scans (`write_text`, `write_attribute_value`). Those two are
+#   the crate's only byte handling: everything else it writes is a marker name
+#   out of the stylesheet or a `Display` impl, and every test parses a whole
+#   document first, which is 48 s of Miri for the parser coverage the suites
+#   below already give (whole lib suite: 49 s, against 15 s for these four).
 #
 # Not run, on purpose:
 # * `usfm_parser --test snapshot` — the insta corpus, hundreds of files of I/O
@@ -85,6 +93,15 @@ run -p usfm_usx --lib
 # documents through the HTML writer, which is 14 s of Miri for byte handling
 # the parser suites below already cover (whole suite: 15 s).
 run -p usfm_html --lib escape::
+
+# `write_text` / `write_attribute_value`: two byte scans over a `&str` that
+# slice at the indices they stop on — `\\`, `|`, the two bytes of U+00A0, and
+# `"` inside a quoted attribute value (ticket 25).                     ~15 s
+run -p usfm_codegen --lib -- --exact \
+  usfm::tests::text_is_escaped_the_way_the_parser_reads_it_back \
+  usfm::tests::a_quote_in_an_attribute_value_is_escaped \
+  usfm::tests::a_stray_backslash_comes_back_escaped \
+  usfm::tests::the_default_attribute_is_written_bare
 
 # The lexer's own unit tests, including `lexer::source`, plus the parser and
 # style unit tests. The `--skip text_replacements` this line carried until

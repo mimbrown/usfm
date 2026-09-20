@@ -90,7 +90,7 @@ Conformance status (276 tests across two roots, 2026-09-19):
 - CI (`.github/workflows/ci.yml`) runs the unit and integration suites
   (`recovery`, `snapshot`, `spans`, `whitespace`, `attributes`, `verse_ends`, `usx_text`,
   `usfm_html`'s `footnotes`, `usfm_json`'s `json` and `coverage`,
-  `usfm_semantic`'s `checks`, parser lib),
+  `usfm_semantic`'s `checks`, `usfm_codegen`'s lib and `roundtrip`, parser lib),
   gates lint with
   `cargo clippy --workspace --all-targets -- -D warnings` (in `scripts/gate.sh`
   since 2026-09-19, ticket 02: the workspace is clippy-clean, so a new warning
@@ -133,6 +133,27 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **`usfm_codegen`: USFM from the AST (ticket 25, M5).** `to_usfm_string(&Document)`
+  (and `write_usfm` into any `fmt::Write`), a `Visit` writing into a `String`,
+  re-exported as `usfm::codegen` behind the default-on `codegen` feature. M5's
+  exit criterion holds: **every one of the 223 `pass` cases of the two
+  conformance roots and all 86 books of the benchmark corpus** parse, write and
+  parse again to the same tree, with an empty `KNOWN` list
+  (`crates/usfm_codegen/tests/roundtrip.rs`). The output is *not* the source
+  byte for byte and is not meant to be — the AST records what a construct is,
+  not which spelling the source used, so the writer emits one canonical
+  spelling: an implicitly closed `\add` comes back with its `\add*`, a `\nd`
+  nested without `+` comes back with one, `\v 01` as `\v 1`, an unquoted
+  attribute value in quotes, a stray `\` as `\\`. So the round-trip test asks
+  that the second parse gains no diagnostic (five cases lose
+  `character-style-nested-without-plus`, which is the canonicalisation) and
+  that writing the second tree gives the same text back — a fixed point. Two
+  spellings are forced rather than chosen: a milestone's `|` is flush against
+  its marker (`\qt-s|who="God"\*`), because between blocks the parser looks for
+  it with no whitespace eaten first, and `\cp` takes no closing marker where
+  `\vp` does. Equality is `usfm_ast::eq_ignoring_spans`, which also compares
+  styles by **marker name through each document's own sheet**, since a derived
+  style's `StyleId` is an index into the sheet that derived it
 - **The semantic pass, made cheap (ticket 24, M4).** `parse_semantic` ran
   11–14% behind `parse` over the whole corpus; it is now 7–8%, and what is left
   is the cost of walking a built tree a second time rather than of any check —
@@ -345,8 +366,9 @@ Priority areas, next: the route is `.scratch/oxc-layout/spec.md` (decision in
 `docs/adr/0001-oxc-style-crate-layout.md`): oxc's crate organisation, not its arena.
 Milestones in order: M1 workspace builds clean, M2 benchmarks + Miri + fuzz, M3
 crate split, M4 `usfm_semantic`, M5 `usfm_codegen`, M6 language server. M1–M4
-closed (exit criteria recorded in the spec; M4 on 2026-09-20); **M5
-(`usfm_codegen`, round trip, `usfm format`) is next**, ticketed 25–27.
+closed (exit criteria recorded in the spec; M4 on 2026-09-20). **M5 is in
+progress**: ticket 25 (the crate and the round trip) is done, 26 (`usfm
+format`) and 27 are next.
 Tickets are in
 `.scratch/oxc-layout/issues/`, written one milestone ahead. Unattended
 sessions follow `docs/agents/loop.md`; `scripts/gate.sh` is the gate before every push.
@@ -384,6 +406,8 @@ usfm-tools/
 │   ├── usfm_usx/          # AST -> USX: the XML tree, its writer and reader
 │   ├── usfm_html/         # AST -> HTML: ToHtml, SerializeHtml, Context
 │   ├── usfm_json/         # AST -> JSON: the tree as it is, one object per node
+│   ├── usfm_codegen/      # AST -> USFM: one canonical spelling per construct,
+│   │                      #   `to_usfm_string`. Round-trips the tcdocs corpus
 │   ├── usfm_pipeline/     # Document -> Document/text: replacements, sections,
 │   │                      #   diglot, prompt, SILE, the format dispatch
 │   └── usfm/              # Facade: re-exports the above behind features, and
@@ -404,9 +428,9 @@ usfm-tools/
     └── data_layer/            # Data persistence (parked)
 ```
 
-`crates/usfm_codegen` (M5) is the one the ADR's tree still lacks;
-`crates/usfm_semantic` arrived with ticket 19 and M6 rebuilds the language
-server under `apps/`.
+Every crate the ADR's tree calls for now exists: `crates/usfm_semantic`
+arrived with ticket 19 and `crates/usfm_codegen` with ticket 25. M6 rebuilds
+the language server under `apps/`.
 
 ## Running Tests
 

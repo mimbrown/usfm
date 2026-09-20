@@ -15,7 +15,7 @@ licence). One command runs everything:
 cargo bench -p usfm_benchmark
 ```
 
-Eight groups, each reporting throughput over the bytes of USFM it was given:
+Nine groups, each reporting throughput over the bytes of USFM it was given:
 
 | Group | One iteration does |
 | --- | --- |
@@ -25,6 +25,7 @@ Eight groups, each reporting throughput over the bytes of USFM it was given:
 | `parse_usx` | `parse`, then `usx::to_usx_string(&document)` |
 | `parse_html` | `parse`, then `to_html_string(&document, document.style_sheet())` |
 | `parse_json` | `parse`, then `usfm_json::to_json_string(&document)` |
+| `codegen` | `usfm_codegen::to_usfm_string(&document)`; the parse is done once **outside** the timed loop |
 | `reference_index` | `usfm_semantic::ReferenceIndex::new(&document)`; the parse is done once **outside** the timed loop |
 | `analyze` | `usfm_semantic::analyze(&document)`; the parse is done once **outside** the timed loop |
 
@@ -52,7 +53,7 @@ Criterion is configured in `benches/corpus.rs` at `warm_up_time` 1 s,
 `measurement_time` 5 s and `sample_size` 10 — the smallest settings that still
 give criterion its ten samples when one whole-corpus iteration takes a quarter
 of a second. The defaults (100 samples over 5 s) would take hours. A full run
-of all eight groups is about **7 minutes**.
+of all nine groups is about **8 minutes**.
 
 Criterion's own output directory, `target/criterion`, is git-ignored through
 the `/target` entry in `.gitignore`, so nothing a run writes is committed.
@@ -777,6 +778,52 @@ therefore taken *before* the fix, where the costs were large enough to survive
 that; after it, a family subtraction on this pass is not worth the build it
 takes. Compare whole binaries, built the same way, interleaved.
 
+## `codegen` (ticket 25)
+
+The new group, 2026-09-20, on the machine and toolchain of the baseline above.
+It is a **new row, compared to nothing**: `usfm_codegen` did not exist before,
+so there is no earlier number and no 3% question. Three consecutive runs,
+`cargo bench -p usfm_benchmark --bench corpus -- codegen`, nothing else
+running; MiB/s, as everywhere in this file.
+
+Like `reference_index` and `analyze`, this group parses **outside** the timed
+loop: what is measured is `to_usfm_string` over a tree that already exists,
+which is what a formatter does. So it is not comparable with `parse_usx`,
+`parse_html` or `parse_json`, which include the parse.
+
+| Class | Run 1 | Run 2 | Run 3 | Median | Spread |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| plain | 311.8 | 293.7 | 286.8 | **293.7** | 8.5% |
+| attributes-heavy | 159.1 | 161.3 | 150.9 | **159.1** | 6.5% |
+| alignment-heavy | 405.9 | 405.7 | 390.3 | **405.7** | 3.9% |
+| note-heavy | 331.4 | 330.6 | 332.2 | **331.4** | 0.5% |
+| **whole-corpus** | 232.7 | 238.0 | 231.8 | **232.7** | 2.7% |
+
+Whole-corpus throughput is **232.7 MiB/s**: the 12.78 MiB corpus is written
+back as USFM in about 55 ms, from trees that are already built. That makes it
+the cheapest output in the repo by a wide margin — the same subtraction on
+ticket 15's numbers puts HTML at about 270 MiB/s *including* its parse, USX at
+about 29 and JSON at about 9.5 — and the reason is that there is no
+intermediate representation at all. USX builds an `XmlNode` tree and JSON a
+`serde_json::Value` tree before either writes a byte; this writes marker names
+and text slices straight into one `String`, and the only allocation per
+document is that `String` growing.
+
+The class ordering says the same thing from the other side. `alignment-heavy`
+is the **fastest** class at 405.7 MiB/s, where it is among the slowest for
+every other output: its bytes are mostly `\zaln-s|…\*` milestones, whose
+attribute values go out as the verbatim slices they came in as. And
+`attributes-heavy` is the slowest at 159.1 MiB/s for the mirror-image reason —
+a `\w …|lemma="…" strong="…"\w*` per word is two `write_attribute_value`
+byte scans and six short `write_str` calls per word, so the per-byte work is
+call overhead rather than copying. Both are still faster than any other
+writer here.
+
+The output is 0.17% larger than the input over the 309 round-trip cases
+(11 273 280 bytes written for 11 254 656 read), which is the canonical
+spelling costing a few bytes: the closing markers the source left implicit,
+and the `\+` on a style the source nested without one.
+
 ## Reading a regression
 
 The VM is a shared 4-vCPU cloud instance, so the numbers move on their own.
@@ -796,7 +843,9 @@ be read as:
 - apply the 3% threshold to `lex`, `parse`, `parse_usx` and `parse_html`, where the
   measurement is steady enough to support it. `reference_index` cannot resolve
   3% on this hardware; treat a change there as real only past ~15%, or rerun it
-  somewhere quieter.
+  somewhere quieter. `codegen` is in the same position: its timed work is
+  30–55 ms over a built tree and its spread reached 8.5% on `plain` across
+  three back-to-back runs, so read it at ~10% rather than 3%.
 
 Criterion prints its own change-since-last-run line when `target/criterion`
 holds a previous run, which is the cheapest way to see a regression: run the
