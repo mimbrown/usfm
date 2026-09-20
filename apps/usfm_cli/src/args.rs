@@ -15,8 +15,8 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use usfm::diagnostics::Severity;
 use usfm::pipeline::OutputFormat;
 
-/// Parse USFM and write it out as USX, HTML, JSON, SILE or a translation
-/// prompt.
+/// Parse USFM and write it out as USX, HTML, JSON, USFM, SILE or a
+/// translation prompt.
 #[derive(Debug, Parser)]
 #[command(name = "usfm", version, about)]
 pub struct Cli {
@@ -28,6 +28,8 @@ pub struct Cli {
 pub enum Command {
     /// Parse USFM files and write them out in another format.
     Parse(ParseArgs),
+    /// Rewrite USFM files in the writer's canonical shape.
+    Format(FormatArgs),
 }
 
 #[derive(Debug, Args)]
@@ -109,6 +111,40 @@ impl ParseArgs {
     }
 }
 
+/// `usfm format`: the formatter (ticket 26).
+///
+/// Deliberately not a flag on `parse`. `parse` concatenates its files into one
+/// document and writes one output; a formatter is per file — each file is
+/// parsed on its own and rewritten on its own, so a book split across files
+/// keeps its files. The three modes are the three a formatter has: print,
+/// rewrite, and check.
+#[derive(Debug, Args)]
+pub struct FormatArgs {
+    /// The USFM files to format. Each is parsed and written on its own.
+    #[arg(required = true, value_name = "FILES")]
+    pub files: Vec<PathBuf>,
+
+    /// A Paratext stylesheet to parse against, in place of the built-in one.
+    #[arg(short = 's', long, value_name = "FILE")]
+    pub stylesheet: Option<PathBuf>,
+
+    /// Rewrite each file in place instead of writing to standard output.
+    #[arg(long)]
+    pub write: bool,
+
+    /// Write nothing; exit 1 if any file is not already formatted.
+    #[arg(long, conflicts_with = "write")]
+    pub check: bool,
+
+    /// With --write, rewrite a file even when its parse reported an error.
+    #[arg(long)]
+    pub force: bool,
+
+    /// How diagnostics are written to standard error.
+    #[arg(long, value_enum, default_value_t = DiagnosticFormat::Text)]
+    pub diagnostics: DiagnosticFormat,
+}
+
 /// `--format`. The same list as [`OutputFormat`], as a clap value enum.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
 pub enum Format {
@@ -118,6 +154,8 @@ pub enum Format {
     Html,
     /// The AST as JSON, one object per node.
     Json,
+    /// USFM again, in the canonical shape `usfm format` writes.
+    Usfm,
     /// SILE's flavour of USX.
     Sile,
     /// The two sides of a diglot woven section by section.
@@ -130,6 +168,7 @@ impl From<Format> for OutputFormat {
             Format::Usx => OutputFormat::Usx,
             Format::Html => OutputFormat::Html,
             Format::Json => OutputFormat::Json,
+            Format::Usfm => OutputFormat::Usfm,
             Format::Sile => OutputFormat::Sile,
             Format::Prompt => OutputFormat::Prompt,
         }
@@ -150,6 +189,14 @@ mod tests {
     use super::*;
     use clap::CommandFactory;
 
+    /// The `parse` arguments of a command line that is a `parse`.
+    fn parse_args(cli: Cli) -> ParseArgs {
+        match cli.command {
+            Command::Parse(args) => args,
+            other => panic!("expected a parse command, got {other:?}"),
+        }
+    }
+
     /// clap checks the command for conflicting flags, bad defaults and the
     /// rest; a mistake in the struct above is a panic here rather than in
     /// someone's shell.
@@ -165,7 +212,7 @@ mod tests {
             "usfm", "parse", "-f", "html", "-s", "a.sty", "-o", "out.html", "-r", "r.txt", "-d",
             "b.usfm", "-w", "in.usfm",
         ]);
-        let Command::Parse(args) = cli.command;
+        let args = parse_args(cli);
         assert_eq!(args.format, Format::Html);
         assert_eq!(args.stylesheet, Some("a.sty".into()));
         assert_eq!(args.output, Some("out.html".into()));
@@ -182,7 +229,7 @@ mod tests {
         let threshold = |flags: &[&str]| {
             let mut argv = vec!["usfm", "parse", "in.usfm"];
             argv.extend_from_slice(flags);
-            let Command::Parse(args) = Cli::parse_from(argv).command;
+            let args = parse_args(Cli::parse_from(argv));
             (args.threshold(), args.threshold_flag())
         };
         assert_eq!(threshold(&[]).0, None);
@@ -203,7 +250,7 @@ mod tests {
     /// Repeatable flags collect, and the diglot pair is long-only.
     #[test]
     fn the_repeatable_flags_collect() {
-        let Command::Parse(args) = Cli::parse_from([
+        let args = parse_args(Cli::parse_from([
             "usfm",
             "parse",
             "in.usfm",
@@ -215,13 +262,41 @@ mod tests {
             "three.txt",
             "--diglot-stylesheet",
             "b.sty",
-        ])
-        .command;
+        ]));
         assert_eq!(
             args.replace,
             vec![PathBuf::from("one.txt"), PathBuf::from("two.txt")]
         );
         assert_eq!(args.diglot_replace, vec![PathBuf::from("three.txt")]);
         assert_eq!(args.diglot_stylesheet, Some("b.sty".into()));
+    }
+
+    /// `format` takes its files and its three modes, and `--write --check`
+    /// together is a usage error rather than a silent precedence rule.
+    #[test]
+    fn format_takes_its_files_and_modes() {
+        let Command::Format(args) = Cli::parse_from([
+            "usfm",
+            "format",
+            "--write",
+            "--force",
+            "-s",
+            "a.sty",
+            "one.usfm",
+            "two.usfm",
+        ])
+        .command
+        else {
+            panic!("expected a format command");
+        };
+        assert_eq!(
+            args.files,
+            vec![PathBuf::from("one.usfm"), PathBuf::from("two.usfm")]
+        );
+        assert_eq!(args.stylesheet, Some("a.sty".into()));
+        assert!(args.write && args.force && !args.check);
+        assert_eq!(args.diagnostics, DiagnosticFormat::Text);
+
+        assert!(Cli::try_parse_from(["usfm", "format", "--write", "--check", "one.usfm"]).is_err());
     }
 }

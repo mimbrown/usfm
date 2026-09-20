@@ -1,17 +1,19 @@
 //! `usfm`: the command line over the `usfm` facade.
 //!
-//! Four modules and nothing else: [`args`] is the command line as a clap
-//! struct, [`driver`] reads the files and writes the output, [`watch`] is
-//! `--watch`, and [`error`] is what is printed before the exit code. Every
-//! transformation of a document lives in `usfm_pipeline`.
+//! Five modules and nothing else: [`args`] is the command line as a clap
+//! struct, [`driver`] reads the files and writes `parse`'s output, [`format`]
+//! is the `format` subcommand, [`watch`] is `--watch`, and [`error`] is what
+//! is printed before the exit code. Every transformation of a document lives
+//! in `usfm_pipeline`.
 //!
 //! Exit codes: 0 if the output was written, 1 if it was not — including when
 //! `--strict` or `--deny-warnings` refused a document the parser had to
-//! repair.
+//! repair, and when `format --check` found a file that is not formatted.
 
 mod args;
 mod driver;
 mod error;
+mod format;
 mod watch;
 
 use clap::Parser;
@@ -31,6 +33,7 @@ fn main() {
 fn run(cli: Cli) -> Result<(), Error> {
     match cli.command {
         Command::Parse(args) => parse(args),
+        Command::Format(args) => format::run(&args),
     }
 }
 
