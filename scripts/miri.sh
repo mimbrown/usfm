@@ -43,6 +43,13 @@
 #   of assertions over hand-built nodes. The same goes for `ReferenceIndex`,
 #   which arrived with ticket 22: it walks `NodeRef`s, pushes child indices and
 #   clones a `NumberList`. Revisit if a check ever reads source text.
+# * `usfm_language_server` (ticket 30) — Miri cannot run it. Its tests are a
+#   tokio runtime and, for the integration test, a spawned process; Miri has no
+#   real threads to run the reactor on and forbids `Command::spawn`. There is
+#   nothing here to check either: the crate slices no bytes. The one thing it
+#   computes from source text is a UTF-16 column, which is
+#   `usfm_span::LineIndex::line_col_utf16` and runs under the `usfm_span` suite
+#   at the top of this script.
 # * `usfm_pipeline` — its lib suite is the text replacements, which spend all
 #   their time inside the `regex` crate; that is not this repo's code, and it
 #   cost 66 s of the parser's 86 s while it lived there (ticket 15 moved it).

@@ -11,8 +11,12 @@
       "sourceMaps": true,
       "outFiles": ["${workspaceFolder}/vscode/dist/*.js"],
       "env": {
-        "SERVER_PATH_DEV": "${workspaceRoot}/target/debug/usfm_language_server",
-        "USFM_PARSER_PATH_DEV": "${workspaceRoot}/target/debug/usfm_parser",
+        // `apps/usfm_language_server`'s binary (ticket 30), from
+        // `cargo build -p usfm_language_server`.
+        "SERVER_PATH_DEV": "${workspaceRoot}/target/debug/usfm-language-server",
+        // The CLI the preview command spawns; it has been `usfm` since the
+        // binary left `usfm_parser` (ticket 15).
+        "USFM_PARSER_PATH_DEV": "${workspaceRoot}/target/debug/usfm",
         "RUST_LOG": "debug"
       }
     }

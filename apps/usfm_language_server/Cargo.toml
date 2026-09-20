@@ -1,0 +1,30 @@
+[package]
+name = "usfm_language_server"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+# The language server the VS Code extension in `vscode/` spawns (ticket 30,
+# M6), rebuilt in `apps/` on the facade. The parked `wip/usfm_language_server`
+# is the one it replaces.
+[[bin]]
+name = "usfm-language-server"
+path = "src/main.rs"
+
+[dependencies]
+# The facade, and the only usfm crate an application names (ticket 17).
+# `default-features = false` on purpose: this ticket needs `usfm::parse_with`
+# (the parser plus the semantic pass), `usfm::span::LineIndex` for positions
+# and `usfm::StyleSheet` for a project's `.sty`, and none of the output
+# writers. Ticket 31's formatting adds `features = ["codegen"]`.
+usfm = { path = "../../crates/usfm", default-features = false }
+# The protocol: `tower-lsp-server` is the maintained fork of `tower-lsp` and
+# brings its own `ls_types`. `tokio` is its runtime and the server's stdio.
+tokio = { workspace = true }
+tower-lsp-server = { workspace = true }
+
+[dev-dependencies]
+# `tests/lsp.rs` speaks JSON-RPC to the built binary by hand; this is what
+# builds and reads the messages. No LSP client crate: the point of the test is
+# that the bytes on the wire are right.
+serde_json = { workspace = true }

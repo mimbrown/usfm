@@ -192,9 +192,11 @@ export async function activate(context: ExtensionContext) {
     }
     const ext = process.platform === "win32" ? ".exe" : "";
     // NOTE: The `./target/release` path is aligned with the path defined in .github/workflows/release_vscode.yml
+    // The binary is `apps/usfm_language_server`'s, built by `npm run
+    // server:build:release` (ticket 30); the parked `wip/` server is gone.
     return (
       process.env.SERVER_PATH_DEV ??
-      join(context.extensionPath, `./target/release/usfm_language_server${ext}`)
+      join(context.extensionPath, `./target/release/usfm-language-server${ext}`)
     );
   }
 
@@ -224,7 +226,7 @@ export async function activate(context: ExtensionContext) {
         scheme: "file",
       },
     ],
-    initializationOptions: configService.languageServerConfig,
+    initializationOptions: serverInitializationOptions(configService),
     outputChannel,
     traceOutputChannel: outputChannel,
     middleware: {
@@ -250,34 +252,36 @@ export async function activate(context: ExtensionContext) {
   };
 
   // Create the language client and start the client.
-  // client = new LanguageClient(languageClientName, serverOptions, clientOptions);
+  client = new LanguageClient(languageClientName, serverOptions, clientOptions);
 
-  // const onNotificationDispose = client.onNotification(
-  //   ShowMessageNotification.type,
-  //   (params) => {
-  //     switch (params.type) {
-  //       case MessageType.Debug:
-  //         outputChannel.debug(params.message);
-  //         break;
-  //       case MessageType.Log:
-  //         outputChannel.info(params.message);
-  //         break;
-  //       case MessageType.Info:
-  //         window.showInformationMessage(params.message);
-  //         break;
-  //       case MessageType.Warning:
-  //         window.showWarningMessage(params.message);
-  //         break;
-  //       case MessageType.Error:
-  //         window.showErrorMessage(params.message);
-  //         break;
-  //       default:
-  //         outputChannel.info(params.message);
-  //     }
-  //   }
-  // );
+  // The server sends `window/showMessage` for one thing only: a project
+  // stylesheet it could not read (ticket 30). Show it, and log the rest.
+  const onNotificationDispose = client.onNotification(
+    ShowMessageNotification.type,
+    (params) => {
+      switch (params.type) {
+        case MessageType.Debug:
+          outputChannel.debug(params.message);
+          break;
+        case MessageType.Log:
+          outputChannel.info(params.message);
+          break;
+        case MessageType.Info:
+          window.showInformationMessage(params.message);
+          break;
+        case MessageType.Warning:
+          window.showWarningMessage(params.message);
+          break;
+        case MessageType.Error:
+          window.showErrorMessage(params.message);
+          break;
+        default:
+          outputChannel.info(params.message);
+      }
+    }
+  );
 
-  // context.subscriptions.push(onNotificationDispose);
+  context.subscriptions.push(onNotificationDispose);
 
   const onDeleteFilesDispose = workspace.onDidDeleteFiles((event) => {
     for (const fileUri of event.files) {
@@ -307,7 +311,8 @@ export async function activate(context: ExtensionContext) {
     }
 
     // update the initializationOptions for a possible restart
-    client.clientOptions.initializationOptions = this.languageServerConfig;
+    client.clientOptions.initializationOptions =
+      serverInitializationOptions(this);
 
     if (
       configService.effectsWorkspaceConfigChange(event) &&
@@ -327,6 +332,23 @@ export async function activate(context: ExtensionContext) {
   } else {
     generateActivatorByConfig(configService.vsCodeConfig, context);
   }
+}
+
+/**
+ * What the server is told at `initialize`.
+ *
+ * `stylesheet` is the one key `apps/usfm_language_server` reads (ticket 30): a
+ * path to the project's `.sty`, which it adds to the default stylesheet rather
+ * than replacing it. With no setting, the server looks for a `custom.sty`
+ * beside the open file. `workspaces` is the per-folder configuration the
+ * server ignores for now; it is sent so an older client and a newer server
+ * agree on the shape.
+ */
+function serverInitializationOptions(configService: ConfigService) {
+  return {
+    stylesheet: configService.vsCodeConfig.stylesheet ?? null,
+    workspaces: configService.languageServerConfig,
+  };
 }
 
 export async function deactivate(): Promise<void> {
