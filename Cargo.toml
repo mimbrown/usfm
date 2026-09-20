@@ -2,6 +2,7 @@
 
 members = [
   "apps/usfm_cli",
+  "apps/usfm_language_server",
   "crates/usfm",
   "crates/usfm_ast",
   "crates/usfm_codegen",
@@ -35,4 +36,11 @@ regex = "1.11.1"
 regex-automata = "0.4.9"
 serde = "1.0.210"
 serde_json = "1.0"
+# The language server's runtime (ticket 30; both were workspace dependencies
+# before ticket 01 parked `wip/`). `tower-lsp-server` is the maintained fork of
+# `tower-lsp` and carries its own `lsp_types`. `apps/usfm_language_server` is
+# the only async crate in the workspace, so tokio is named for it alone and
+# with the features an stdio LSP loop needs rather than `full`.
+tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread", "io-std", "sync"] }
+tower-lsp-server = "0.23.0"
 xml-rs = "0.8.26"

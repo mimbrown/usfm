@@ -514,9 +514,21 @@ and `unlisted-book-code` is the first check to have moved.
 - [ ] Rebuild `usfm_language_server` on `ParseResult`: diagnostics from the parser's
       diagnostics, document symbols from `ReferenceIndex`, hover on markers from the
       stylesheet. Full-document reparse per change is fine at 10 ms per book.
+      **Started 2026-09-20 (M6, ticket 30): `apps/usfm_language_server` is a new
+      crate on the `usfm` facade — full text sync, a document store, and
+      `publishDiagnostics` from `usfm::parse_with` (the parser's diagnostics and
+      `usfm_semantic`'s together) after every open and change, with no debounce.
+      The parked `wip/` server is replaced, not fixed; ticket 33 deletes it.
+      Symbols and hover are tickets 31 and 32.**
 - [ ] Lexicon checking becomes a separate, optional feature layered on the AST's text
       nodes rather than raw text, so markers and attributes are never spell-checked.
-- [ ] Re-enable the `LanguageClient` in the VS Code extension.
+      (Ticket 33 asks whether it should come back at all.)
+- [x] Re-enable the `LanguageClient` in the VS Code extension. Done 2026-09-20
+      (ticket 30): `client/extension.ts` constructs and starts the client again,
+      spawns `usfm-language-server`, and shows the server's
+      `window/showMessage`; `npm run server:build:*` build
+      `-p usfm_language_server`. The extension has no diagnostics of its own to
+      retire — it never had any.
 
 ### Cross-cutting: testing and safety
 

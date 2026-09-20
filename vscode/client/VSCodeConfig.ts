@@ -6,6 +6,7 @@ export class VSCodeConfig implements VSCodeConfigInterface {
   private _trace!: TraceLevel;
   private _binPath: string | undefined;
   private _requireConfig!: boolean;
+  private _stylesheet: string | undefined;
 
   constructor() {
     this.refresh();
@@ -21,6 +22,7 @@ export class VSCodeConfig implements VSCodeConfigInterface {
     this._binPath = this.configuration.get<string>("path.server");
     this._requireConfig =
       this.configuration.get<boolean>("requireConfig") ?? false;
+    this._stylesheet = this.configuration.get<string>("stylesheet") ?? undefined;
   }
 
   get enable(): boolean {
@@ -52,6 +54,15 @@ export class VSCodeConfig implements VSCodeConfigInterface {
 
   get requireConfig(): boolean {
     return this._requireConfig;
+  }
+
+  get stylesheet(): string | undefined {
+    return this._stylesheet;
+  }
+
+  updateStylesheet(value: string | undefined): PromiseLike<void> {
+    this._stylesheet = value;
+    return this.configuration.update("stylesheet", value);
   }
 
   updateRequireConfig(value: boolean): PromiseLike<void> {
@@ -91,4 +102,12 @@ interface VSCodeConfigInterface {
    * @default false
    */
   requireConfig: boolean;
+  /**
+   * Path to the project's USFM stylesheet (`.sty`), absolute or relative to the
+   * workspace folder. The server extends the default stylesheet with it; with
+   * no setting it looks for a `custom.sty` beside the open file.
+   * `usfm.stylesheet`
+   * @default undefined
+   */
+  stylesheet: string | undefined;
 }

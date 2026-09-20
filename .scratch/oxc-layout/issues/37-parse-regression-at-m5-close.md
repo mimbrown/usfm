@@ -49,7 +49,7 @@ diagnostic or tree changed.
 
 ## Answer
 
-Landed via PR #37 (2026-09-20). Confirmed first: `corpus-m4-close` against
+Landed in `0b05aa9` (PR #37, 2026-09-20). Confirmed first: `corpus-m4-close` against
 `corpus-m5-close`, three rounds turn about on `parse/whole-corpus`, medians
 53.7 vs 51.5 MiB/s, −4.1%. Attributed by callgrind instruction counts over
 one parse of the whole corpus (wall clock cannot resolve suspects worth

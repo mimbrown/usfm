@@ -1,6 +1,6 @@
 # 30. `apps/usfm_language_server`: rebuilt on `usfm::parse`, diagnostics first
 
-Status: ready-for-agent
+Status: resolved
 Milestone: M6
 Blocked by: 37
 
@@ -42,3 +42,41 @@ pays for it, diagnostics.
 Done when the gate is green (the server's tests run in it) and the VS Code
 extension shows the server's diagnostics on a file with an unknown marker
 (describe the manual check; it cannot run in CI).
+
+## Answer
+
+Landed via PR #38 (2026-09-20). `apps/usfm_language_server` (binary
+`usfm-language-server`) on `tower-lsp-server` 0.23 and `tokio` (workspace
+dependencies again, tokio with the four features an stdio loop needs), on
+the facade with `default-features = false`. Four modules: `main.rs`
+(`Backend`, `initialize` advertising full sync and UTF-16 positions only,
+`did_open`/`did_change`/`did_close`, `publishDiagnostics` after every
+open/change and an empty list on close), `convert.rs` (`Span` -> `Range`,
+`Diagnostic` -> LSP diagnostic with the kebab-case `Code` as `code`,
+`source = "usfm"`, severity one to one), `documents.rs` (a `HashMap<Uri,
+String>` behind a `tokio::sync::RwLock`; the text is read back from the
+store so what is published is what the server believes the file to be),
+`stylesheet.rs` (`initializationOptions.stylesheet`, absolute or relative
+to the workspace root, else a `custom.sty` beside the file, else the
+default; a found sheet *extends* the default as the machine-py test does;
+each path read once, failures included, so a broken sheet warns once via
+`window/showMessage`). Positions: `LineIndex::line_col_utf16` in
+`usfm_span`, sharing `line_col`'s clamping and boundary snapping, tested
+with `é`, an emoji and `中`. No debounce: a book parses in milliseconds.
+
+Tests: 11 unit tests in the crate, 2 in `usfm_span`, and
+`tests/lsp.rs::diagnostics_are_published_on_open_and_cleared_on_a_clean_change`
+speaking hand-framed JSON-RPC to the built binary (a 30 s reader timeout).
+The ticket's `\zzz` is `unknown-custom-marker` (a `z` marker is the user
+extension space), so the test uses `\qqq` -> `unknown-marker`.
+
+`vscode/`: no client-side regex diagnostics existed, but the
+`LanguageClient` construction was commented out, so the extension shipped
+no server at all; restored. `server:build:*` build `-p
+usfm_language_server`, `extension.ts` spawns `usfm-language-server` and
+sends `{stylesheet, workspaces}` as initialization options, a
+`usfm.stylesheet` setting, `.vscode/launch.json` fixed (it also pointed
+the preview at the pre-ticket-15 `usfm_parser` binary). `npm run compile`
+bundles; the manual check is written up in `vscode/README.md`. Gate exit
+0; `scripts/miri.sh` leaves the server out and says why. The lexicon
+machinery in the extension is untouched (ticket 33).

@@ -58,6 +58,45 @@ impl<'a> LineIndex<'a> {
     /// assert_eq!(index.line_col(100), (3, 2)); // clamped to the end
     /// ```
     pub fn line_col(&self, offset: u32) -> (usize, usize) {
+        let (line, before) = self.line_and_text_before(offset);
+        (line, before.chars().count() + 1)
+    }
+
+    /// Convert a byte offset into a 1-based `(line, column)` pair, counting
+    /// columns in **UTF-16 code units**.
+    ///
+    /// The Language Server Protocol measures a `Position.character` in UTF-16
+    /// code units by default, so `apps/usfm_language_server` maps a [`Span`]
+    /// through this rather than through [`line_col`](Self::line_col): a
+    /// character outside the Basic Multilingual Plane (an emoji, say) is one
+    /// column there and two here. Both are 1-based, like every other position
+    /// this crate produces; a caller that wants LSP's 0-based `Position`
+    /// subtracts one from each.
+    ///
+    /// Out-of-range and mid-character offsets behave exactly as
+    /// [`line_col`](Self::line_col)'s do.
+    ///
+    /// ```
+    /// use usfm_span::LineIndex;
+    ///
+    /// let index = LineIndex::new("é😀x");
+    /// assert_eq!(index.line_col(2), (1, 2)); // after é: one character
+    /// assert_eq!(index.line_col_utf16(2), (1, 2)); // é is one UTF-16 unit
+    /// assert_eq!(index.line_col(6), (1, 3)); // after the emoji
+    /// assert_eq!(index.line_col_utf16(6), (1, 4)); // which is a surrogate pair
+    /// ```
+    pub fn line_col_utf16(&self, offset: u32) -> (usize, usize) {
+        let (line, before) = self.line_and_text_before(offset);
+        (line, before.chars().map(char::len_utf16).sum::<usize>() + 1)
+    }
+
+    /// The 1-based line `offset` falls on, and the text from the start of that
+    /// line up to `offset` — the part both column counts share.
+    ///
+    /// An offset past the end of the source is clamped to the end, and one
+    /// inside a multi-byte character is moved back to that character's start,
+    /// so the slice is always a valid one.
+    fn line_and_text_before(&self, offset: u32) -> (usize, &str) {
         let mut offset = (offset as usize).min(self.source.len());
         while !self.source.is_char_boundary(offset) {
             offset -= 1;
@@ -68,8 +107,7 @@ impl<'a> LineIndex<'a> {
             .line_starts
             .partition_point(|&start| start as usize <= offset);
         let line_start = self.line_starts[line - 1] as usize;
-        let column = self.source[line_start..offset].chars().count() + 1;
-        (line, column)
+        (line, &self.source[line_start..offset])
     }
 
     /// The number of lines, counting a trailing newline as ending the last
@@ -165,6 +203,44 @@ mod tests {
         assert_eq!(index.line_col(0), (1, 1));
         assert_eq!(index.line_col(10), (1, 1));
         assert_eq!(index.line_count(), 1);
+    }
+
+    #[test]
+    fn utf16_columns_count_code_units() {
+        // `é` is two bytes and one UTF-16 unit; `😀` is four bytes and two
+        // (a surrogate pair); `中` is three bytes and one.
+        let source = "\\v 1 é😀中b\nplain\n";
+        let index = LineIndex::new(source);
+        // Up to the `é` the two counts agree: ASCII is one of everything.
+        assert_eq!(index.line_col(5), (1, 6));
+        assert_eq!(index.line_col_utf16(5), (1, 6));
+        // After `é`.
+        assert_eq!(index.line_col(7), (1, 7));
+        assert_eq!(index.line_col_utf16(7), (1, 7));
+        // After the emoji: one character, two code units.
+        assert_eq!(index.line_col(11), (1, 8));
+        assert_eq!(index.line_col_utf16(11), (1, 9));
+        // After `中`.
+        assert_eq!(index.line_col(14), (1, 9));
+        assert_eq!(index.line_col_utf16(14), (1, 10));
+        // The next line starts over at column 1 either way.
+        assert_eq!(index.line_col_utf16(16), (2, 1));
+        assert_eq!(index.line_col_utf16(18), (2, 3));
+    }
+
+    #[test]
+    fn utf16_columns_clamp_and_snap_like_line_col() {
+        let source = "ab\né😀\n";
+        let index = LineIndex::new(source);
+        // Inside the emoji, not on a character boundary: the character's own
+        // position, as `line_col` does.
+        assert_eq!(index.line_col_utf16(7), (2, 2));
+        assert_eq!(index.line_col_utf16(8), (2, 2));
+        // Exactly at the end, and past it.
+        assert_eq!(index.line_col_utf16(11), (3, 1));
+        assert_eq!(index.line_col_utf16(999), (3, 1));
+        // An empty source has nowhere else to be.
+        assert_eq!(LineIndex::new("").line_col_utf16(7), (1, 1));
     }
 
     #[test]
