@@ -1,0 +1,17 @@
+---
+source: crates/usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 a\\x - \\xo 1.1 \\xt Gen 1.1\\xt*\\x* b"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..55
+  VerseStart 1@16..20
+  Text "a"@21..22
+  Note x caller=-@22..53
+    Char xo@27..35
+      Text "1.1 "@31..35
+    Char xt@35..50
+      Text "Gen 1.1"@39..46
+  Text " b"@53..55
+  VerseEnd 1
+ChapterEnd 1

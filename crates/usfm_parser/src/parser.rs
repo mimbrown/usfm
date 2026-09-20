@@ -2001,13 +2001,18 @@ impl<'a> ParserImpl<'a> {
             && !matches!(name.as_str(), "ref" | "fig")
             && context.is_implicitly_closed_by_char()
         {
-            // Two conditions, both derived from what Paratext writes for
+            // Three conditions, all derived from what Paratext writes for
             // tcdocs: the style must be allowed to nest (`NEST` in its
-            // `OccursUnder`, so never `\fr`/`\ft`/`\xo` …) *and* it must be
+            // `OccursUnder`, so never `\fr`/`\ft`/`\xo` …), the style it
+            // would nest *into* must be one that holds more than plain text
+            // ([`ParserImpl::parent_holds_plain_text`]), *and* it must be
             // closed by its own marker within the container. `\bk … \nd
             // Lord\nd* …\bk*` nests; `\xo 1.1 \xt Gen 1\x*` is a sibling
             // even though `\xt` may nest, because nothing closes it.
-            if self.rule(marker).nest && self.char_is_closed_ahead(&name) {
+            if self.rule(marker).nest
+                && !self.parent_holds_plain_text(context)
+                && self.char_is_closed_ahead(&name)
+            {
                 self.emit(
                     Code::CharacterStyleNestedWithoutPlus,
                     span,
@@ -2039,8 +2044,42 @@ impl<'a> ParserImpl<'a> {
         }
     }
 
+    /// Whether the character style now open holds plain text, so nothing
+    /// nests inside it without `\+`, whatever lies ahead. One of the three
+    /// parts of the nesting decision in `parse_char`, and the only one that
+    /// looks at the style being nested *into* rather than the one opening.
+    ///
+    /// `\xo`, a cross reference's origin reference, is the one such style the
+    /// conformance roots name, and they name it in as many words:
+    /// `paratextTests/NestingInCrossReferencesInvalid` is `\x + \xo 1.1 \em
+    /// \+pn name\+pn* stuff \em*\x*`, its `metadata.xml` says "Grammar is
+    /// accepting nesting of character styles under `\xo` - this is normally
+    /// just text", and its reference USX closes the `\xo` at the `\em` and
+    /// makes the two siblings. `paratextTests/CrossReferencesQuoteOutsideNote`
+    /// (`\xo 1.1 \em stuff\em*`) and
+    /// `paratextTests/CrossReferencesInsideCharacterMarker` (`\xo 1.1 \xq
+    /// stuff\xq*`) read the same way, and no reference file in either root
+    /// puts a `<char>` inside a `<char style="xo">`.
+    ///
+    /// It is deliberately this one style and not "a note-internal style
+    /// inside a note-internal style": `biblica/CategoriesOnNotes` nests a
+    /// closed `\xt` inside `\ft` and a `\ref` inside that `\xt`,
+    /// `specExamples/extended/contentCatogories1` nests `\sc BC\sc*` inside
+    /// `\ft`, and `usfmjsTests/usfmBodyTestD` nests `\dc` inside both `\ft`
+    /// and `\xt` — the references want nesting everywhere except here
+    /// (ticket 36).
+    ///
+    /// `\+xt` is untouched: an explicit `\+` is the author saying what they
+    /// mean, and this path only decides the unmarked spelling.
+    fn parent_holds_plain_text(&self, context: &ParserInlineContext<'a>) -> bool {
+        context
+            .char_style()
+            .is_some_and(|style| self.rule(style.index()).marker == "xo")
+    }
+
     /// Whether a `\name*` for the character style just opened lies ahead in
-    /// the current container. Half of the nesting decision in `parse_char`.
+    /// the current container. The last of the three parts of the nesting
+    /// decision in `parse_char`, and the only one that reads ahead.
     /// The scan stops at whatever would close the enclosing style first — a
     /// paragraph or cell marker, a closing marker of any open style, another
     /// `\name` (which would claim the closer) — or end of input, and leaves

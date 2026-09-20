@@ -47,7 +47,9 @@
 //! own: an attribute list runs to the closing marker, so a `\xt` that has one
 //! is always closed; and `\xt` is the only note-internal marker that may nest,
 //! so a sibling standing in front of a closed `\xt` keeps its closer too, or
-//! the `\xt` would be read as its child.
+//! the `\xt` would be read as its child. The second of those is one case
+//! wider than the parser needs since ticket 36, which is the sharp edge on
+//! [`UsfmWriter::omitted_closers`].
 //!
 //! The omitted form reads back to the identical tree *and* to the identical
 //! diagnostics: the parser says nothing about a character style implicitly
@@ -352,12 +354,21 @@ impl<'s, W: Write> UsfmWriter<'s, '_, W> {
     ///
     /// The last clause is the one that is not obvious, and `\xt` is the only
     /// note-internal marker it can bite: it is the only one with `NEST` in its
-    /// `\OccursUnder`, and the parser reads an unmarked `\xt` as nested exactly
-    /// when its own `\xt*` lies ahead. So `\fq a\fq*\xt b|link-href="x"\xt*`
-    /// keeps *both* closers: drop the `\fq*` and the `\xt*` ahead turns the
-    /// `\xt` into a child of the `\fq` rather than its sibling. Because a
-    /// child's answer depends on the one after it, the flags are computed from
-    /// the right.
+    /// `\OccursUnder`, and the parser reads an unmarked `\xt` as nested
+    /// exactly when its own `\xt*` lies ahead. So
+    /// `\fq a\fq*\xt b|link-href="x"\xt*` keeps *both* closers: drop the
+    /// `\fq*` and the `\xt*` ahead turns the `\xt` into a child of the `\fq`
+    /// rather than its sibling. Because a child's answer depends on the one
+    /// after it, the flags are computed from the right.
+    ///
+    /// That clause is deliberately one case wider than the parser: since
+    /// ticket 36 nothing nests inside `\xo` without `\+`, so
+    /// `\xo 1.1 \xt b|link-href="x"\xt*` would read back unchanged with the
+    /// `\xo*` left out as well. The writer keeps it. Nothing in the corpora
+    /// writes that shape — the three places either root produces an `\xo*` at
+    /// all have text or a non-note style after the `\xo` — and `\xo*` is
+    /// USFM the parser reads back to the identical tree, so the output stays
+    /// a fixed point either way.
     fn omitted_closers(&self, children: &[Inline<'_>]) -> Vec<bool> {
         let mut omitted = vec![false; children.len()];
         for index in (0..children.len()).rev() {
@@ -805,6 +816,33 @@ mod tests {
         writes_body(
             "\\p \\x - \\xq a\\xq*\\xt b\\xt*\\x*\n",
             "\\p \\x - \\xq a\\xt b\\x*\n",
+        );
+    }
+
+    /// Ticket 36: nothing nests inside `\xo`, so a closed `\xt` after one is
+    /// the note's next run and comes back out as one — the writer's `\+xt`,
+    /// which was the ticket's complaint, is gone with the nesting that made
+    /// it. The `\xo*` in the attributed case is the writer being one case
+    /// stricter than the parser needs (see [`UsfmWriter::omitted_closers`]);
+    /// both spellings parse to the same tree.
+    #[test]
+    fn a_closed_xt_after_xo_is_written_as_a_sibling() {
+        writes_body(
+            "\\p \\x - \\xo 1.1 \\xt Gen 1.1\\xt*\\x*\n",
+            "\\p \\x - \\xo 1.1 \\xt Gen 1.1\\x*\n",
+        );
+        writes_body(
+            "\\p \\x - \\xo 1.1 \\xt Gen 1.1|link-href=\"x\"\\xt*\\x*\n",
+            "\\p \\x - \\xo 1.1 \\xo*\\xt Gen 1.1|link-href=\"x\"\\xt*\\x*\n",
+        );
+    }
+
+    /// The `\+` spelling still means a child, and comes back with its `\+`.
+    #[test]
+    fn a_plussed_xt_inside_xo_stays_nested() {
+        writes_body(
+            "\\p \\x - \\xo 1.1 \\+xt Gen 1.1\\+xt*\\x*\n",
+            "\\p \\x - \\xo 1.1 \\+xt Gen 1.1\\+xt*\\x*\n",
         );
     }
 
