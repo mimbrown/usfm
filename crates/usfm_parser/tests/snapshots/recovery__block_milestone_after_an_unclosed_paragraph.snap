@@ -1,0 +1,10 @@
+---
+source: crates/usfm_parser/tests/recovery.rs
+description: "\\p a\n\\id\n\\zaln-s\\*"
+---
+Para p@0..18
+  Text "a"@3..5
+  Milestone zaln-s@9..18
+--- diagnostics
+error[missing-book-code] @5..8: `\id` must be followed by a book code
+info[unknown-custom-milestone] @9..16: custom milestone `\zaln-s` is not in the stylesheet

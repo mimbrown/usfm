@@ -1,12 +1,12 @@
 ---
-source: usfm_parser/tests/recovery.rs
+source: crates/usfm_parser/tests/recovery.rs
 description: "\\id GEN\n\\c 1\n\\p \\v 1 a \\foo custom \\foo* b"
 ---
 Book GEN "" @0..7
 ChapterStart 1@8..12
 Para p@13..42
   VerseStart 1@16..20
-  Text "a custom  b"@21..42
+  Text "a custom b"@21..42
   VerseEnd 1
 ChapterEnd 1
 --- diagnostics

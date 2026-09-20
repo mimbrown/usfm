@@ -1,0 +1,14 @@
+---
+source: crates/usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\zaln-s |x-strong=\"H1\"\\*\n\\p \\v 1 a"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Milestone zaln-s@13..37 x-strong="H1"
+Para p@38..47
+  VerseStart 1@41..45
+  Text "a"@46..47
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+info[unknown-custom-milestone] @13..20: custom milestone `\zaln-s` is not in the stylesheet

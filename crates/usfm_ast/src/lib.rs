@@ -293,7 +293,12 @@ pub fn is_valid_attribute_name(name: &str) -> bool {
 ///
 /// 1. A run of ASCII whitespace (space, tab, CR, LF) becomes one space. A
 ///    newline is whitespace like any other, so a line break inside a
-///    paragraph is a space.
+///    paragraph is a space. This holds across anything the parser dropped:
+///    two runs separated only by a marker that left no node (`\*` with no
+///    milestone open, a closing marker with nothing to close) are merged into
+///    one run, and the whitespace that ended the first and the whitespace that
+///    started the second become one space, not two. No `content` this crate
+///    produces holds two adjacent ASCII whitespace characters.
 /// 2. Only ASCII whitespace counts. A no-break space (U+00A0), an
 ///    ideographic space (U+3000) and every other Unicode space is content,
 ///    never collapsed or trimmed.

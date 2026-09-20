@@ -1,0 +1,8 @@
+\id+ GEN
+\c 1
+\s some\id GLO
+\c 1
+\p \v 1 something \p  \k blah\k* defi textnition
+\v 2 something \p  \w \+pn prope
+\t
+\v 1 vrnoun|keyword\+pn* \w*erse text†\rb  definitext\tirb*on

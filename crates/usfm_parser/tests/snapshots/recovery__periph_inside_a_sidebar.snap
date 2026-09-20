@@ -1,0 +1,10 @@
+---
+source: crates/usfm_parser/tests/recovery.rs
+description: "\\esb\n\\periph T\n\\p x\n\\esbe\n\\p after"
+---
+Sidebar esb@0..25
+  Periph periph@5..20 title="T"@13..15
+    Para p@15..20
+      Text "x"@18..20
+Para p@26..34
+  Text "after"@29..34

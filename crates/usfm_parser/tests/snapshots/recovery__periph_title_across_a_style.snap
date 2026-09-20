@@ -1,0 +1,8 @@
+---
+source: crates/usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\periph Title\n\\w a\\w*\nmore\n"
+---
+Book GEN "" @0..7
+Periph periph@8..35 title="Title more"@16..35
+--- diagnostics
+info[character-style-nested-without-plus] @22..24: `\w` is nested without `+`; treated as `\+w`

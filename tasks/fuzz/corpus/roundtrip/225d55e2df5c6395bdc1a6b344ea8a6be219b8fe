@@ -1,0 +1,13 @@
+\idGr,RI,,,,NMS," x-occurrence="1" x-occurrences="1" x-content="τις"
+\w One|x-occurrence="1" x-occurrences="1"\w*
+\zaln-e\*
+\zaln-s|x-strong="G15370" x-lemma="ἐκ" x-morph="Gr,P,,,,,G,,," x-occurrence="1" x-occurrences="1" x-content="ἐξ"
+\w of|x-occurrence="1" x-occurrences="1"\w*
+\zaln-e\*
+\zaln-s|x-strong="G08460" x-lemma="αὐτός" x-morph="Gr,RP,,,3GMP," x-occurrence="1" x-occurrences="2" x-content="αὐτῶν"
+\zaln-s|x-strong="G23980" x-lemma="ἴδιοἐκ" x-morph="Gr,P,,,,,G,,," x-occurrence="1" x-occurrences="1" x-content="ἐξ"
+\w of|x-occurrence="1" x-occurrences="1"\w*
+\zaln-e\*
+\zaln-s|x-strong="G08460" x-lemma="αὐτός" x-morph="Gr,RP,,,3GMP," x-occurrence="1" x-occurrences="2" x-content="αὐτῶν"
+\zaln-s|x-strong="G23980" x-lemma="ἴδιος" xverse-ς" xverse-outside-chapter" x-occurrence="1" x-occurrences="1" xent="ψε,N,,,,,NNP," x-occurrence="1" x-occurrences="1" x-content="θηρία"
+\w beasts|x-occurr GEN

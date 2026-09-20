@@ -1,0 +1,6 @@
+\id GEN
+\c 1
+\s some text
+\p
+\v 1 verse text \em caption|noZEPfault attr\em*
+\v 2 verse text \em caêãñén|xattr=no quotes\em*

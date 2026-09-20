@@ -1,5 +1,5 @@
 ---
-source: usfm_parser/tests/recovery.rs
+source: crates/usfm_parser/tests/recovery.rs
 description: "\\id GEN\n\\c 1\n\\p \\v 1 \\em a \\f + \\ft b \\em* c\\f* d\\em*"
 ---
 Book GEN "" @0..7
@@ -10,7 +10,7 @@ Para p@13..53
     Text "a "@25..27
     Note f caller=+@27..47
       Char ft@32..47
-        Text "b  c"@36..44
+        Text "b c"@36..44
     Text " d"@47..49
   VerseEnd 1
 ChapterEnd 1

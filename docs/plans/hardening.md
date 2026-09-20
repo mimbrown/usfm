@@ -511,15 +511,16 @@ and `unlisted-book-code` is the first check to have moved.
 - [x] **Fuzzing.** `cargo fuzz` targets that parse arbitrary bytes and assert no
       panic, the span invariants and that the USX output is well-formed XML.
       Done 2026-09-19 by `.scratch/oxc-layout/issues/06-fuzz-target.md`:
-      `tasks/fuzz` holds `parse_lossy` and `parse_utf8`, seeded from tcdocs and
+      `tasks/fuzz` holds `parse_lossy`, `parse_utf8`, `parse_html` and
+      `roundtrip`, seeded from tcdocs and
       (since 2026-09-19) the vendored usfm-grammar and machine.py fixtures, and
       sharing `usfm_parser::span_check` with `crates/usfm_parser/tests/spans.rs`; see
-      `tasks/fuzz/README.md` for the runs and the five findings they produced
-      (two span-invariant wordings, control characters, duplicate attributes
-      and attribute names that are not XML names). Run on demand, not in CI:
+      `tasks/fuzz/README.md` for the runs and the findings they produced
+      (two span-invariant wordings, control characters, duplicate attributes,
+      attribute names that are not XML names, and `roundtrip`'s nineteen, which
+      are mostly what a *dropped* marker does to a tree; one of those is still
+      open, in `tasks/fuzz/findings/`). Run on demand, not in CI:
       a useful run is minutes long and needs nightly plus a sanitizer.
-      Still open: the `strict()` round-trip property (no diagnostics implies
-      USFM -> USX -> USFM is identical) waits for `usfm_codegen` in M5.
 - [ ] **Malformed corpus.** Directory of real-world broken files (with permission)
       plus the synthetic ones from the assessment. Snapshot the diagnostics and
       recovered tree.
@@ -542,8 +543,21 @@ and `unlisted-book-code` is the first check to have moved.
       `parse`, `parse_usx`, `parse_html`, `parse_json` and `reference_index`,
       recorded in `docs/benchmarks.md`. What is left is the CI gate: the numbers are
       still compared by hand, interleaved against the previous commit.
-- [ ] **Property tests.** USX → USFM → USX round trip for the subset the parser
-      supports, once a USFM writer exists.
+- [x] **Property tests.** The round trip, now that `usfm_codegen` is the USFM
+      writer: parse → USFM → parse gives the same tree ignoring spans, gains no
+      diagnostic code, and writes out identically. Done 2026-09-20 by tickets
+      25 and 27. It is asserted in three places off one definition
+      (`usfm_tests::roundtrip`): over the `pass` corpus, the 86 benchmark books
+      and the machine.py fixtures in `crates/usfm_codegen/tests/roundtrip.rs`;
+      over *every* conformance case, `pass` and `fail` alike, by
+      `cargo run -p usfm_tests -- --roundtrip tasks/conformance/roundtrip-known.txt`
+      in `scripts/gate.sh` (the known-failure file is empty and a stale entry
+      fails the gate, as with the baseline); and over arbitrary bytes by the
+      `roundtrip` fuzz target. It is not "the second parse reports no error":
+      an error about the document rather than its spelling is written back
+      faithfully and reported again, which 21 of the 275 conformance cases do.
+      USX → USFM → USX is still not covered — nothing reads USX back into a
+      `Document`.
 
 ## Open questions
 

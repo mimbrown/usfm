@@ -13,11 +13,17 @@
 //! 3. serializing the recovered tree to USX does not panic and produces
 //!    well-formed XML;
 //! 4. serializing it to HTML does not panic and produces well-formed markup
-//!    (`check_html`, ticket 14).
+//!    (`check_html`, ticket 14);
+//! 5. writing the recovered tree back as USFM and parsing *that* gives the
+//!    same tree, gains no diagnostic, and writes out identically
+//!    (`check_roundtrip`, ticket 27).
 //!
 //! Nothing here catches a panic: a panic *is* the finding, and libFuzzer wants
 //! to see it.
 
+use std::collections::BTreeMap;
+
+use usfm::codegen::to_usfm_string;
 use usfm::html::to_html_string;
 use usfm::parser::span_check;
 use usfm::usx::to_usx_string;
@@ -41,6 +47,71 @@ pub fn check_html(source: &str) {
     let document = result.document;
     let html = to_html_string(&document, document.style_sheet());
     assert_html_well_formed(&html, source);
+}
+
+/// Parse, write USFM, parse again, and assert the round trip held.
+///
+/// The three assertions are `usfm_tests::roundtrip`'s, which is where the
+/// property is defined and explained; they are restated here rather than
+/// called because this crate builds under a sanitizer on nightly and depends
+/// only on the facade — `usfm_tests` would drag in `xml-rs`, `regex`, `serde`
+/// and `diffy` and the conformance corpus's paths for forty lines of code.
+/// The two must say the same thing: change one, change the other.
+///
+/// 1. the two trees are equal ignoring spans;
+/// 2. the second parse reports no diagnostic code the first did not. Gaining
+///    one means the writer wrote something the parser likes *less* than the
+///    input did. Losing one is the writer canonicalising a spelling the AST
+///    does not record (`\v 01` is `\v 1` once the number is a `usize`), which
+///    is its job. It is deliberately not "the second parse reports no error":
+///    an error about the document rather than about its spelling — a `\v` with
+///    no `\c`, a book with no `\id` — is written back faithfully and reported
+///    again, and 21 of the 275 conformance cases do exactly that;
+/// 3. writing the second tree gives the same bytes: the output is a fixed
+///    point, so a writer that produced something the parser reads differently
+///    cannot hide behind 1 and 2.
+pub fn check_roundtrip(source: &str) {
+    let first = usfm::parse(source);
+    let written = to_usfm_string(&first.document);
+    let second = usfm::parse(&written);
+
+    assert!(
+        usfm::ast::eq_ignoring_spans(&first.document, &second.document),
+        "the tree changed.\n--- written ---\n{written}\n--- before ---\n{:#?}\n\
+         --- after ---\n{:#?}\nsource: {source:?}",
+        first.document,
+        second.document,
+    );
+
+    let before = codes(&first.diagnostics);
+    let after = codes(&second.diagnostics);
+    let gained: Vec<String> = after
+        .iter()
+        .filter(|(code, count)| before.get(*code).unwrap_or(&0) < count)
+        .map(|(code, count)| format!("{code} ({} -> {count})", before.get(code).unwrap_or(&0)))
+        .collect();
+    assert!(
+        gained.is_empty(),
+        "the second parse gained diagnostics: {}\n--- written ---\n{written}\nsource: {source:?}",
+        gained.join(", "),
+    );
+
+    let rewritten = to_usfm_string(&second.document);
+    assert!(
+        rewritten == written,
+        "the output is not a fixed point.\n--- first ---\n{written}\n--- second ---\n\
+         {rewritten}\nsource: {source:?}",
+    );
+}
+
+/// The diagnostic codes of a parse, counted. Keyed by the code's name, which
+/// `Code` has and `Ord` has not, so a report lists them in a fixed order.
+fn codes(diagnostics: &[usfm::Diagnostic]) -> BTreeMap<String, usize> {
+    let mut counts = BTreeMap::new();
+    for diagnostic in diagnostics {
+        *counts.entry(diagnostic.code.to_string()).or_insert(0) += 1;
+    }
+    counts
 }
 
 /// Parse `usx` back with `xml-rs` and drain it to the end of the document.

@@ -1,0 +1,11 @@
+---
+source: crates/usfm_parser/tests/recovery.rs
+description: "\\periph\\id\n\\p x \\v 3 y"
+---
+Periph periph@0..22
+  Para p@11..22
+    Text "x "@14..16
+    VerseStart 3@16..20
+    Text "y"@21..22
+--- diagnostics
+error[missing-book-code] @7..10: `\id` must be followed by a book code

@@ -41,7 +41,7 @@ elif [[ $# -gt 0 ]]; then
   exit 2
 fi
 
-targets=(parse_lossy parse_utf8 parse_html)
+targets=(parse_lossy parse_utf8 parse_html roundtrip)
 for target in "${targets[@]}"; do
   mkdir -p "corpus/$target"
 done

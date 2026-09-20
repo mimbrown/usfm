@@ -24,7 +24,13 @@ impl Display for NumberRange {
         if let Some(start_modifier) = self.start_modifier {
             write!(f, "{}", start_modifier)?;
         }
-        if !self.is_collapsed() {
+        // A range whose ends are the same number is written as that number,
+        // since `4-4` and `4` are the same verse — but only when there is
+        // nothing else in the range to write. An `end_modifier` has nowhere
+        // else to go: `4-4t` written as `4` loses the `t`, and reads back as a
+        // different verse. (`is_collapsed` is left alone: `4-4t` *is* one
+        // verse, and `usfm_semantic` asks that question, not this one.)
+        if !self.is_collapsed() || self.end_modifier.is_some() {
             if self.guard_rtl {
                 write!(f, "\u{200F}")?;
             }
@@ -191,6 +197,21 @@ mod tests {
             ranges: vec![NumberRange { start: 1, start_modifier: None, end: 3, end_modifier: None, guard_rtl: true }],
             guard_rtl: false,
         });
+    }
+
+    /// A range whose ends are the same number is written as that number —
+    /// unless the end carries a modifier of its own, which is then the only
+    /// place it can be written. `\v 4-4t` is real (the round-trip fuzz target
+    /// found it, ticket 27) and used to come back as `\v 4`.
+    #[test]
+    fn a_collapsed_range_keeps_an_end_modifier() {
+        for number in ["4", "4a", "4-4t", "4a-4b", "4-5"] {
+            assert_eq!(
+                NumberList::parse_str(number).unwrap().to_string(),
+                number,
+                "{number}"
+            );
+        }
     }
 
     #[test]

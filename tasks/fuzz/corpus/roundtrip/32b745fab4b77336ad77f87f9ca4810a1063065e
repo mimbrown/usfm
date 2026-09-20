@@ -1,0 +1,20 @@
+\id ACT EN_ULT en_English_ltr Wed Oct 10 2018 11:55:23 GMT-0400 (EDT) tc
+\c 1
+\p
+\v 4 \zaln-s|x-content="καὶ" x-lemma="καί" x-morph="Gr,CC,,,,,,,," x-occurrence="1" x-occurrences="1" x-strong="G25320"\*\w When|x-occurrence="1" x-occurrences="1"\w*\zaln-e\*
+\zaln-s|x-content="συναλιζόμενος" x-lemma="συναλίζω" x-morph="Gr,V,PPM,NMS," x-occurrence="1" x-occurrences="1" x-strong="G48710"\*\w he|x-occurrence="1" x-occurrences="3"\w*
+\w was|x-occurrence="1" x-occurrences="1"\w*
+\w meeting|x-occurrence="1" x-occurrences="1"\w*
+\w together|x-occurrence="1" x-occurrences="1"\w*
+\w with|x-occurrence="1" x-occurrences="1"\w*
+\w them|x-occurrence="1" x-occurrences="2"\w*\zaln-e\*,
+\zaln-s|x-conten~="παρήγγειλεν" x-lemma="παραγγέλλω" x-morph="Gr,V,IAA3,,S," x-occurrence="1" x-occurrences="1" x-strong="G38530"\*\w he|x-occurrence="2" x-occurrences="3"\w*
+\w commanded|x-occurrence="1" x-occurrences="1"\w*\zaln-e\*
+\zaln-s|x-content="αὐτοῖς" x-lemma="αὐτός" x-morph="Gr,RP,,,3DMP," x-occurrence="1" x-occurrences="1" x-strong="G08460"\*\w them|x-occurrence="2" x-occurrences="2"\w*\zaln-e\*
+\zaln-s|x-content="μὴ" x-lemma="μή" x-morph="Gr,DO,,,,,,,," x-occurrence="1" x-occurrences="1" x-strong="G33610"\*\w not|x-occurrence="1" x-occurrences="1"\w*\zaln-e\*
+\zaln-s|x-content="χωρίζεσθαι" x-lemma="χωρίζω" x-morph="Gr,V,NPP,,,,," x-occurrence="1" x-occurrences="1" x-strong="G55630"\*\w to|x-occurrence="1" x-occurrences="2"\w*
+\w leave|x-occurrence="1" x-occurrences="1"\w*\zaln-e\*
+\zaln-s|x-content="ἀπὸ" x-lemma="ἀπό" x-morph="Gr,P,,,,,G,,," x-occurrence="1" x-occurrences="1" x-strong="G05750"\*\zaln-s|x-content="Ἱεροσολύμων" x-lemma="Ἱεροσόλυμα" x-morph="Gr,N,,,,,GNP," x-occurrence="1" x-occurrences="1" x-strong="G24140"\*\w Jerusalem|x-occurrence="1" x-occurrences="1"\w*\zaln-e\*\zaln-e\*,
+\zaln-s|x-content="ἀλλὰ" x-lemma="ἀλλά" x-morph="Gr,CO,,,,,,,," x-occurrence="1" x-occurrences="1" x-strong="G02350"\*\w but|x-occurrence="1" x-occurrences="1"\w*\zaln-e\*
+\zaln-s|x-content="περιμένειν" x-lemma="περιμένω" x-morph="Gr,V,NPA,,,,," x-occurrence="1" x-occurrences="1" x-ses="1"\w*
+\w me|x-occurrence="1" x-occurrences="1"\w*\zaln-e\*

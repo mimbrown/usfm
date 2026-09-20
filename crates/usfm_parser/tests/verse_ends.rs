@@ -256,6 +256,91 @@ p: "God" /1 " " v2 "the earth" /2
     );
 }
 
+/// Ticket 28, found by ticket 27's round-trip fuzz target on machine.py's
+/// `41MATTes.SFM`. `\esbe` opens a paragraph like any other marker, so a `\v`
+/// on the next line with no paragraph marker of its own belongs to *that*
+/// paragraph — and the end of the verse open before `\esb`, which cannot go
+/// inside the sidebar, was being placed into the `\esbe` paragraph's own empty
+/// block list and silently dropped. It goes where it goes when a `\p` does
+/// follow `\esbe`: at the end of the last verse-text block before the sidebar.
+#[test]
+fn a_verse_after_esbe_with_no_paragraph_marker_ends_the_one_before_the_sidebar() {
+    check(
+        "\\id GEN\n\\c 1\n\\p \\v 1 In the beginning\n\\esb\n\\p Aside\n\\esbe\n\\v 2 the earth",
+        r#"
+id Gen
+c1
+p: v1 "In the beginning" /1
+esb:
+  p: "Aside"
+p: v2 "the earth" /2
+/c1"#,
+    );
+}
+
+/// Content *on* the `\esbe` line becomes an implicit `\p`, so a verse there
+/// places its predecessor's end the way a `\p` would — inline, after the text
+/// already in the paragraph — not before the sidebar. Only a verse with
+/// nothing before it on that line ends the one before it outside the sidebar,
+/// which is the case above. The round-trip fuzz target found the difference
+/// (ticket 27): the two spellings must agree, since the writer turns the first
+/// into the second.
+#[test]
+fn a_verse_after_text_on_the_esbe_line_ends_the_previous_one_inline() {
+    let expected = r#"
+id Gen
+c1
+p: v1 "In the beginning"
+esb:
+p: "God" /1 " " v2 "the earth" /2
+/c1"#;
+    check(
+        "\\id GEN\n\\c 1\n\\p \\v 1 In the beginning\n\\esb\n\\esbe God \\v 2 the earth",
+        expected,
+    );
+    check(
+        "\\id GEN\n\\c 1\n\\p \\v 1 In the beginning\n\\esb\n\\esbe\n\\p God \\v 2 the earth",
+        expected,
+    );
+}
+
+/// The same input with the `\p` the marker did not need: the two must agree,
+/// which is the whole of ticket 28.
+#[test]
+fn a_paragraph_marker_after_esbe_does_not_change_where_the_verse_ends() {
+    check(
+        "\\id GEN\n\\c 1\n\\p \\v 1 In the beginning\n\\esb\n\\p Aside\n\\esbe\n\\p \\v 2 the earth",
+        r#"
+id Gen
+c1
+p: v1 "In the beginning" /1
+esb:
+  p: "Aside"
+p: v2 "the earth" /2
+/c1"#,
+    );
+}
+
+/// Peripheral matter has no verses, and that has to include the `\periph`
+/// line itself. A `\v` there opened a verse whose `VerseStart` was then thrown
+/// away with the rest of the title line — only the title's text survives — but
+/// whose end was still emitted, and it landed in the paragraph *before* the
+/// periph. A `VerseEnd` with no `VerseStart` is a tree no source produces and
+/// no writer can write back; the round-trip fuzz target found it on
+/// `" i\periph\v 2"`.
+#[test]
+fn a_verse_on_a_periph_line_opens_no_verse() {
+    check(
+        "\\id GEN\n\\c 1\n\\p a\n\\periph\\v 2",
+        r#"
+id Gen
+c1
+p: "a"
+periph:
+/c1"#,
+    );
+}
+
 #[test]
 fn end_milestones_can_be_switched_off() {
     let document = Parser::new("\\id GEN\n\\c 1\n\\p \\v 1 In the beginning \\v 2 the earth")

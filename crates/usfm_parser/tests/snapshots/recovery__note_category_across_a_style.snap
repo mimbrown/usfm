@@ -1,0 +1,14 @@
+---
+source: crates/usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 \\ef - \\cat a \\rb b\\rb* c\\cat* note\\ef*"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..59
+  VerseStart 1@16..20
+  Note ef caller=-@21..59 category="a c"@27..50
+    Text "note"@50..55
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+info[character-style-nested-without-plus] @34..37: `\rb` is nested without `+`; treated as `\+rb`

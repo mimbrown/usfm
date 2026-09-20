@@ -57,6 +57,24 @@ fn ascii_whitespace_runs_collapse_to_one_space() {
     assert_eq!(para("a \t b\nc\r\n  d"), r#""a b c d""#);
 }
 
+/// Rule 1 holds across a node the parser dropped, too. A marker that leaves
+/// nothing in the tree — `\*` with no milestone open, `\em*` with no `\em` —
+/// leaves the whitespace on both sides of it, and the two text runs are merged
+/// into one. That run is a single run of text in the document, so its
+/// whitespace collapses like any other: `"a  b"` would be a `Text` no source
+/// could produce and no writer could write back (the round-trip fuzz target
+/// found it on `\ \* i`).
+#[test]
+fn whitespace_collapses_across_a_dropped_marker() {
+    assert_eq!(para("a \\* b"), r#""a b""#);
+    assert_eq!(para("a \\em* b"), r#""a b""#);
+    // The marker with nothing around it still separates nothing from nothing.
+    assert_eq!(para("a\\*b"), r#""ab""#);
+    // Only ASCII whitespace collapses: a no-break space on either side of the
+    // dropped marker is content and survives (rule 2).
+    assert_eq!(para("a\u{a0}\\*\u{a0}b"), "\"a\u{a0}\u{a0}b\"");
+}
+
 /// `//` is an optional line break, its own node; the whitespace around it
 /// stays in the text on either side (USX `Man <optbreak/> Who`).
 #[test]
@@ -170,4 +188,21 @@ fn an_unclosed_character_style_is_trimmed_at_the_paragraph_end() {
 #[test]
 fn leading_whitespace_after_a_marker_is_not_text() {
     assert_eq!(para("  \\v 1   text"), r#"<v> "text""#);
+}
+
+/// Rule 6 holds when the marker that ate the space is one the parser dropped.
+/// `\p\* n` is a paragraph, a `\*` with no milestone to end, and ` n`: the
+/// space belongs to the `\*` as it would to any marker, so the paragraph's
+/// first text is `"n"`. A leading `" n"` is a `Text` the writer would spell
+/// `\p  n`, which reads back as `"n"` — the round-trip fuzz target found it.
+#[test]
+fn leading_whitespace_after_a_dropped_marker_is_not_text_either() {
+    assert_eq!(render("\\id GEN\n\\c 1\n\\p\\* n"), r#""n""#);
+    assert_eq!(render("\\id GEN\n\\c 1\n\\p \\p* n"), r#""n""#);
+    // Inside a character style the same holds, since a style's children begin
+    // after its own marker.
+    assert_eq!(para("\\add\\* x\\add*"), r#"["x"]"#);
+    // And after `\v N`, whose space is the verse marker's however many
+    // dropped markers stand between it and the text.
+    assert_eq!(para("\\v 3\\* x"), r#"<v> "x""#);
 }

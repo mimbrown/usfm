@@ -92,6 +92,7 @@ name = "usfm"
 version = "0.1.0"
 dependencies = [
  "usfm_ast",
+ "usfm_codegen",
  "usfm_diagnostics",
  "usfm_html",
  "usfm_parser",
@@ -106,6 +107,14 @@ name = "usfm_ast"
 version = "0.1.0"
 dependencies = [
  "usfm_span",
+ "usfm_style",
+]
+
+[[package]]
+name = "usfm_codegen"
+version = "0.1.0"
+dependencies = [
+ "usfm_ast",
  "usfm_style",
 ]
 

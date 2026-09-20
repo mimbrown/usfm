@@ -36,11 +36,32 @@ that outside a tag `<` only ever starts one and `&` only ever starts a
 character reference, and that no character HTML cannot carry reaches the
 output.
 
+`roundtrip` calls `usfm_fuzz::check_roundtrip`, which parses, writes the tree
+back as USFM with `usfm::codegen`, and parses *that*. The property is
+idempotence on any input, not validity: whatever the recovery rules made of the
+bytes, writing that tree out and reading it back must give the same thing.
+Three assertions, the ones `usfm_tests::roundtrip` defines and explains
+(the gate's `--roundtrip` step and `usfm_codegen`'s own test run the same
+three):
+
+1. the two trees are equal ignoring spans (`usfm_ast::eq_ignoring_spans`, which
+   compares styles by marker rather than by index);
+2. the second parse reports no diagnostic **code the first did not**. Gaining
+   one means the writer wrote something the parser likes less than the input
+   did. Losing one is the writer canonicalising a spelling the AST does not
+   record, which is its job. It is deliberately not "the second parse reports
+   no error": an error about the *document* rather than about its spelling — a
+   `\v` with no `\c`, a book with no `\id` — is written back faithfully and
+   reported again, and 21 of the 275 conformance cases do exactly that;
+3. writing the second tree gives the same bytes, so a writer that produced
+   something the parser reads differently cannot hide behind 1 and 2.
+
 | Target | Input | Checks |
 | --- | --- | --- |
 | `parse_lossy` | any bytes, through `String::from_utf8_lossy` | parse, spans, USX |
 | `parse_utf8` | any bytes, skipped unless they are valid UTF-8 | parse, spans, USX |
 | `parse_html` | any bytes, through `String::from_utf8_lossy` | parse, HTML |
+| `roundtrip` | any bytes, through `String::from_utf8_lossy` | parse, USFM, parse |
 
 ## Running
 
@@ -49,6 +70,7 @@ output.
 cargo +nightly fuzz run --fuzz-dir tasks/fuzz parse_lossy -- -max_total_time=600 -max_len=65536
 cargo +nightly fuzz run --fuzz-dir tasks/fuzz parse_utf8  -- -max_total_time=600 -max_len=65536
 cargo +nightly fuzz run --fuzz-dir tasks/fuzz parse_html  -- -max_total_time=600 -max_len=65536
+cargo +nightly fuzz run --fuzz-dir tasks/fuzz roundtrip   -- -max_total_time=600 -max_len=65536
 
 # Four workers, same wall time.
 cargo +nightly fuzz run --fuzz-dir tasks/fuzz parse_lossy -- \
@@ -67,17 +89,22 @@ cargo +nightly fuzz tmin --fuzz-dir tasks/fuzz <target> tasks/fuzz/artifacts/<ta
 ```
 
 Then write the minimised input as a test — `crates/usfm_parser/tests/recovery.rs` for a
-parser rule, `tests/spans.rs` for a span invariant, `tests/usx_text.rs` for the
-USX writer, `usfm_html`'s own tests for the HTML writer — and fix it. A finding
+parser rule, `tests/spans.rs` for a span invariant, `tests/whitespace.rs` for a
+whitespace rule, `tests/verse_ends.rs` for a verse-end placement rule,
+`tests/usx_text.rs` for the
+USX writer, `usfm_html`'s own tests for the HTML writer, `usfm_codegen`'s for
+the USFM writer — and fix it. A finding
 is a bug: it is not worked around by widening an invariant or catching the
-panic. A finding that is not fixed in the same
-sitting goes to `findings/` with a note, so it is not lost.
+panic. A finding that is not fixed in the same sitting goes to `findings/`
+with a note — one input file and a section in `findings/README.md` saying what
+it breaks and what fixing it would take — so it is not lost.
 
 ## Seeds
 
 `./seed.sh` copies the conformance inputs into `corpus/parse_lossy/`,
-`corpus/parse_utf8/` and `corpus/parse_html/` — one corpus per target, listed
-in the script's `targets` array — named after the test they came from:
+`corpus/parse_utf8/`, `corpus/parse_html/` and `corpus/roundtrip/` — one corpus
+per target, listed in the script's `targets` array — named after the test they
+came from:
 
 - the tcdocs inputs (`tcdocs/tests/*/*/origin.usfm`), as `<category>__<case>.usfm`;
 - the vendored usfm-grammar fixtures
@@ -110,17 +137,44 @@ are not UTF-8.
 final code, and the first (106 298 runs in 601 s, 177 exec/s, from the 295
 seeds) was clean as well. Its corpus row is larger because the second run
 started from what the first one had found; `./seed.sh --prune` puts the
-committed corpus back to the seeds afterwards.
+committed corpus back to the seeds afterwards. `roundtrip`'s row is from its
+twenty-first run, which started from the pruned seeds; the twenty before it had
+grown the corpus to about 2900 files, which is how they kept reaching further
+in.
 
 | Target | exec/s | corpus at the end | cov | ft | crashes |
 | --- | --- | --- | --- | --- | --- |
 | `parse_lossy` | 49 (29 749 runs in 601 s) | 1647 files, 14.9 MB | 4175 | 22 337 | none |
 | `parse_utf8` | 83 (50 097 runs in 601 s) | 1622 files, 13.7 MB | 4200 | 22 225 | none |
 | `parse_html` | 166 (100 068 runs in 601 s) | 2110 files, 16 MB | 3408 | 20 830 | none |
+| `roundtrip` | 119 (35 101 runs in 601 s) | 1824 files, 17 MB | 4429 | 21 032 | **one**, below |
 
 `parse_html` found nothing in either run: the escaping it checks for went in
 with the target (ticket 14), so the hole ticket 06 left in the HTML writer was
 closed before the first run rather than by it.
+
+`roundtrip` (ticket 27) was the opposite. The seed scan (`-runs=0`) failed on a
+seed straight away — `41MATTes.SFM`, the verse end of ticket 28 — and each of
+the twenty ten-minute runs after it found one more. Twenty-one findings,
+nineteen bugs — two of the bugs were found
+twice, by different inputs, and the second of those took two goes: the first
+fix moved the blocks after parsing and left a verse end dangling, which is what
+the second finding was. They fall out as four in `usfm_ast` (three in
+`add_child`, one in `NumberRange`'s display), fourteen in the parser and one in
+`usfm_codegen`'s attribute writer — and eighteen of the nineteen are fixed.
+The one that is not is a `Block::Milestone` the writer has no line to put on:
+after a `Sidebar` or a `Table`, or first in a `\periph` division, the line
+before it reaches out and takes it back. Three inputs spell it and they are all
+in `findings/`, with `findings/README.md` on why the fix is an AST-shape
+question rather than a repair at one site.
+
+The runs got deeper as they went, because each started from the corpus the one
+before had left: the first finding was 487 execs in, the twentieth 34 553. The
+run in the table above is the twenty-first, from the 295 committed seeds again
+after `./seed.sh --prune` — and it is **not clean**: at 35 101 execs it found
+`\esb\c\sh\*`, a second spelling of the open finding, which went to
+`findings/` beside the first. So `roundtrip` has never yet run ten minutes
+clean; every other target has.
 
 Found on the way there, each fixed with the test named:
 
@@ -133,3 +187,31 @@ Found on the way there, each fixed with the test named:
 | `\0` | a C0 control character reached the USX output, which XML cannot carry at all | `usx_text.rs::characters_xml_forbids_are_replaced` |
 | `\rb b\|"h=c"` | two bare values both became `gloss`, so the USX had one attribute twice | `recovery.rs::duplicate_attribute`, `usx_text.rs::repeated_attributes_are_written_once` |
 | `\w a\|b<c="1"\w*` | an attribute name that is not an XML name went into the output verbatim | `recovery.rs::malformed_attribute_name`, `usx_text.rs::attributes_that_are_not_xml_names_are_dropped` |
+
+And `roundtrip`'s eighteen fixed ones (ticket 27; the nineteenth is in
+`findings/`). All but the first are in `usfm_codegen`'s
+`roundtrip.rs::the_fuzz_findings_round_trip`, which checks the property they
+were found by; the first is a whole file, covered there by
+`the_machine_py_fixtures_round_trip`. The rule each one broke has its own test
+in the crate that was wrong.
+
+| Input | What was wrong | Test |
+| --- | --- | --- |
+| `machine-py__Tes__41MATTes.usfm` (a seed) | a verse end was dropped when `\v` follows `\esbe` with no paragraph marker: it was handed to the `\esbe` line's own empty block list (ticket 28, parser fix) | `verse_ends.rs::a_verse_after_esbe_with_no_paragraph_marker_ends_the_one_before_the_sidebar`, `usx_text.rs::a_verse_after_esbe_closes_the_verse_before_the_sidebar` |
+| `\ \* i` | a `\*` that ends no milestone leaves the whitespace on both sides of it, and the two text runs merged into a `Text` holding two spaces — which rule 1 says no `Text` holds (AST fix, in `add_child`) | `whitespace.rs::whitespace_collapses_across_a_dropped_marker` |
+| `\p\* n` | the same drop with nothing to merge with: the whitespace stayed as the paragraph's first text's leading space, which rule 6 gives to the marker (AST fix) | `whitespace.rs::leading_whitespace_after_a_dropped_marker_is_not_text_either` |
+| `\v 3\* x` | the same, one node along: `\v N` is always written with its space, so the text's own leading space made two (AST fix) | same |
+| ` i\periph\v 2` | a `\v` on a `\periph` line opened a verse whose start was thrown away with the rest of the line while its end was emitted — into the paragraph before the periph (parser fix: peripheral matter has no verses, the title line included) | `verse_ends.rs::a_verse_on_a_periph_line_opens_no_verse` |
+| `\v 4-4t` | a verse range whose ends are the same number is written as that number — but the `t` on the end had nowhere else to go, so `4-4t` came back as `4`, a different verse (`usfm_ast` fix, in `NumberRange`'s `Display`) | `usfm_ast`'s `a_collapsed_range_keeps_an_end_modifier` |
+| `\periph\|: `, `\periph\|s \` | a default attribute value that ends a `\periph` attribute list kept its trailing whitespace, and the writer's own line break read it back without (parser fix: the list ends with the line, so that whitespace is the line's) | `attributes.rs::a_periph_default_value_that_ends_the_list_drops_its_trailing_whitespace` |
+| `\z\|"a=\*` | the separator the writer put between a default attribute and the pair after it was read back as part of the default's verbatim value (codegen fix: nothing is written after a default pair) | `usfm_codegen`'s `a_default_attribute_gets_no_separator_after_it` |
+| `\e-\ef -\cat\0 \rb \5b\rb*\no"r*` | a note's `\cat` category is joined the same way as a `\periph` title, across a character style that contributes nothing, and doubled the whitespace at the seam the same way (parser fix, the same one) | `recovery.rs::note_category_collapses_whitespace_across_a_style` |
+| `iT\n\periph\0*\n\w 1"\w*\np` | the `\periph` title is the text of its line, so a character style on it contributes nothing — and left the whitespace on both sides of itself side by side in the title (parser fix: the joined title collapses its whitespace, rule 1) | `recovery.rs::periph_title_collapses_whitespace_across_a_style` |
+| `\v 1p\esb\esbe\.\v 7` | a verse after text on the `\esbe` line ended the one before it outside the sidebar, where the same document with a real `\p` after `\esbe` — which is what the writer writes — ends it inline after that text (parser fix: the `\esbe` line places verse ends as the implicit `\p` it becomes) | `verse_ends.rs::a_verse_after_text_on_the_esbe_line_ends_the_previous_one_inline` |
+| `\esb\periph` | a `\periph` inside a sidebar swallowed the `\esbe` that closes the sidebar, as an empty paragraph styled `\esbe` — a sidebar no writer can close (parser fix: whatever ends the container a division is in ends the division) | `recovery.rs::a_periph_inside_a_sidebar_ends_with_the_sidebar` |
+| `\periph\id\`, `\periph\id\v 3` | a block after a `\periph` whose `\id` the parser dropped: the division runs to the next `\periph` or `\id`, so the written form swallowed it — and a `\v` there opened a verse that a periph's blocks never do (parser fix: a dropped `\id` ends nothing, so the division simply continues, verses suspended) | `recovery.rs::a_block_after_a_periph_that_nothing_ended_is_inside_it` |
+| `\tr \tc1 x\c\n\tr \tc1 y` | two tables with nothing between them but a dropped `\c`: consecutive `\tr` rows are one table, so the written form ran them together (parser fix: so does the parser now) | `recovery.rs::two_tables_with_a_dropped_marker_between_them_are_one` |
+| `\c 3\c\n\cp` | a `\cp` paragraph after a chapter start, which only a dropped marker can put there: `\c` absorbs a `\cp` that follows it, so the written form read it back as the chapter's published number (parser fix: so does the parser now) | `recovery.rs::a_cp_paragraph_after_a_chapter_is_its_published_number` |
+| `r\id\-\*` | a block-level milestone whose paragraph was closed by an `\id` the parser then dropped: nothing stood between them in the tree, and written out the paragraph ran on and swallowed the milestone (parser fix: such a milestone goes inside the paragraph) | `recovery.rs::a_block_milestone_after_a_paragraph_that_nothing_closed_is_inline` |
+| `\v 1\v\vp` | a `\va` or `\vp` that reached a paragraph as a character style, because the `\v` between it and the verse was dropped: a writer has nowhere to put `alt_number` and `pub_number` but right after the number, so the written form read them back as those (parser fix: so does the parser now, wherever they come from) | `recovery.rs::a_va_or_vp_after_a_verse_is_its_number_however_it_got_there` |
+| `\v 1\vp x` | an unclosed `\vp` after `\v N` stayed beside the verse as a `Char`, a tree no USFM spells: closing it, as the writer must, reads it back as the published number (parser fix: it is lifted whether or not it is closed) | `recovery.rs::published_verse_number_not_closed` |

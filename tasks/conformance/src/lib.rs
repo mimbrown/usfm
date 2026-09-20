@@ -56,6 +56,8 @@ use usfm::{DEFAULT_STYLESHEET, parse_with_options};
 use usfm::usx::{UsxOptions, XmlDocument, XmlElement, XmlNode, to_usx_node_with_options};
 use xml::reader::{EventReader, XmlEvent};
 
+pub mod roundtrip;
+
 /// Root path to the tcdocs test suite
 pub const TCDOCS_ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tcdocs/tests");
 

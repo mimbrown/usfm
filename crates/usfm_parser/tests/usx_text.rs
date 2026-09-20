@@ -153,3 +153,22 @@ fn an_empty_attribute_list_on_a_milestone_writes_the_same_usx() {
     assert_eq!(with_pipe, without_pipe);
     XmlDocument::from(with_pipe.as_bytes()).expect("well-formed XML");
 }
+
+/// Ticket 28: a `\v` on the line after `\esbe`, with no paragraph marker of
+/// its own, belongs to the paragraph `\esbe` opened — and the verse open
+/// before `\esb` still has to end before the sidebar. It used to lose both its
+/// `eid` and the `vid` that says the implicit paragraph continues it: the
+/// paragraph after the sidebar carried `vid="GEN 1:1"` while verse 1 was never
+/// closed. Written out as USX (which is what the round trip compares), the two
+/// spellings — with and without the `\p` — differ only in the diagnostic.
+#[test]
+fn a_verse_after_esbe_closes_the_verse_before_the_sidebar() {
+    let implicit = usx("\\id GEN\n\\c 1\n\\p \\v 1 a\n\\esb\n\\p side\n\\esbe\n\\v 2 b");
+    assert!(
+        implicit.contains(r#"<para style="p"><verse number="1" style="v" sid="GEN 1:1" />a<verse eid="GEN 1:1" /></para>"#),
+        "{implicit}"
+    );
+    assert!(!implicit.contains("vid="), "{implicit}");
+    let explicit = usx("\\id GEN\n\\c 1\n\\p \\v 1 a\n\\esb\n\\p side\n\\esbe\n\\p \\v 2 b");
+    assert_eq!(implicit, explicit);
+}

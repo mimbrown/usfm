@@ -1,0 +1,15 @@
+\ie GEN
+\usfm 3.1.2
+\c 1
+\p
+\v 1 the first verse
+\v 2 the second verse
+\c 2
+\p
+\v 1 thshabiah son of Kemuel
+\lf This was the list of the administrators of the tribes of Isry 2
+\li3 list entry 3
+\lf optional list footer
+\list-e\*
+\p
+\v 2 This was introduced in 3rsiversion of usfm spec.
