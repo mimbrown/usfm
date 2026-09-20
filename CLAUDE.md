@@ -344,14 +344,10 @@ it leaves for callers:
 Priority areas, next: the route is `.scratch/oxc-layout/spec.md` (decision in
 `docs/adr/0001-oxc-style-crate-layout.md`): oxc's crate organisation, not its arena.
 Milestones in order: M1 workspace builds clean, M2 benchmarks + Miri + fuzz, M3
-crate split, M4 `usfm_semantic`, M5 `usfm_codegen`, M6 language server. M1, M2
-and M3 all closed 2026-09-19 (exit criteria recorded in the spec); **M4
-(`usfm_semantic`) is under way**: the checks that read a finished tree rather
-than a token stream leave the parser for `usfm_semantic`, with `usfm::parse()`
-returning the union so tcdocs is unchanged. Tickets 18–23 are done (the crate,
-placement and attributes, the audit of every `Code`, `ReferenceIndex`'s move
-and the verse- and chapter-order checks); 24 (what the pass costs) is the last.
-M4 is ticketed (18–24). Tickets are in
+crate split, M4 `usfm_semantic`, M5 `usfm_codegen`, M6 language server. M1–M4
+closed (exit criteria recorded in the spec; M4 on 2026-09-20); **M5
+(`usfm_codegen`, round trip, `usfm format`) is next**, ticketed 25–27.
+Tickets are in
 `.scratch/oxc-layout/issues/`, written one milestone ahead. Unattended
 sessions follow `docs/agents/loop.md`; `scripts/gate.sh` is the gate before every push.
 

@@ -29,7 +29,7 @@ Done when the gate is green with tcdocs unchanged and the gap is under 5%.
 
 ## Answer
 
-Landed via PR #28 (2026-09-20). Measured first (new `analyze` bench group,
+Landed in `f181eab` (PR #28, 2026-09-20). Measured first (new `analyze` bench group,
 a per-family attribution): `is_valid_attribute_name` was 58% of the pass's
 instructions over an aligned text (`chars()` decoding to answer byte
 questions); the `OccursUnder` scan for `\w` walked 96 strings per word; the
