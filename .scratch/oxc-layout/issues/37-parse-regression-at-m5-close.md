@@ -1,6 +1,6 @@
 # 37. `parse` is 3.9% slower at the M5 close than at the M4 close
 
-Status: ready-for-agent
+Status: resolved
 Milestone: M5
 
 Found at the M5 boundary by the rerun `docs/agents/loop.md` prescribes
@@ -46,3 +46,29 @@ places:
 Done when `parse/whole-corpus` is within 3% of the M4 close by the recipe
 (or the regression is shown not to reproduce), the gate is green, and no
 diagnostic or tree changed.
+
+## Answer
+
+Landed via PR #37 (2026-09-20). Confirmed first: `corpus-m4-close` against
+`corpus-m5-close`, three rounds turn about on `parse/whole-corpus`, medians
+53.7 vs 51.5 MiB/s, −4.1%. Attributed by callgrind instruction counts over
+one parse of the whole corpus (wall clock cannot resolve suspects worth
+0.2–2% each on this VM): M5 was +51.4 M instructions (+3.4%) on M4, of
+which `fold_verse_number_style`'s `marker_name` call — an owned `String`
+per closed character style — was 51%, the `\cp` `marker_name` compare per
+paragraph close 17%, `add_child`'s rule-6 `last()` read on every inline
+node 23%, and the merge path's `ends_with` under 1%; `parent_holds_plain_text`,
+`place_block_milestone` and the rest were free. The rows add to the
+measured loss.
+
+Fix: `ParserImpl` caches the `va`, `vp` and `cp` indices at construction,
+as it did `p`/`esb`/`esbe`/`c`/`tr`/`cat`/`periph`, and the two paths
+compare ids; `add_child` asks the child first (a `Text` whose first byte is
+ASCII whitespace) before reading the child list, and the merge check is a
+last-byte test. No check removed, no tree, diagnostic or snapshot changed.
+After: 1,504 M instructions (+0.7% on M4), and by the wall-clock recipe
+`parse/whole-corpus` is **+1.4%** on the M4 close (51.8 -> 52.5, medians of
+three, same sitting), `parse_semantic` −0.4%, `parse_html` +0.7%, `lex`
+−2.0%. Recorded in `docs/benchmarks.md` ("After ticket 37"). Rule for the
+future, now in CLAUDE.md: a hot path compares a cached index, never
+`marker_name`. Ticket 30 is unblocked.

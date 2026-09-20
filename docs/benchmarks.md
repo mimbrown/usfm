@@ -860,6 +860,129 @@ close compares a marker name for `\cp`). Spread over the three rounds is
 0.3% / 2.9% on `parse` (base / M5), so the first job of the ticket is to
 confirm the number, then attribute it as ticket 24 did.
 
+## After ticket 37
+
+The M5 regression, found, attributed and paid back. **`parse/whole-corpus` is
+now +1.4% on the M4 close**, against −3.9% when M5 closed.
+
+### Confirming it
+
+Same recipe as the M5 close, but on `parse/whole-corpus` alone so the two
+binaries answer one question three times in one sitting: `f181eab` and
+`2440a92`, both at `CARGO_PROFILE_BENCH_CODEGEN_UNITS=1`, run turn about.
+Criterion's point estimate, MiB/s.
+
+| | R1 | R2 | R3 | median |
+| --- | ---: | ---: | ---: | ---: |
+| M4 close (`f181eab`) | 53.7 | 54.0 | 53.5 | **53.7** |
+| M5 close (`2440a92`) | 51.7 | 51.5 | 51.4 | **51.5** |
+
+**−4.1%**: it reproduces, and the M5-close spread is gone (0.9% / 0.6%) now
+that nothing else runs between the rounds.
+
+### Where the time was: the attribution table
+
+**Instruction counts, not wall clock.** The families here are worth 0.2–2% of
+one benchmark each, which is under this VM's noise floor, and rebuilding a
+binary per experiment moves `parse` by more than that on placement alone (see
+"What the `lex` row does *not* mean"). `valgrind --tool=callgrind
+--cache-sim=no` counts the same instructions every run, and the suspects are
+per-node work whose cost is instructions — allocator calls above all. The
+subject is a scratch binary outside the workspace (a path dependency on
+`crates/usfm`) that parses the whole corpus once, which is exactly one
+iteration of `parse/whole-corpus` without criterion around it, built at
+`codegen-units = 1` as the bench binaries are; the M4 figure is the same
+binary built against an `f181eab` worktree. Each suspect was then switched
+off in turn by a local hack, reverted after its run.
+
+| Switched off | Ir | Δ vs M5 | share of the regression |
+| --- | ---: | ---: | ---: |
+| nothing (M5 as committed) | 1,544,605,051 | — | — |
+| `fold_verse_number_style` entirely | 1,513,525,400 | −31.08 M | 61% |
+| … only its `marker_name` `String` | 1,518,607,596 | −26.00 M | 51% |
+| `add_child`'s rule-6 check | 1,532,992,270 | −11.61 M | 23% |
+| the `\cp` `marker_name` compare | 1,535,794,053 | −8.81 M | 17% |
+| `add_child`'s merge `ends_with` | 1,544,289,019 | −0.32 M | 0.6% |
+| `parent_holds_plain_text` | 1,545,393,131 | +0.79 M | 0% |
+| **M4 close (`f181eab`)** | **1,493,246,806** | **−51.36 M** | 100% |
+
+The regression is 51.36 M instructions, 3.4% of the parse, and the four rows
+that carry it add to 51.8 M — it is fully accounted for, and the rest of M5's
+parser work (`place_block_milestone` and `BlockListHead`, the table join, the
+`\periph` value trim, the two `eat_whitespace` calls) is together under 0.5 M.
+
+**Two thirds of it is one line, in two places.** `marker_name` returns an
+*owned* `String` — `self.rule(marker).marker.clone()` — and it is documented
+as being for diagnostic paths only, because a diagnostic wants a name it can
+hold across an `emit`. M5 put it on two paths that run per node: every
+character style that closes (`fold_verse_number_style`, to ask whether it is
+`\va` or `\vp`) and every paragraph that closes (to ask whether it is `\cp`).
+A function-level diff of the two profiles shows it as allocator traffic
+rather than as string work: `_int_free` +9.4 M, `malloc` +7.3 M, `free`
++5.4 M, `String::clone` +5.8 M, `memcpy` +3.1 M.
+
+The rule-6 check is the other quarter, and it is **not** the trim — almost no
+text in the corpus starts with whitespace, so it almost never fires. It is the
+question: `self.children().last()` on *every* inline node added to *every*
+container, before the node itself is looked at.
+
+### What was done
+
+No check was removed: each of them fixes a round-trip bug with a test behind
+it, and no tree, diagnostic or snapshot changes.
+
+1. **`ParserImpl` caches the `StyleId`s of `va`, `vp` and `cp`** at
+   construction, beside the `p`, `esb`, `esbe`, `c`, `tr`, `cat` and `periph`
+   it already cached. `fold_verse_number_style` compares
+   `char.style.index()` against `self.va` / `self.vp` and `parse_paragraph_as`
+   compares `marker` against `self.cp`, so both ask a `usize` question.
+   `StyleSheet::add_rule` only ever appends and the names are unique, so a
+   milestone style derived while parsing can take neither one of these indices
+   nor one of these names, and a sheet without the marker leaves `usize::MAX`,
+   which no style id equals.
+2. **`add_child`'s rule-6 check asks the child first.** Is it a `Text` whose
+   first byte is ASCII whitespace? Only then is the child list consulted. A
+   multi-byte character's first byte is never ASCII whitespace, so the byte
+   test and `trim_start_matches` agree on every input.
+3. **The merge path's `ends_with` is a last-byte test** for the same reason.
+   Worth 0.3 M, taken because it is the same question asked more cheaply.
+
+That is 40.3 M of the 51.4 M back: the fixed tree parses the corpus in
+**1,504,262,854** instructions, **+0.74%** on the M4 close. What is left is
+the checks themselves — one discriminant test per inline node, one id compare
+per closed character style, one per paragraph.
+
+`marker_name` is still an allocation on `parse_char`'s own path, where it has
+been since long before M5 and where the name is used for more than one
+question. That is not this regression and was left alone.
+
+### After: the fixed tree against the M4 close
+
+`corpus-fix` against `f181eab`, both at `CARGO_PROFILE_BENCH_CODEGEN_UNITS=1`,
+three rounds turn about, filter `whole-corpus`. Point estimates in MiB/s;
+positive Δ is faster.
+
+| Id | `f181eab` R1 | R2 | R3 | median | fixed R1 | R2 | R3 | median | Δ |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `lex/whole-corpus` | 151.0 | 152.2 | 151.5 | **151.5** | 148.7 | 146.0 | 148.5 | **148.5** | **−2.0%** |
+| `parse/whole-corpus` | 51.8 | 51.5 | 52.5 | **51.8** | 53.2 | 52.5 | 52.3 | **52.5** | **+1.4%** |
+| `parse_semantic/whole-corpus` | 49.0 | 48.7 | 49.1 | **49.0** | 49.0 | 48.4 | 48.8 | **48.8** | **−0.4%** |
+| `parse_usx/whole-corpus` | 18.6 | 19.1 | 19.2 | **19.1** | 19.2 | 19.1 | 19.2 | **19.2** | **+0.2%** |
+| `parse_html/whole-corpus` | 43.5 | 43.8 | 43.9 | **43.8** | 43.9 | 44.1 | 44.3 | **44.1** | **+0.7%** |
+| `parse_json/whole-corpus` | 7.2 | 7.3 | 7.3 | **7.3** | 8.0 | 8.1 | 8.1 | **8.1** | **+11.3%** |
+| `reference_index/whole-corpus` | 285.1 | 278.4 | 288.4 | **285.1** | 285.0 | 284.6 | 285.8 | **285.0** | **−0.0%** |
+| `analyze/whole-corpus` | 378.6 | 372.3 | 378.1 | **378.1** | 381.7 | 379.6 | 379.2 | **379.6** | **+0.4%** |
+
+Every id the 3% threshold applies to is inside it, `parse` on the right side
+of zero. `lex` is the usual placement wobble — its code has not changed since
+`f181eab` — and `parse_json`, whose spread is 7–8%, is read at its own scale.
+
+**One number not to carry between sittings.** The M4 binary reads 51.8 MiB/s
+on `parse/whole-corpus` in this table and 53.7 in the confirmation above. The
+binary is the same; the sitting is not — the confirmation ran that one id
+alone, this run works through eight groups before reaching it. Compare
+medians within one interleaved sitting, never a table against a table.
+
 ## Reading a regression
 
 The VM is a shared 4-vCPU cloud instance, so the numbers move on their own.

@@ -145,6 +145,21 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **The M5 parse regression, paid back (ticket 37).** `parse/whole-corpus`
+  was −3.9% at the M5 boundary and is **+1.4%** on the M4 close now, with no
+  tree, diagnostic or snapshot changed and no check removed. Attributed by
+  callgrind rather than by wall clock, because each suspect is worth under
+  this VM's noise floor (`docs/benchmarks.md`, "After ticket 37", has the
+  table and the method). Two thirds of the loss was `marker_name` — which
+  returns an **owned `String`** and is meant for diagnostic paths — called
+  per closed character style (`\va`/`\vp`) and per closed paragraph (`\cp`);
+  `ParserImpl` now caches those three `StyleId`s at construction, as it did
+  `p`, `esb`, `esbe`, `c`, `tr`, `cat` and `periph`, and compares ids. The
+  other quarter was `add_child`'s rule-6 check reading the child list on
+  every inline node; it asks the cheap question first now (is this a `Text`
+  whose first byte is ASCII whitespace), and the merge path's `ends_with` is
+  a last-byte test. **When a hot path needs to know which marker it has,
+  compare a cached index — never `marker_name`.**
 - **Where a `Block::Milestone` may stand (ticket 35, M5).** The rule is on
   `Block::Milestone`: one stands between blocks only when the block before it
   is one the writer gives a line of its own — a `Book`, a `ChapterStart`, a
@@ -501,10 +516,8 @@ Priority areas, next: the route is `.scratch/oxc-layout/spec.md` (decision in
 Milestones in order: M1 workspace builds clean, M2 benchmarks + Miri + fuzz, M3
 crate split, M4 `usfm_semantic`, M5 `usfm_codegen`, M6 language server. M1–M5
 closed (exit criteria recorded in the spec; M5 on 2026-09-20, tickets 25–27
-and 34–36). **Next: ticket 37** (`parse` is 3.9% slower at the M5 close than
-at the M4 close, over the 3% threshold — the boundary rerun in
-`docs/benchmarks.md`, "M5 close"), then **M6**, the language server rebuilt in
-`apps/` (tickets 30–33; 30 is blocked by 37).
+and 34–36). Ticket 37 paid back the M5 parse regression, so **next is M6**,
+the language server rebuilt in `apps/` (tickets 30–33, starting with 30).
 Tickets are in
 `.scratch/oxc-layout/issues/`, written one milestone ahead. Unattended
 sessions follow `docs/agents/loop.md`; `scripts/gate.sh` is the gate before every push.
