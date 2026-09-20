@@ -1,6 +1,6 @@
 # 36. `\xt ...\xt*` after `\xo` is read as nested inside the `\xo`
 
-Status: ready-for-agent
+Status: claimed
 Milestone: M5
 Blocked by: 34
 
