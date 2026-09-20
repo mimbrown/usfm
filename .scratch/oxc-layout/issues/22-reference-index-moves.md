@@ -20,7 +20,7 @@ Done when the gate is green and `usfm_ast` has no `reference` module.
 
 ## Answer
 
-Landed via PR #26 (2026-09-19). `reference.rs` moved by `git mv` into
+Landed in `f18f402` (PR #26, 2026-09-19). `reference.rs` moved by `git mv` into
 `usfm_semantic` (`ReferenceIndex::new(&Document)`, `ChapterRef`, `VerseRef`;
 lifted to the facade root); `usfm_ast` keeps only `NodePath`, now in
 `cursor.rs` beside what uses it, and `Document::reference_index()` is gone.

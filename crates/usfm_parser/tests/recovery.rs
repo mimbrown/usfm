@@ -770,11 +770,15 @@ const MACHINE_PY_CUSTOM_STY: &str = include_str!("../../../tasks/conformance/fix
 /// ticket 21 — three `verse-text-before-chapter` and a `verse-in-heading` —
 /// and `usfm_semantic/tests/checks.rs` asserts the union of the eight.
 ///
-/// Two of the file's oddities are deliberately *not* reported: `\v 6` occurs
-/// twice in chapter 2 and `\v 5` comes after `\v 7a`. Both are well-formed
+/// Two of the file's oddities are deliberately not reported *here*: `\v 6`
+/// occurs twice in chapter 2 and `\v 5` comes after it. Both are well-formed
 /// verse markers, and whether a book's verses are unique and in order is a
-/// question about the document, not about its syntax; that check belongs to
-/// `usfm_semantic` (M4), which will have the versification to check against.
+/// question about the document, not about its syntax, so the parser keeps them
+/// and says nothing. `usfm_semantic` reports them since ticket 23 — with a
+/// third, `\v 2-3` and `\v 3-4a` both claiming verse 3 — and
+/// `usfm_semantic/tests/checks.rs`'s `machine_py_41mat_order` is this test's
+/// twin, pinning the three to their verses. This snapshot is the parser alone,
+/// so it is unchanged by them.
 /// The thin space (U+2009) ending the `\v 4` line survives into the text:
 /// whitespace rule 1 normalises ASCII whitespace only.
 #[test]

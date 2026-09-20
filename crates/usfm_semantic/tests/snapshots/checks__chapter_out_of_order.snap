@@ -1,0 +1,19 @@
+---
+source: crates/usfm_semantic/tests/checks.rs
+description: "\\id GEN\n\\c 2\n\\p \\v 1 a\n\\c 1\n\\p \\v 1 b"
+---
+Book GEN "" @0..7
+ChapterStart 2@8..12
+Para p@13..23
+  VerseStart 1@16..20
+  Text "a"@21..23
+  VerseEnd 1
+ChapterEnd 2
+ChapterStart 1@23..27
+Para p@28..37
+  VerseStart 1@31..35
+  Text "b"@36..37
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+warning[chapter-out-of-order] @23..27: chapter 1 comes after chapter 2

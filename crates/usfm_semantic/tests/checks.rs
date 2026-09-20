@@ -432,15 +432,212 @@ fn a_column_span_is_counted() {
     );
 }
 
+/// The Paratext-shaped book from sillsdev/machine.py that ticket 09 vendored,
+/// read by the two tests below. `recovery.rs` snapshots the same file for the
+/// parser's half.
+const MACHINE_PY_41MAT: &str =
+    include_str!("../../../tasks/conformance/fixtures/machine-py/Tes/41MATTes.SFM");
+
+// ---------------------------------------------------------------------------
+// Verse and chapter order (ticket 23). The only checks here that are not about
+// a node on its own: a verse is judged against the verses of its chapter and a
+// chapter against the chapters of its book, which the walk passes in order and
+// the `Analyzer` remembers. All four are Warnings — the document is well-formed
+// USFM and nothing is repaired — so no tcdocs case can turn on them.
+// Versification is out of scope: a *missing* verse is not reported.
+// ---------------------------------------------------------------------------
+
+/// The same number twice in one chapter, on the second one's `\v`.
+#[test]
+fn duplicate_verse_number() {
+    let source = "\\id GEN\n\\c 1\n\\p \\v 1 a \\v 2 b \\v 2 c";
+    assert_eq!(
+        common::parser_codes(source),
+        Vec::<Code>::new(),
+        "both verses are well-formed, so the parser says nothing"
+    );
+    check(Code::DuplicateVerseNumber, source);
+}
+
+/// Segments are distinct verses: `\v 4a` and `\v 4b` are the two halves of
+/// verse 4 and neither covers the other.
+#[test]
+fn verse_segments_are_distinct_verses() {
+    assert_eq!(
+        common::codes("\\id GEN\n\\c 1\n\\p \\v 4a a \\v 4b b \\v 5 c"),
+        Vec::<Code>::new()
+    );
+}
+
+/// The same segment twice, though, is the same verse twice.
+#[test]
+fn duplicate_verse_number_same_segment() {
+    check_variant(
+        Code::DuplicateVerseNumber,
+        "same_segment",
+        "\\id GEN\n\\c 1\n\\p \\v 4a a \\v 4a b",
+    );
+}
+
+/// A bare number is the whole verse, segments and all, so `\v 4` then
+/// `\v 4a` is a duplicate — and so is `\v 4a` then `\v 4`, which is the shape
+/// `Tes/03LEVTes.SFM` has.
+#[test]
+fn duplicate_verse_number_whole_then_segment() {
+    check_variant(
+        Code::DuplicateVerseNumber,
+        "whole_then_segment",
+        "\\id GEN\n\\c 1\n\\p \\v 4 a \\v 4a b",
+    );
+    assert_eq!(
+        common::codes("\\id GEN\n\\c 1\n\\p \\v 4a a \\v 4 b"),
+        vec![Code::DuplicateVerseNumber],
+        "the bare number covers the segment either way round"
+    );
+}
+
+/// A range covers every number in it, so `\v 3-5` and a later `\v 4` are the
+/// same verse written twice. Reported as a duplicate and not as
+/// `verse-out-of-order`: a verse reports at most one of the two.
+#[test]
+fn duplicate_verse_number_inside_a_range() {
+    let source = "\\id GEN\n\\c 1\n\\p \\v 3-5 a \\v 4 b";
+    assert_eq!(common::codes(source), vec![Code::DuplicateVerseNumber]);
+    check_variant(Code::DuplicateVerseNumber, "inside_a_range", source);
+}
+
+/// The other side of the range rule: the number after the range is new, and
+/// a segment written on a range's end (`\v 3-4a`, then `\v 4b`) leaves the
+/// other segment free — the shape `41MATTes.SFM` uses.
+#[test]
+fn a_verse_after_a_range_is_silent() {
+    assert_eq!(
+        common::codes("\\id GEN\n\\c 1\n\\p \\v 3-5 a \\v 6 b"),
+        Vec::<Code>::new()
+    );
+    assert_eq!(
+        common::codes("\\id GEN\n\\c 1\n\\p \\v 3-4a a \\v 4b b \\v 5 c"),
+        Vec::<Code>::new()
+    );
+}
+
+/// A range of four billion verses is a number like any other: coverage keeps
+/// a range as a range, so nothing here iterates it. The fuzzer reaches inputs
+/// like this, and a check that counted from 1 to `\v 4000000000` would hang
+/// rather than crash, which is the harder failure to notice.
+#[test]
+fn an_absurdly_wide_range_is_not_iterated() {
+    let source = "\\id GEN\n\\c 1\n\\p \\v 1-4000000000 a \\v 2000000000 b";
+    assert_eq!(common::codes(source), vec![Code::DuplicateVerseNumber]);
+}
+
+/// A number lower than the previous verse's end.
+#[test]
+fn verse_out_of_order() {
+    let source = "\\id GEN\n\\c 1\n\\p \\v 6 a \\v 7a b \\v 5 c";
+    assert_eq!(
+        common::parser_codes(source),
+        Vec::<Code>::new(),
+        "every verse here is well-formed, so the parser says nothing"
+    );
+    check(Code::VerseOutOfOrder, source);
+}
+
+/// A gap in a list is a number that is still free, so a verse that fills it
+/// is out of order without being a duplicate: `\v 1,3-5` then `\v 2`.
+#[test]
+fn verse_out_of_order_into_a_gap() {
+    let source = "\\id GEN\n\\c 1\n\\p \\v 1,3-5 a \\v 2 b";
+    assert_eq!(common::codes(source), vec![Code::VerseOutOfOrder]);
+    check_variant(Code::VerseOutOfOrder, "into_a_gap", source);
+}
+
+/// Segments compare by letter, so `4b` after `4a` is forward and `4a` after
+/// `4b` is backwards.
+#[test]
+fn verse_out_of_order_by_segment() {
+    check_variant(
+        Code::VerseOutOfOrder,
+        "by_segment",
+        "\\id GEN\n\\c 1\n\\p \\v 4b a \\v 4a b",
+    );
+}
+
+/// A verse before the first `\c` is in no chapter, so the order checks never
+/// see it: `verse-outside-chapter` has already said what there is to say.
+#[test]
+fn a_verse_before_the_first_chapter_is_not_ordered() {
+    assert_eq!(
+        common::codes("\\id GEN\n\\p \\v 5 a\n\\c 1\n\\p \\v 1 b \\v 2 c"),
+        vec![Code::VerseTextBeforeChapter, Code::VerseOutsideChapter],
+        "no duplicate and no ordering report for the chapterless `\\v 5`"
+    );
+}
+
+/// Each chapter counts its verses on its own, so the same number in two
+/// chapters is not a duplicate.
+#[test]
+fn verse_numbers_start_again_in_each_chapter() {
+    assert_eq!(
+        common::codes("\\id GEN\n\\c 1\n\\p \\v 1 a\n\\c 2\n\\p \\v 1 b"),
+        Vec::<Code>::new()
+    );
+}
+
+/// The same chapter number twice, on the second `\c`.
+#[test]
+fn duplicate_chapter_number() {
+    let source = "\\id GEN\n\\c 1\n\\p \\v 1 a\n\\c 1\n\\p \\v 1 b";
+    assert_eq!(
+        common::parser_codes(source),
+        Vec::<Code>::new(),
+        "both chapters are well-formed, so the parser says nothing"
+    );
+    check(Code::DuplicateChapterNumber, source);
+}
+
+/// A chapter numbered lower than the one before it.
+#[test]
+fn chapter_out_of_order() {
+    check(
+        Code::ChapterOutOfOrder,
+        "\\id GEN\n\\c 2\n\\p \\v 1 a\n\\c 1\n\\p \\v 1 b",
+    );
+}
+
+/// Chapters are counted per book, not per document. A document with two `\id`
+/// lines is two books — the CLI makes one whenever it is given several files —
+/// and the second book's chapters start again at 1, so neither its `\c 1` nor
+/// its `\v 1` is a repeat of the first book's. `id-not-first` is still
+/// reported, and is the only thing reported.
+#[test]
+fn chapters_and_verses_start_again_in_each_book() {
+    let source = "\\id GEN\n\\c 1\n\\p \\v 1 a\n\\id EXO\n\\c 1\n\\p \\v 1 b";
+    assert_eq!(
+        common::codes(source),
+        vec![Code::IdNotFirst],
+        "the second book repeats nothing of the first"
+    );
+}
+
+/// A gap is not a mistake here — versification is out of scope, so `\c 1`
+/// followed by `\c 3` is a book with two chapters and nothing to report.
+#[test]
+fn a_chapter_gap_is_silent() {
+    assert_eq!(
+        common::codes("\\id GEN\n\\c 1\n\\p \\v 1 a\n\\c 3\n\\p \\v 1 b"),
+        Vec::<Code>::new()
+    );
+}
+
 /// The machine.py fixture ticket 09 vendored, whose eight mistakes
 /// `recovery.rs` lists. Four of them are this crate's, and the union a caller
-/// sees still has all eight.
+/// sees still has all eight — plus the three the order checks add, which
+/// `machine_py_41mat_order` below pins to their verses.
 #[test]
 fn machine_py_41mat() {
-    const SOURCE: &str =
-        include_str!("../../../tasks/conformance/fixtures/machine-py/Tes/41MATTes.SFM");
     assert_eq!(
-        common::codes(SOURCE),
+        common::codes(MACHINE_PY_41MAT),
         vec![
             // Three `\p` in the introduction, before `\c 1`.
             Code::VerseTextBeforeChapter,
@@ -454,7 +651,42 @@ fn machine_py_41mat() {
             Code::UnmatchedClosingMarker,
             // `\v 3-4a` on the line after `\esbe`, and `\v 1` after `\c 4`.
             Code::ContentOutsideParagraph,
+            // `\v 3-4a` again: `\v 2-3` before it already covered verse 3.
+            Code::DuplicateVerseNumber,
+            // `\v 6` twice in chapter 2, and `\v 5` after the second of them.
+            Code::DuplicateVerseNumber,
+            Code::VerseOutOfOrder,
             Code::ContentOutsideParagraph,
+        ],
+    );
+}
+
+/// The twin of `recovery.rs`'s `machine_py_41mat`, which says the file's two
+/// verse oddities are the parser's business to keep and this crate's to
+/// report: `\v 6` appears twice in chapter 2, and `\v 5` comes after it.
+/// Both are reported here, on the later `\v` of each pair — and with them a
+/// third the ticket did not name, because `\v 2-3` and `\v 3-4a` both claim
+/// verse 3.
+#[test]
+fn machine_py_41mat_order() {
+    let reported: Vec<(Code, u32)> = usfm::parse(MACHINE_PY_41MAT)
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| {
+            matches!(
+                diagnostic.code,
+                Code::DuplicateVerseNumber | Code::VerseOutOfOrder
+            )
+        })
+        .map(|diagnostic| (diagnostic.code, diagnostic.span.start))
+        .collect();
+    let offset = |marker: &str| MACHINE_PY_41MAT.find(marker).expect("in the fixture") as u32;
+    assert_eq!(
+        reported,
+        vec![
+            (Code::DuplicateVerseNumber, offset("\\v 3-4a")),
+            (Code::DuplicateVerseNumber, offset("\\v 6 Bad verse.")),
+            (Code::VerseOutOfOrder, offset("\\v 5 Chapter two")),
         ],
     );
 }
@@ -462,12 +694,20 @@ fn machine_py_41mat() {
 /// `Tes/03LEVTes.SFM`: `\id Leviticus` is a book name where the code belongs,
 /// so the parser drops the `\id` line and the document is left without one.
 /// The two halves report one code each, and the order a caller sees is the
-/// order of the offsets.
+/// order of the offsets. Since ticket 23 there is a third: the file writes
+/// `\v 55` and then `\v 55b`, and a bare number covers its own segments.
 #[test]
 fn machine_py_03lev() {
     const SOURCE: &str =
         include_str!("../../../tasks/conformance/fixtures/machine-py/Tes/03LEVTes.SFM");
-    assert_eq!(common::codes(SOURCE), vec![Code::MissingId, Code::UnknownBookCode]);
+    assert_eq!(
+        common::codes(SOURCE),
+        vec![
+            Code::MissingId,
+            Code::UnknownBookCode,
+            Code::DuplicateVerseNumber
+        ]
+    );
     assert_eq!(common::parser_codes(SOURCE), vec![Code::UnknownBookCode]);
 }
 
