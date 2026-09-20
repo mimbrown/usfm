@@ -139,17 +139,16 @@ fn bench_parse_json(c: &mut Criterion) {
     });
 }
 
-/// `reference_index` alone: the parse is done once, outside the timed loop, so
-/// the number is the cost of walking a built tree. Throughput is still counted
-/// over the bytes of source the tree came from, which keeps the unit the same
-/// as the groups above without the two being directly comparable.
-///
-/// The index moved to `usfm_semantic` in ticket 22; the call it times is the
-/// same walk under a new name (`document.reference_index()` was
-/// `ReferenceIndex::build`).
-fn bench_reference_index(c: &mut Criterion) {
+/// A group over trees built once, outside the timed loop, so the number is the
+/// cost of walking a built tree. Throughput is still counted over the bytes of
+/// source the trees came from, which keeps the unit the same as the groups
+/// above without the two being directly comparable.
+fn built_tree_group<F>(c: &mut Criterion, name: &str, run: F)
+where
+    F: Fn(&Document<'_>),
+{
     let sheet = style_sheet();
-    let mut group = c.benchmark_group("reference_index");
+    let mut group = c.benchmark_group(name);
     for (class, files) in corpus() {
         let bytes = total_bytes(&files);
         let documents: Vec<Document<'_>> = files
@@ -163,7 +162,7 @@ fn bench_reference_index(c: &mut Criterion) {
             |b, documents| {
                 b.iter(|| {
                     for document in documents {
-                        black_box(ReferenceIndex::new(document));
+                        run(document);
                     }
                 })
             },
@@ -172,10 +171,35 @@ fn bench_reference_index(c: &mut Criterion) {
     group.finish();
 }
 
+/// `reference_index` alone, over a tree parsed outside the timed loop.
+///
+/// The index moved to `usfm_semantic` in ticket 22; the call it times is the
+/// same walk under a new name (`document.reference_index()` was
+/// `ReferenceIndex::build`).
+fn bench_reference_index(c: &mut Criterion) {
+    built_tree_group(c, "reference_index", |document| {
+        black_box(ReferenceIndex::new(document));
+    });
+}
+
+/// `usfm_semantic::analyze` alone, over a tree parsed outside the timed loop
+/// (ticket 24).
+///
+/// `parse_semantic` minus `parse` says what the pass costs *in place*, where
+/// the tree is still warm from being built; this says what the walk and the
+/// checks cost on their own, which is what an editor re-checking a cached tree
+/// would pay, and it is the number to split by check family when the gap
+/// between the two groups needs attributing.
+fn bench_analyze(c: &mut Criterion) {
+    built_tree_group(c, "analyze", |document| {
+        black_box(usfm::semantic::analyze(document));
+    });
+}
+
 criterion_group! {
     name = benches;
     config = configured();
     targets = bench_lex, bench_parse, bench_parse_semantic, bench_parse_usx, bench_parse_html,
-        bench_parse_json, bench_reference_index
+        bench_parse_json, bench_reference_index, bench_analyze
 }
 criterion_main!(benches);

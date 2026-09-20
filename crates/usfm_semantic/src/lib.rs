@@ -134,15 +134,17 @@ pub fn analyze(document: &Document) -> Vec<Diagnostic> {
 /// (`check_placement`, `check_attributes`), so the mapping from the recovery
 /// table to the code that implements it stays easy to follow.
 ///
-/// [`Scope`] is the only state besides the diagnostics: what the walk is
-/// inside, which is what the parser read off its stack of open markers.
+/// Besides the diagnostics it holds what the walk is inside ([`Scopes`],
+/// which is what the parser read off its stack of open markers), the numbers
+/// the order checks compare against ([`Order`]) and the placement answers
+/// already worked out ([`PlacementMemo`]).
 struct Analyzer<'a> {
     /// The sheet the document's `StyleId`s resolve against — the parser's
     /// extended with anything it had to derive (hardening plan D3), never
     /// `DEFAULT_STYLESHEET`.
     style_sheet: &'a StyleSheet,
-    /// What the walk is inside, innermost last; see [`Scope`].
-    scopes: Vec<Scope>,
+    /// What the walk is inside; see [`Scopes`].
+    scopes: Scopes,
     /// Whether the block being visited is the first of the block list it is
     /// in. `id-not-first` is exactly "a `Book` for which this is false", which
     /// is the rule the parser applied to the list it was appending to.
@@ -155,6 +157,8 @@ struct Analyzer<'a> {
     chapter_seen: bool,
     /// The numbers the order checks compare against; see [`Order`].
     order: Order,
+    /// The placement verdicts already worked out; see [`PlacementMemo`].
+    placement: PlacementMemo,
     diagnostics: Vec<Diagnostic>,
 }
 
@@ -193,41 +197,57 @@ impl Order {
     fn chapter(&mut self, number: usize) {
         self.chapter_number = Some(number);
         self.previous_chapter = Some(number);
-        self.covered = Coverage::default();
+        self.covered.clear();
         self.previous_verse = None;
     }
 }
 
-/// One level of the containment the placement check reads.
+/// What the walk is inside: the containment the placement and verse checks
+/// read, which is what the parser read off its stack of open markers.
 ///
-/// Only the four kinds of container that change the answer are on the stack.
-/// Blocks that hold blocks (a sidebar, a periph) are not: whatever they
-/// contain is in a paragraph of its own, which is the parent that counts.
-#[derive(Clone, Copy, PartialEq)]
-enum Scope {
-    /// A paragraph: the parent of the notes and of the outermost character
-    /// styles it holds.
-    Para(StyleId),
-    /// A character style. Its content is governed by `NEST` rather than by
-    /// `OccursUnder`, so a character style inside one is not checked.
-    Char,
-    /// A note: the parent of the character styles inside it, and transparent
-    /// to a note, whose parent is the paragraph either way.
-    Note(StyleId),
-    /// A table cell, whose content is not placement-checked at all: the cell
-    /// markers are not in any `OccursUnder` list.
-    Cell,
+/// Only the four kinds of container that change an answer are here. Blocks
+/// that hold blocks (a sidebar, a periph) are not: whatever they contain is in
+/// a paragraph of its own, which is the parent that counts.
+///
+/// A record of fields rather than a `Vec` of frames, because every question
+/// asked of it is about the innermost container of one kind — "which
+/// paragraph", "which note", "is it a cell" — and none is a search. The
+/// visitor that enters a container copies this aside, sets what that container
+/// changes and puts the copy back after the children, so the Rust stack is the
+/// stack (ticket 24: the `Vec` version answered `placement_parent` by scanning
+/// itself twice for every character style).
+#[derive(Clone, Copy, Default)]
+struct Scopes {
+    /// The nearest enclosing paragraph: the parent of the notes and of the
+    /// outermost character styles it holds. `None` at block level, and inside
+    /// a table cell, whose content belongs to no paragraph however the
+    /// paragraph before the table was marked.
+    para: Option<StyleId>,
+    /// The nearest enclosing note: the parent of the character styles inside
+    /// it. Transparent to a note, whose parent is the paragraph either way.
+    note: Option<StyleId>,
+    /// Inside a table cell, whose content is not placement-checked at all:
+    /// the cell markers are in no `OccursUnder` list.
+    cell: bool,
+    /// The innermost container is a character style, whose content is
+    /// governed by `NEST` rather than by `OccursUnder`. Cleared on entering a
+    /// note, whose content is the note's however the note was reached.
+    in_char: bool,
+    /// How many character styles enclose the walk at any depth, which is what
+    /// `verse-in-character-style` asks.
+    char_depth: u32,
 }
 
 impl<'a> Analyzer<'a> {
     fn new(style_sheet: &'a StyleSheet) -> Self {
         Self {
             style_sheet,
-            scopes: Vec::new(),
+            scopes: Scopes::default(),
             first_in_container: true,
             book: None,
             chapter_seen: false,
             order: Order::default(),
+            placement: PlacementMemo::new(),
             diagnostics: Vec::new(),
         }
     }
@@ -236,10 +256,12 @@ impl<'a> Analyzer<'a> {
         self.diagnostics.push(Diagnostic::new(code, span, message));
     }
 
-    fn in_scope(&mut self, scope: Scope, f: impl FnOnce(&mut Self)) {
-        self.scopes.push(scope);
+    /// Walk `f` with the containment `scopes` describes, and put back what
+    /// the walk was inside afterwards.
+    fn in_scopes(&mut self, scopes: Scopes, f: impl FnOnce(&mut Self)) {
+        let outer = std::mem::replace(&mut self.scopes, scopes);
         f(self);
-        self.scopes.pop();
+        self.scopes = outer;
     }
 
     /// `unlisted-book-code`: a code that is well formed — `book@code` in
@@ -367,11 +389,7 @@ impl<'a> Analyzer<'a> {
         if !self.chapter_seen {
             self.emit(Code::VerseOutsideChapter, verse.span, "`\\v` before any `\\c`");
         }
-        let heading = self.scopes.iter().rev().find_map(|scope| match scope {
-            Scope::Para(style) => Some(*style),
-            _ => None,
-        });
-        if let Some(style) = heading {
+        if let Some(style) = self.scopes.para {
             let rule = self.style_sheet.get_rule(style.index());
             if matches!(rule.text_type, TextType::Title | TextType::Section) && rule.marker != "s5"
             {
@@ -382,7 +400,7 @@ impl<'a> Analyzer<'a> {
                 );
             }
         }
-        if self.scopes.contains(&Scope::Char) {
+        if self.scopes.char_depth > 0 {
             self.emit(
                 Code::VerseInCharacterStyle,
                 verse.span,
@@ -543,20 +561,16 @@ impl<'a> Analyzer<'a> {
     ///   `character-style-nested-without-plus` for it. Inside a note it is
     ///   the note; otherwise the paragraph.
     fn placement_parent(&self, is_note: bool) -> Option<StyleId> {
-        if self.scopes.contains(&Scope::Cell) {
+        if self.scopes.cell {
             return None;
         }
         if is_note {
-            return self.scopes.iter().rev().find_map(|scope| match scope {
-                Scope::Para(style) => Some(*style),
-                _ => None,
-            });
+            return self.scopes.para;
         }
-        match self.scopes.last() {
-            Some(Scope::Char) => None,
-            Some(Scope::Note(style) | Scope::Para(style)) => Some(*style),
-            Some(Scope::Cell) | None => None,
+        if self.scopes.in_char {
+            return None;
         }
+        self.scopes.note.or(self.scopes.para)
     }
 
     /// `marker-not-allowed-here` / `marker-not-listed-here`: a character style
@@ -575,33 +589,29 @@ impl<'a> Analyzer<'a> {
         let Some(parent) = self.placement_parent(is_note) else {
             return;
         };
+        let verdict = match self.placement.get(style, parent) {
+            Some(verdict) => verdict,
+            None => {
+                let verdict = placement_verdict(self.style_sheet, style, parent);
+                self.placement.remember(style, parent, verdict);
+                verdict
+            }
+        };
+        if verdict == Verdict::Listed {
+            return;
+        }
         let sheet = self.style_sheet;
-        let rule = sheet.get_rule(style.index());
-        if rule.occurs_under.is_empty() {
-            return;
-        }
+        let marker = &sheet.get_rule(style.index()).marker;
         let parent_name = &sheet.get_rule(parent.index()).marker;
-        if rule.occurs_under.contains(parent_name) {
-            return;
-        }
-        let note_only = rule.occurs_under.iter().all(|allowed| {
-            sheet
-                .get_rule_by_marker(allowed)
-                .is_some_and(|allowed| allowed.is_note())
-        });
-        let (code, message) = if note_only {
-            (
+        let (code, message) = match verdict {
+            Verdict::NotAllowed => (
                 Code::MarkerNotAllowedHere,
-                format!("`\\{}` cannot occur under `\\{parent_name}`", rule.marker),
-            )
-        } else {
-            (
+                format!("`\\{marker}` cannot occur under `\\{parent_name}`"),
+            ),
+            _ => (
                 Code::MarkerNotListedHere,
-                format!(
-                    "`\\{}` is not listed as occurring under `\\{parent_name}`",
-                    rule.marker
-                ),
-            )
+                format!("`\\{marker}` is not listed as occurring under `\\{parent_name}`"),
+            ),
         };
         self.emit(code, span, message);
     }
@@ -616,14 +626,12 @@ impl<'a> Analyzer<'a> {
     /// `attributes` is `Some` iff the source had a `|`, so an empty list is
     /// `|` with nothing after it and not a marker written without one.
     fn check_attributes(&mut self, style: StyleId, attributes: &Attributes<'_>) {
-        let sheet = self.style_sheet;
-        let rule = sheet.get_rule(style.index());
         if attributes.pairs.is_empty() {
             // A milestone is nothing but its attributes, so `\ts-s |\*` says
             // the same as `\ts-s\*` and nothing was lost; unfoldingWord's
             // aligned texts write their translation sections that way. On a
             // character style the `|` announces a value that is missing.
-            let code = if rule.is_milestone() {
+            let code = if self.style_sheet.get_rule(style.index()).is_milestone() {
                 Code::EmptyMilestoneAttributeList
             } else {
                 Code::EmptyAttributeList
@@ -631,9 +639,37 @@ impl<'a> Analyzer<'a> {
             self.emit(code, attributes.pipe, "`|` is not followed by any attribute");
             return;
         }
+        self.report_attribute_pairs(attributes);
+        if !attributes.pairs.iter().any(|pair| pair.name.is_empty()) {
+            return;
+        }
+        // `rule` is borrowed from the sheet, not from `self`, so it survives
+        // the `emit` calls without a clone.
+        let marker = &self.style_sheet.get_rule(style.index()).marker;
+        if default_attribute_name(marker).is_none() {
+            self.emit(
+                Code::NoDefaultAttribute,
+                attributes.pipe,
+                format!("`\\{marker}` has no default attribute; the value needs a name"),
+            );
+        }
+        if attributes.pairs.len() > 1 {
+            self.emit(
+                Code::DefaultAttributeWithOthers,
+                attributes.pipe,
+                "a bare value must be the only attribute; give it a name",
+            );
+        }
+    }
+
+    /// `malformed-attribute-name` / `duplicate-attribute`, one pass over the
+    /// pairs with both codes in it, so that a list with both reports them in
+    /// the order they are written rather than one code's before the other's.
+    ///
+    /// Both keep the pair in the tree; it is the USX and HTML writers that
+    /// drop it, having no way to write it.
+    fn report_attribute_pairs(&mut self, attributes: &Attributes<'_>) {
         for (index, pair) in attributes.pairs.iter().enumerate() {
-            // Both of these keep the pair in the tree; it is the USX and HTML
-            // writers that drop it, having no way to write it.
             if !pair.name.is_empty() && !is_valid_attribute_name(&pair.name) {
                 self.emit(
                     Code::MalformedAttributeName,
@@ -657,26 +693,6 @@ impl<'a> Analyzer<'a> {
                 self.emit(Code::DuplicateAttribute, pair.span, message);
             }
         }
-        if !attributes.pairs.iter().any(|pair| pair.name.is_empty()) {
-            return;
-        }
-        // `rule` is borrowed from the sheet, not from `self`, so it survives
-        // the `emit` calls without a clone.
-        let marker = &rule.marker;
-        if default_attribute_name(marker).is_none() {
-            self.emit(
-                Code::NoDefaultAttribute,
-                attributes.pipe,
-                format!("`\\{marker}` has no default attribute; the value needs a name"),
-            );
-        }
-        if attributes.pairs.len() > 1 {
-            self.emit(
-                Code::DefaultAttributeWithOthers,
-                attributes.pipe,
-                "a bare value must be the only attribute; give it a name",
-            );
-        }
     }
 }
 
@@ -691,6 +707,92 @@ impl Analyzer<'_> {
             self.first_in_container = index == 0;
             self.visit_block(block);
         }
+    }
+}
+
+/// What `check_placement` decides about one (style, parent) pair.
+#[derive(Clone, Copy, PartialEq)]
+enum Verdict {
+    /// The parent is in the style's `OccursUnder`, or the list is empty,
+    /// which is what an unrestricted style has.
+    Listed,
+    /// Not listed, and every marker the style does list is a note style, so
+    /// the style exists only inside a note: `marker-not-allowed-here`.
+    NotAllowed,
+    /// Not listed, but the list is not note-only: `marker-not-listed-here`.
+    NotListed,
+}
+
+/// The rule itself, as a function of the pair and the sheet alone — which is
+/// what makes it safe to remember in [`PlacementMemo`].
+fn placement_verdict(sheet: &StyleSheet, style: StyleId, parent: StyleId) -> Verdict {
+    let rule = sheet.get_rule(style.index());
+    if rule.occurs_under.is_empty() {
+        return Verdict::Listed;
+    }
+    let parent_name = &sheet.get_rule(parent.index()).marker;
+    if rule.occurs_under.contains(parent_name) {
+        return Verdict::Listed;
+    }
+    let note_only = rule.occurs_under.iter().all(|allowed| {
+        sheet
+            .get_rule_by_marker(allowed)
+            .is_some_and(|allowed| allowed.is_note())
+    });
+    if note_only {
+        Verdict::NotAllowed
+    } else {
+        Verdict::NotListed
+    }
+}
+
+/// The verdicts already worked out, by (style, parent).
+///
+/// `OccursUnder` is a list of marker names — 96 of them for `\w` — and the
+/// question is whether the parent's name is among them, asked once for every
+/// character style and every note in the document. In a text whose every word
+/// is a `\w` in the same kind of paragraph that is the same list scanned to
+/// the same place a hundred thousand times: over the benchmark corpus the
+/// placement check was 6.2 ms of `analyze`'s 43 ms before this, and is inside
+/// the noise after it (ticket 24, `docs/benchmarks.md`).
+///
+/// Direct-mapped, fixed size and never grown, so a lookup is one index and one
+/// comparison and a document with more pairs than slots simply asks the sheet
+/// again. A `HashMap` would answer the same question with a hash of a pair of
+/// integers, which is most of what the memo is meant to save.
+struct PlacementMemo {
+    /// `(style, parent, verdict)`, at a slot derived from the pair. A key of
+    /// [`EMPTY`](PlacementMemo::EMPTY) is a slot nothing has been put in:
+    /// no stylesheet has `u32::MAX` rules.
+    slots: [(u32, u32, Verdict); Self::SLOTS],
+}
+
+impl PlacementMemo {
+    const SLOTS: usize = 64;
+    const EMPTY: u32 = u32::MAX;
+
+    fn new() -> Self {
+        Self {
+            slots: [(Self::EMPTY, Self::EMPTY, Verdict::Listed); Self::SLOTS],
+        }
+    }
+
+    /// Knuth's multiplicative hash over the pair, which spreads the low style
+    /// indices the sheet actually uses across the slots.
+    fn slot(style: StyleId, parent: StyleId) -> usize {
+        let key = (style.index() as u64) << 32 | parent.index() as u64;
+        (key.wrapping_mul(0x9E37_79B9_7F4A_7C15) >> 58) as usize & (Self::SLOTS - 1)
+    }
+
+    fn get(&self, style: StyleId, parent: StyleId) -> Option<Verdict> {
+        let (remembered_style, remembered_parent, verdict) = self.slots[Self::slot(style, parent)];
+        (remembered_style == style.index() as u32 && remembered_parent == parent.index() as u32)
+            .then_some(verdict)
+    }
+
+    fn remember(&mut self, style: StyleId, parent: StyleId, verdict: Verdict) {
+        self.slots[Self::slot(style, parent)] =
+            (style.index() as u32, parent.index() as u32, verdict);
     }
 }
 
@@ -745,6 +847,24 @@ enum Part {
     Run(usize, usize),
 }
 
+/// `\v 5` and nothing else: one range, one number, no segment.
+///
+/// What almost every verse in almost every document is, and [`Part`] is a
+/// heavier answer than it needs — three `Option`s, a `flat_map` and a
+/// `find_map` per verse, for one number to look up and one to record.
+fn plain_number(number: &NumberList) -> Option<usize> {
+    match number.ranges() {
+        [range]
+            if range.start == range.end
+                && range.start_modifier.is_none()
+                && range.end_modifier.is_none() =>
+        {
+            Some(range.start)
+        }
+        _ => None,
+    }
+}
+
 /// The parts of one range, in ascending order.
 fn parts(range: &NumberRange) -> impl Iterator<Item = Part> {
     let start = Part::One((range.start, range.start_modifier));
@@ -773,9 +893,19 @@ struct Coverage {
 }
 
 impl Coverage {
+    /// Forget every verse, keeping the room they took: the next chapter fills
+    /// the same intervals again.
+    fn clear(&mut self) {
+        self.whole.clear();
+        self.segments.clear();
+    }
+
     /// The first number of `number` an earlier verse already covered, or
     /// `None` if the verse is new all through.
     fn first_covered(&self, number: &NumberList) -> Option<VerseKey> {
+        if let Some(plain) = plain_number(number) {
+            return self.covers((plain, None)).then_some((plain, None));
+        }
         number
             .ranges()
             .iter()
@@ -788,11 +918,7 @@ impl Coverage {
             Part::One(key) => self.covers(key).then_some(key),
             Part::Run(low, high) => {
                 let from_whole = self.overlapping(low, high).map(|(start, _)| start.max(low));
-                let from_segment = self
-                    .segments
-                    .range((low, '\0')..=(high, char::MAX))
-                    .next()
-                    .map(|&(number, _)| number);
+                let from_segment = self.first_segment_in(low, high).map(|(number, _)| number);
                 match (from_whole, from_segment) {
                     (Some(a), Some(b)) => Some(a.min(b)),
                     (found, None) | (None, found) => found,
@@ -810,12 +936,23 @@ impl Coverage {
             Some(segment) => self.segments.contains(&(number, segment)),
             // A bare number is the whole verse, so any of its segments is a
             // collision.
-            None => self
-                .segments
-                .range((number, '\0')..=(number, char::MAX))
-                .next()
-                .is_some(),
+            None => self.first_segment_in(number, number).is_some(),
         }
+    }
+
+    /// The lowest segmented verse recorded in `low..=high`, if any.
+    ///
+    /// The `is_empty` guard is the whole point: a chapter written without
+    /// segments — which is almost every chapter — never builds a cursor over
+    /// the tree, and this is on the path of every `\v` (ticket 24).
+    fn first_segment_in(&self, low: usize, high: usize) -> Option<(usize, char)> {
+        if self.segments.is_empty() {
+            return None;
+        }
+        self.segments
+            .range((low, '\0')..=(high, char::MAX))
+            .next()
+            .copied()
     }
 
     /// The first interval of `whole` that meets `low..=high`.
@@ -829,6 +966,10 @@ impl Coverage {
 
     /// Record everything `number` covers.
     fn add(&mut self, number: &NumberList) {
+        if let Some(plain) = plain_number(number) {
+            self.add_run(plain, plain);
+            return;
+        }
         for part in number.ranges().iter().flat_map(parts) {
             match part {
                 Part::One((number, Some(segment))) => {
@@ -847,6 +988,17 @@ impl Coverage {
         if low > high {
             return;
         }
+        // A chapter written in order is one interval that grows by one verse
+        // at a time, so the answer is almost always "extend the last one":
+        // `low` starts inside it or just after its end, and nothing sorts
+        // above it to merge with. Everything below bisects instead.
+        if let Some(last) = self.whole.last_mut()
+            && low >= last.0
+            && low <= last.1.saturating_add(1)
+        {
+            last.1 = last.1.max(high);
+            return;
+        }
         // The intervals this one joins onto: those ending at or after `low - 1`
         // and starting at or before `high + 1`. Adjacency counts, so `1-2` and
         // `3-4` become `1-4` rather than two intervals that both hold 2-and-3.
@@ -862,6 +1014,10 @@ impl Coverage {
             low.min(self.whole[first].0),
             high.max(self.whole[last - 1].1),
         );
+        if last - first == 1 {
+            self.whole[first] = merged;
+            return;
+        }
         self.whole.splice(first..last, [merged]);
     }
 }
@@ -889,7 +1045,13 @@ impl Visit for Analyzer<'_> {
 
     fn visit_para(&mut self, para: &Para<'_>) {
         self.check_verse_text_before_chapter(para);
-        self.in_scope(Scope::Para(para.style), |analyzer| walk_para(analyzer, para));
+        // A paragraph is reached at block level, so everything else starts
+        // again here whatever stood before it.
+        let scopes = Scopes {
+            para: Some(para.style),
+            ..Scopes::default()
+        };
+        self.in_scopes(scopes, |analyzer| walk_para(analyzer, para));
     }
 
     fn visit_verse_start(&mut self, verse: &VerseStart<'_>) {
@@ -907,7 +1069,11 @@ impl Visit for Analyzer<'_> {
     }
 
     fn visit_table_cell(&mut self, cell: &TableCell<'_>) {
-        self.in_scope(Scope::Cell, |analyzer| walk_table_cell(analyzer, cell));
+        let scopes = Scopes {
+            cell: true,
+            ..Scopes::default()
+        };
+        self.in_scopes(scopes, |analyzer| walk_table_cell(analyzer, cell));
     }
 
     fn visit_sidebar(&mut self, sidebar: &Sidebar<'_>) {
@@ -922,7 +1088,12 @@ impl Visit for Analyzer<'_> {
         }
         // Not `walk_char`: it visits the attribute list after the children,
         // and this pass has just read that list itself.
-        self.in_scope(Scope::Char, |analyzer| {
+        let scopes = Scopes {
+            in_char: true,
+            char_depth: self.scopes.char_depth + 1,
+            ..self.scopes
+        };
+        self.in_scopes(scopes, |analyzer| {
             for inline in &char.children {
                 analyzer.visit_inline(inline);
             }
@@ -931,7 +1102,12 @@ impl Visit for Analyzer<'_> {
 
     fn visit_note(&mut self, note: &Note<'_>) {
         self.check_placement(note.style, note.span, true);
-        self.in_scope(Scope::Note(note.style), |analyzer| walk_note(analyzer, note));
+        let scopes = Scopes {
+            note: Some(note.style),
+            in_char: false,
+            ..self.scopes
+        };
+        self.in_scopes(scopes, |analyzer| walk_note(analyzer, note));
     }
 
     fn visit_milestone(&mut self, milestone: &Milestone<'_>) {
@@ -975,6 +1151,34 @@ mod tests {
                 span: Span::new(span.end, span.end),
             }),
         ])
+    }
+
+    /// A memo that answers for a pair it was not given would report the wrong
+    /// code, so the key is checked on the way out and a collision is a miss —
+    /// which is all a full memo ever costs. Every 64th pair shares a slot with
+    /// the one tried here.
+    #[test]
+    fn the_placement_memo_answers_only_for_the_pair_it_remembers() {
+        let (style, parent) = (StyleId::new(3), StyleId::new(7));
+        let mut memo = PlacementMemo::new();
+        assert!(memo.get(style, parent).is_none());
+        memo.remember(style, parent, Verdict::NotAllowed);
+        assert!(memo.get(style, parent) == Some(Verdict::NotAllowed));
+        assert!(memo.get(parent, style).is_none(), "the pair is ordered");
+        assert!(memo.get(style, StyleId::new(8)).is_none());
+        let colliding = (0..u32::MAX)
+            .map(StyleId::new)
+            .find(|other| {
+                *other != style && PlacementMemo::slot(*other, parent) == PlacementMemo::slot(style, parent)
+            })
+            .expect("64 slots over a wider range of styles");
+        assert!(memo.get(colliding, parent).is_none());
+        memo.remember(colliding, parent, Verdict::NotListed);
+        assert!(
+            memo.get(style, parent).is_none(),
+            "the later pair took the slot"
+        );
+        assert!(memo.get(colliding, parent) == Some(Verdict::NotListed));
     }
 
     /// The table in `usfm_diagnostics`'s module documentation says which side

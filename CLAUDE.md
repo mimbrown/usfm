@@ -133,6 +133,23 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **The semantic pass, made cheap (ticket 24, M4).** `parse_semantic` ran
+  11–14% behind `parse` over the whole corpus; it is now 7–8%, and what is left
+  is the cost of walking a built tree a second time rather than of any check —
+  a callgrind profile puts every cache miss in the walk and none in the checks,
+  so the 5% the ticket asked for is under the floor a second traversal can
+  reach. Nothing moved back into the parser and no diagnostic, message or span
+  changed. Three things paid for it, found by timing `analyze` alone (a new
+  bench group) with each check family switched off:
+  `usfm_ast::is_valid_attribute_name` scans bytes instead of `chars()` and is
+  `#[inline]` — decoding UTF-8 to classify an attribute name was 58% of
+  everything the pass did over an aligned text; `check_placement` remembers its
+  verdict per (style, parent) in a 64-slot direct-mapped memo, where it scanned
+  `\w`'s 96-entry `OccursUnder` list for every word; and `check_verse_order`
+  has a fast path for a plain `\v 5`. The scope stack is four fields saved on
+  the Rust stack instead of a `Vec` of frames, so `placement_parent` is a field
+  read rather than two scans. Numbers, attribution and method are in
+  `docs/benchmarks.md` ("After ticket 24")
 - **Verse and chapter order (ticket 23, M4).** Four Warnings, all
   `usfm_semantic`'s, all riding the `Analyzer` walk (no `ReferenceIndex`: the
   checks want a chapter number, a verse number and a span, and building an
@@ -331,9 +348,10 @@ crate split, M4 `usfm_semantic`, M5 `usfm_codegen`, M6 language server. M1, M2
 and M3 all closed 2026-09-19 (exit criteria recorded in the spec); **M4
 (`usfm_semantic`) is under way**: the checks that read a finished tree rather
 than a token stream leave the parser for `usfm_semantic`, with `usfm::parse()`
-returning the union so tcdocs is unchanged. Tickets 18–22 are done (the crate,
-placement and attributes, the audit of every `Code`, and `ReferenceIndex`'s
-move); 23 (verse order) is what is left. M4 is ticketed (18–24). Tickets are in
+returning the union so tcdocs is unchanged. Tickets 18–23 are done (the crate,
+placement and attributes, the audit of every `Code`, `ReferenceIndex`'s move
+and the verse- and chapter-order checks); 24 (what the pass costs) is the last.
+M4 is ticketed (18–24). Tickets are in
 `.scratch/oxc-layout/issues/`, written one milestone ahead. Unattended
 sessions follow `docs/agents/loop.md`; `scripts/gate.sh` is the gate before every push.
 
