@@ -206,6 +206,42 @@ formatting, hover, symbols, completion and code actions, each with a test
 that speaks JSON-RPC to the binary; `wip/usfm_language_server` is deleted;
 the gate runs the server's tests.
 
+Checked 2026-09-20 on `main` at `e304772` (tickets 30–32; `c258619`,
+`03e619b`, `e304772`; ticket 37 preceded them):
+- Diagnostics, formatting, hover, symbols, completion and code actions,
+  each with a test that speaks JSON-RPC to the binary:
+  `apps/usfm_language_server/tests/lsp.rs` has three stdio tests covering
+  all six over the wire (hand-framed `Content-Length` messages, a 30 s
+  reader timeout), and each feature is a module of pure functions with its
+  own unit tests (55 in the binary). Yes.
+- The VS Code extension runs against the new server: `vscode/` spawns
+  `usfm-language-server` (the `LanguageClient` had been commented out and is
+  restored), `npm run compile` bundles, and `vscode/README.md` has the manual
+  check for every feature. Not run in CI — no display — so this is the
+  extension *built* against the server, verified by hand where a display
+  exists. Yes, with that caveat.
+- The gate runs the server's tests: `cargo test --workspace` in
+  `scripts/gate.sh` and CI; `scripts/miri.sh` leaves the crate out and says
+  why. Yes.
+- `wip/usfm_language_server` is deleted: **no.** Ticket 33 couples the
+  deletion with the `wip/data_layer` lexicon question and is ready-for-human;
+  the deletion has no open question of its own and is a one-line change
+  once Michael answers. M6 stays open on that one item.
+- Benchmarks at the boundary (`docs/benchmarks.md`, "M6 close", against the
+  ticket 37 binary): every group within noise; `parse` read −3.6% in the
+  eight-group table with 4–6% spreads and +0.2% on a confirmation run of
+  `parse/whole-corpus` alone, so no ticket.
+Also in M6: `usfm_style` keeps `\Name` and `\Description` (ticket 31);
+`usfm_semantic::placement::check` is the `OccursUnder` rule as a public
+function the checks and the server share (32); `LineIndex::line_col_utf16`
+(30). Found on the way and left: `ReferenceIndex` reads chapters from the
+top-level blocks only, so a `\periph` division's chapters are not in it
+(32 worked around it with a walk; a ticket if a caller ever needs the index
+to see them); the server re-parses on every request rather than caching a
+tree per document (milliseconds per book; revisit if a measurement says so).
+Frontier after this: empty — tickets 10 and 33 are ready-for-human. The
+loop stops here.
+
 ## Open, to settle when reached
 
 - M2: which corpus. Settled: WEB (public domain) via its USFX rendering, since
