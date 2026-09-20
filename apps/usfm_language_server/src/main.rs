@@ -8,10 +8,20 @@
 //! publishes is `usfm::parse_with`'s, which is the parser's repairs and
 //! `usfm_semantic`'s checks together, the same list `usfm parse` prints.
 //!
-//! This ticket is diagnostics and nothing else. Three modules hold the parts
-//! the rest of M6 reuses: [`documents`] keeps the open text, [`convert`] turns
-//! a byte [`Span`](usfm::Span) into a protocol range, and [`stylesheet`]
-//! decides which `.sty` a document is parsed with.
+//! What it answers: diagnostics on every change (ticket 30), and since
+//! ticket 31 `textDocument/formatting` — the document written back out by
+//! `usfm_codegen`, the same text `usfm format` writes — and
+//! `textDocument/hover`, which is the stylesheet's own words about the marker
+//! under the cursor, or the reference (`GEN 1:1`) where the cursor is in a
+//! verse.
+//!
+//! A module per part, so that each is a pure function with tests of its own
+//! and this file stays the wiring: [`documents`] keeps the open text,
+//! [`convert`] turns a byte [`Span`](usfm::Span) into a protocol range and a
+//! protocol position back into an offset, [`stylesheet`] decides which `.sty`
+//! a document is parsed with, [`locate`] finds the node under a position (and
+//! the reference it is in), [`hover`] writes the markdown for it, and
+//! [`format`] holds the formatter and the rule under which it refuses.
 //!
 //! Nothing is debounced. A parse of a whole book is a few milliseconds
 //! (`docs/benchmarks.md`: the corpus parses at tens of MiB/s, and the largest
@@ -21,19 +31,26 @@
 
 mod convert;
 mod documents;
+mod format;
+mod hover;
+mod locate;
 mod stylesheet;
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use tokio::sync::Mutex;
 use tower_lsp_server::jsonrpc::Result;
 use tower_lsp_server::ls_types::{
     DidChangeTextDocumentParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams,
-    InitializeParams, InitializeResult, InitializedParams, MessageType, PositionEncodingKind,
-    ServerCapabilities, ServerInfo, TextDocumentSyncCapability, TextDocumentSyncKind, Uri,
+    DocumentFormattingParams, Hover, HoverContents, HoverParams, HoverProviderCapability,
+    InitializeParams, InitializeResult, InitializedParams, MarkupContent, MarkupKind, MessageType,
+    OneOf, PositionEncodingKind, ServerCapabilities, ServerInfo, TextDocumentSyncCapability,
+    TextDocumentSyncKind, TextEdit, Uri,
 };
 use tower_lsp_server::{Client, LanguageServer, LspService, Server};
 
+use usfm::StyleSheet;
 use usfm::span::LineIndex;
 
 use documents::Documents;
@@ -67,10 +84,15 @@ impl Backend {
     /// The list is always published, empty included: an empty list is how the
     /// protocol says "this file is clean now", so the editor clears the
     /// squiggles a previous version left.
-    async fn publish_diagnostics(&self, uri: &Uri, version: Option<i32>) {
-        let Some(text) = self.documents.text(uri).await else {
-            return;
-        };
+    /// The text of `uri` and the stylesheet it is parsed with, or `None` when
+    /// the client has not opened it.
+    ///
+    /// Every feature starts here, so that a hover, a formatting request and
+    /// the published diagnostics all describe the same text parsed the same
+    /// way. A stylesheet that could not be read is reported as it is read,
+    /// which the `Stylesheets` cache makes happen once per path.
+    async fn source(&self, uri: &Uri) -> Option<(String, Arc<StyleSheet>)> {
+        let text = self.documents.text(uri).await?;
         let (sheet, warning) = {
             let path = uri.to_file_path();
             self.stylesheets.lock().await.for_document(path.as_deref())
@@ -78,11 +100,18 @@ impl Backend {
         if let Some(warning) = warning {
             // Never fatal: the document is parsed with the default sheet, and
             // the editor's user is told why their project's markers are
-            // unknown. The `Stylesheets` cache makes sure this is said once.
+            // unknown.
             self.client
                 .show_message(MessageType::WARNING, warning)
                 .await;
         }
+        Some((text, sheet))
+    }
+
+    async fn publish_diagnostics(&self, uri: &Uri, version: Option<i32>) {
+        let Some((text, sheet)) = self.source(uri).await else {
+            return;
+        };
 
         let result = usfm::parse_with(&text, &sheet);
         let index = LineIndex::new(&text);
@@ -98,14 +127,14 @@ impl Backend {
 }
 
 impl LanguageServer for Backend {
-    /// The capabilities are what this ticket implements and no more: full text
+    /// The capabilities are what is implemented and no more: full text
     /// synchronisation, so the server is handed the whole document on every
-    /// change, and the positions it publishes are UTF-16 (the protocol's
-    /// default, said out loud because [`convert`] depends on it).
+    /// change; UTF-16 positions (the protocol's default, said out loud because
+    /// [`convert`] depends on it); whole-document formatting; and hover.
     ///
-    /// Formatting and hover arrive with ticket 31, symbols, completion and
-    /// code actions with 32. Advertising them before they work would only make
-    /// the editor ask questions this server answers with `null`.
+    /// Symbols, completion and code actions arrive with ticket 32. Advertising
+    /// them before they work would only make the editor ask questions this
+    /// server answers with `null`.
     async fn initialize(&self, params: InitializeParams) -> Result<InitializeResult> {
         // `initializationOptions.stylesheet`: a path to the project's `.sty`.
         // Anything else the client sends is ignored rather than refused — an
@@ -129,6 +158,11 @@ impl LanguageServer for Backend {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(
                     TextDocumentSyncKind::FULL,
                 )),
+                // Whole-document formatting only: `rangeFormatting` would have
+                // to write a fragment of USFM, and the writer's unit is a
+                // document. This is what `editor.formatOnSave` asks for.
+                document_formatting_provider: Some(OneOf::Left(true)),
+                hover_provider: Some(HoverProviderCapability::Simple(true)),
                 ..Default::default()
             },
             server_info: Some(ServerInfo {
@@ -165,6 +199,68 @@ impl LanguageServer for Backend {
         self.documents.set(&uri, change.text).await;
         self.publish_diagnostics(&uri, Some(params.text_document.version))
             .await;
+    }
+
+    /// The whole document, rewritten by `usfm_codegen`, as one edit.
+    ///
+    /// One edit and not a minimal diff: the writer produces a text, not a
+    /// patch, and a diff of the two would be a guess at which lines
+    /// correspond. If a client flickers on it, a diff is a follow-up
+    /// (ticket 31).
+    ///
+    /// **A refusal is `null`, not an empty list.** `[]` means "already
+    /// formatted, nothing to change", which is not true here and would leave
+    /// the editor silently doing nothing on save; `null` is the protocol's
+    /// "no result", and the reason goes to the user as a `window/showMessage`
+    /// warning, which is what the CLI prints on stderr in the same case.
+    async fn formatting(&self, params: DocumentFormattingParams) -> Result<Option<Vec<TextEdit>>> {
+        let uri = params.text_document.uri;
+        let Some((text, sheet)) = self.source(&uri).await else {
+            return Ok(None);
+        };
+        let result = usfm::parse_with(&text, &sheet);
+        if let Some(refusal) = format::refusal(&result.diagnostics) {
+            self.client
+                .show_message(MessageType::WARNING, refusal)
+                .await;
+            return Ok(None);
+        }
+
+        let formatted = format::formatted(&result.document);
+        if formatted == text {
+            // Nothing to do, and now `[]` is the honest answer.
+            return Ok(Some(Vec::new()));
+        }
+        let index = LineIndex::new(&text);
+        Ok(Some(vec![TextEdit {
+            range: convert::whole_document(&index, &text),
+            new_text: formatted,
+        }]))
+    }
+
+    /// What the stylesheet and the tree say about the position hovered.
+    ///
+    /// See [`hover`] for the rule; the range is the located node's span, so
+    /// the editor underlines the marker's whole construct rather than the word
+    /// under the pointer.
+    async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
+        let position = params.text_document_position_params;
+        let Some((text, sheet)) = self.source(&position.text_document.uri).await else {
+            return Ok(None);
+        };
+        let offset = convert::offset(&text, position.position);
+        let result = usfm::parse_with(&text, &sheet);
+        let Some(hover) = hover::hover(&result.document, offset) else {
+            return Ok(None);
+        };
+        let index = LineIndex::new(&text);
+        Ok(Some(Hover {
+            contents: HoverContents::Markup(MarkupContent {
+                kind: MarkupKind::Markdown,
+                value: hover.markdown,
+            }),
+            range: Some(convert::range(&index, hover.span)),
+        }))
     }
 
     async fn did_close(&self, params: DidCloseTextDocumentParams) {

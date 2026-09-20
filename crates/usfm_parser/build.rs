@@ -7,12 +7,22 @@ use usfm_style::{StyleRule, StyleSheet, TextProperties};
 
 const REF_STYLE: &str = r#"        StyleRule {
             marker: "ref".into(),
+            name: Some("ref...ref* - Scripture Reference".into()),
+            description: Some("A scripture reference".into()),
             style_type: StyleType::Character,
             text_type: TextType::NoteText,
             text_properties: TextProperties::from_bits(1168).unwrap(),
             nest: true,
             occurs_under: vec![],
         },"#;
+
+/// An `Option<String>` as the Rust expression that rebuilds it.
+fn option(value: &Option<String>) -> String {
+    match value {
+        Some(value) => format!("Some({value:?}.into())"),
+        None => "None".to_string(),
+    }
+}
 
 fn main() -> std::io::Result<()> {
     // Only re-run when an actual input changes.
@@ -33,6 +43,8 @@ fn main() -> std::io::Result<()> {
 
     style_sheet.rules.push(StyleRule {
         marker: "flag".into(),
+        name: None,
+        description: None,
         style_type: usfm_style::StyleType::Character,
         text_properties: TextProperties::default(),
         text_type: usfm_style::TextType::Other,
@@ -63,6 +75,15 @@ fn main() -> std::io::Result<()> {
     for rule in style_sheet.rules.iter() {
         writeln!(writer, "        StyleRule {{")?;
         writeln!(writer, "            marker: {:?}.into(),", rule.marker)?;
+        // `\Name` and `\Description` are documentation the sheet carries and
+        // the language server shows on hover (ticket 31); a rule the sheet
+        // says nothing about writes `None` rather than an empty string.
+        writeln!(writer, "            name: {},", option(&rule.name))?;
+        writeln!(
+            writer,
+            "            description: {},",
+            option(&rule.description)
+        )?;
         writeln!(
             writer,
             "            style_type: StyleType::{:?},",

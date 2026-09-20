@@ -1,11 +1,13 @@
 //! From the toolchain's positions and diagnostics to the protocol's.
 //!
-//! Two things are converted here and nothing else: a [`Span`] (a byte range in
-//! the source) becomes an LSP [`Range`] (a pair of line/character positions),
-//! and a [`usfm::Diagnostic`] becomes an LSP [`LspDiagnostic`]. Both are pure
-//! functions over a [`LineIndex`], so they are tested without a server and
-//! reused by every later feature that has to point at a place in a file
-//! (tickets 31 and 32).
+//! Positions go both ways here and nothing else happens: a [`Span`] (a byte
+//! range in the source) becomes an LSP [`Range`] (a pair of line/character
+//! positions), an LSP [`Position`] becomes a byte [`offset`] again — which is
+//! how a request that arrives with a position finds the node it is about — and
+//! a [`usfm::Diagnostic`] becomes an LSP [`LspDiagnostic`]. All of them are
+//! pure functions over the source and its [`LineIndex`], so they are tested
+//! without a server and reused by every feature that has to point at a place
+//! in a file (hover here, and ticket 32's).
 
 use tower_lsp_server::ls_types::{
     Diagnostic as LspDiagnostic, DiagnosticSeverity, NumberOrString, Position, Range,
@@ -34,6 +36,72 @@ pub fn position(index: &LineIndex, offset: u32) -> Position {
 /// One span as a protocol [`Range`].
 pub fn range(index: &LineIndex, span: Span) -> Range {
     Range::new(position(index, span.start), position(index, span.end))
+}
+
+/// The whole of `source` as a protocol [`Range`], from `0:0` to the position
+/// after its last character.
+///
+/// What a formatting edit that replaces the document covers (ticket 31). The
+/// end is past the last line's last character, and on a source ending in a
+/// newline that is the start of the empty line after it — which is the
+/// position the editor puts the caret at, and the only end that leaves nothing
+/// behind.
+pub fn whole_document(index: &LineIndex, source: &str) -> Range {
+    Range::new(Position::new(0, 0), position(index, source.len() as u32))
+}
+
+/// One protocol [`Position`] as a byte offset into `source`: the inverse of
+/// [`position`].
+///
+/// A request arrives with a position and the server answers about the tree,
+/// whose nodes carry byte offsets, so every position-taking request — hover
+/// here, and the requests of ticket 32 — starts by coming back this way.
+///
+/// It is the inverse where it can be. Where it cannot, it clamps, because a
+/// client is allowed to send a position that is not in the document and a
+/// server may not fall over on one:
+///
+/// * a line past the last is the end of the source;
+/// * a character past the end of its line is the end of that line, *before*
+///   its line break, so a click past the text of a line stays on that line;
+/// * a character that lands inside a surrogate pair — inside an emoji, whose
+///   UTF-16 length is 2 — is that character's own start, the same rounding
+///   [`LineIndex::line_col_utf16`] does in the other direction.
+///
+/// `source` rather than the [`LineIndex`], which keeps line starts but hands
+/// out neither them nor the text: the scan is over one line once per request.
+pub fn offset(source: &str, position: Position) -> u32 {
+    // The start of the wanted line, or the end of the source when there are
+    // fewer lines than that.
+    let mut start = 0;
+    for _ in 0..position.line {
+        match source[start..].find('\n') {
+            Some(break_at) => start += break_at + 1,
+            None => return source.len() as u32,
+        }
+    }
+
+    // Its text, without the line break: a character past the end of a line
+    // clamps to the end of *that* line rather than running into the next.
+    let line = &source[start..];
+    let line = match line.find('\n') {
+        Some(end) => &line[..end],
+        None => line,
+    };
+
+    let mut units = 0;
+    for (byte, character) in line.char_indices() {
+        if units >= position.character {
+            return (start + byte) as u32;
+        }
+        units += character.len_utf16() as u32;
+        if units > position.character {
+            // The position fell *inside* this character — between the halves
+            // of a surrogate pair — so it is this character's own start.
+            return (start + byte) as u32;
+        }
+    }
+    (start + line.len()) as u32
 }
 
 /// The severity mapping, one to one.
@@ -144,6 +212,79 @@ mod tests {
         assert_eq!(severity(Severity::Error), DiagnosticSeverity::ERROR);
         assert_eq!(severity(Severity::Warning), DiagnosticSeverity::WARNING);
         assert_eq!(severity(Severity::Info), DiagnosticSeverity::INFORMATION);
+    }
+
+    #[test]
+    fn an_offset_is_the_inverse_of_a_position() {
+        let source = "\\id GEN\n\\v 1 é😀 text\n";
+        let index = LineIndex::new(source);
+        assert_eq!(offset(source, Position::new(0, 0)), 0);
+        // The start of the second line, which is byte 8.
+        assert_eq!(offset(source, Position::new(1, 0)), 8);
+        // `text` is at unit 9 of that line: `\v 1 ` is five, `é` one and the
+        // emoji two, then the space.
+        let text = source.find("text").unwrap() as u32;
+        assert_eq!(offset(source, Position::new(1, 9)), text);
+        // Every offset in the source comes back from its own position.
+        for byte in 0..=source.len() {
+            if !source.is_char_boundary(byte) {
+                continue;
+            }
+            let byte = byte as u32;
+            assert_eq!(offset(source, position(&index, byte)), byte, "byte {byte}");
+        }
+    }
+
+    #[test]
+    fn a_position_outside_the_document_clamps() {
+        let source = "\\id GEN\n\\p text\n";
+        // A character past the end of its line is the end of that line,
+        // before the break: `\p text` is seven units long, and byte 8 + 7 is
+        // where the line's `\n` sits.
+        assert_eq!(offset(source, Position::new(1, 7)), 15);
+        assert_eq!(offset(source, Position::new(1, 99)), 15);
+        assert_eq!(&source[15..], "\n");
+        // A line past the last is the end of the source, whatever the column
+        // says. (Line 2 is the empty line after the trailing break.)
+        assert_eq!(offset(source, Position::new(2, 0)), source.len() as u32);
+        assert_eq!(offset(source, Position::new(2, 4)), source.len() as u32);
+        assert_eq!(offset(source, Position::new(99, 0)), source.len() as u32);
+        // An empty source has one position and one offset.
+        assert_eq!(offset("", Position::new(0, 0)), 0);
+        assert_eq!(offset("", Position::new(7, 7)), 0);
+    }
+
+    #[test]
+    fn a_position_inside_a_surrogate_pair_rounds_to_its_character() {
+        // `😀` is two UTF-16 units; a position between them is the emoji's
+        // own start, which is how `line_col_utf16` rounds the other way.
+        let source = "a😀b";
+        assert_eq!(offset(source, Position::new(0, 1)), 1);
+        assert_eq!(offset(source, Position::new(0, 2)), 1);
+        assert_eq!(offset(source, Position::new(0, 3)), 5);
+    }
+
+    #[test]
+    fn the_whole_document_range_ends_where_the_text_does() {
+        let source = "\\id GEN\n\\p text\n";
+        assert_eq!(
+            whole_document(&LineIndex::new(source), source),
+            // The empty line after the trailing break.
+            Range::new(Position::new(0, 0), Position::new(2, 0)),
+        );
+
+        // With no trailing break the end is past the last character.
+        let source = "\\id GEN";
+        assert_eq!(
+            whole_document(&LineIndex::new(source), source),
+            Range::new(Position::new(0, 0), Position::new(0, 7)),
+        );
+
+        let source = "";
+        assert_eq!(
+            whole_document(&LineIndex::new(source), source),
+            Range::new(Position::new(0, 0), Position::new(0, 0)),
+        );
     }
 
     #[test]

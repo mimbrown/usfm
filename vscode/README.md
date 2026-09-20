@@ -26,7 +26,7 @@ npm run compile                # bundle client/extension.ts into out/main.js
 npm run build                  # release server + bundle + .vsix
 ```
 
-## The manual check: diagnostics in the editor
+## The manual check: diagnostics, formatting and hover in the editor
 
 CI runs the server's own tests (`cargo test -p usfm_language_server`, which
 includes a JSON-RPC conversation with the built binary over stdio), but nothing
@@ -67,3 +67,32 @@ in CI runs VS Code. This is the check by hand, and it is the one ticket 30's
    file reports nothing at all. Point
    `usfm.stylesheet` at a file that does not exist and the server says so in a
    warning notification once, then carries on with the default stylesheet.
+
+### Formatting and hover (ticket 31)
+
+7. Hover the `\p` on line 3. A tooltip says
+   `\p — p - Paragraph - Normal - First Line Indent`, the marker's
+   description under it, and the `\OccursUnder` list on one line — all of it
+   from the stylesheet the file was parsed with, so a marker from your
+   `custom.sty` describes itself the same way. Hover the `\v` (or any word of
+   the verse text) and the tooltip is the reference, `GEN 1:1`.
+8. Put the verse on a line of its own — `\p` on one line and
+   `\v 1 text more` under it — and run **Format Document**
+   (`shift+alt+F`). The file comes back in the writer's canonical shape: one
+   line per paragraph, `\v 1` on the `\p` line, `\ca`/`\cp` on lines of
+   their own. It is exactly what
+   `usfm format` writes, so a file formatted here and one formatted in a
+   script are the same bytes.
+9. Turn on formatting on save for USFM:
+
+   ```json
+   "[usfm]": { "editor.formatOnSave": true }
+   ```
+
+   Saving now formats. The server advertises `documentFormattingProvider`, so
+   nothing else has to be configured for the command or the save to find it.
+10. Put `\qqq` back and save. **Nothing is written**, and a warning
+    notification says the file has an error and formatting it would write the
+    repaired text over yours. That is the same rule as `usfm format --write`
+    without `--force`: a parse that reported an error was repaired, and the
+    repaired tree is not the author's text.
