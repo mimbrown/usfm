@@ -16,18 +16,45 @@
 //! | node | written as | note |
 //! |---|---|---|
 //! | `Book` | `\id GEN Description` | the description is a text run |
-//! | `ChapterStart` | `\c 1 \ca 4\ca* \cp K` | `\cp` takes no closing marker: the parser reads one word |
+//! | `ChapterStart` | `\c 1`, then `\ca 4\ca*` and `\cp K` on lines of their own | `\cp` takes no closing marker: the parser reads one word |
 //! | `ChapterEnd`, `VerseEnd` | *nothing* | synthesized; the parser re-emits them |
 //! | `Para` | `\q2 content` | `\usfm 3.1` is one of these, so the version needs no line of its own |
 //! | `VerseStart` | `\v 1 \va 2\va* \vp K\vp* ` | always a trailing space, which a paragraph-level trim drops when nothing follows |
 //! | `Char` | `\nd Lord\nd*`, `\+nd Lord\+nd*` inside another `Char` | nesting is not recorded in the AST: a `Char` inside a `Char` is nested |
-//! | `Note` | `\f + \cat People\cat*\ft text\f*` | the category is a leading `\cat`, which is how the parser reads one back |
+//! | `Note` | `\f + \cat People\cat*\fr 1.1 \ft text\f*` | the category is a leading `\cat`, which is how the parser reads one back; the content runs are not closed — see below |
 //! | `Milestone` | `\qt-s \|who="God"\*`, `\ts\*` | no `\|` at all when `attributes` is `None` |
 //! | `Attributes` | `\|lemma="grace" strong="H1234"`, `\|Speaker` | the default attribute is written bare |
 //! | `Table` | `\tr \tc1 a \tcr2 b`, `\tc1-2` for a colspan | `\th`/`\thr` for a header cell |
 //! | `Sidebar` | `\esb \cat People\cat*` … `\esbe` | |
 //! | `Periph` | `\periph Title\|id="x"` | the attribute list ends with the line |
 //! | `OptBreak` | `//` | |
+//!
+//! # Inside a note
+//!
+//! A note is the one place a closing marker is left out, because it is the one
+//! place every USFM writer leaves it out. `\f + \fr 1.1 \ft the note\f*` is
+//! what Paratext writes and what the corpora in this repo hold;
+//! `\f + \fr 1.1 \ft the note\ft*\f*` is the same document and the shape
+//! nobody spells (ticket 34 — until it, the writer reported 78 of the 86 books
+//! of `tasks/benchmark/corpus/web/` under `usfm format --check`).
+//!
+//! Which styles those are is the stylesheet's answer, not a list here: a
+//! `\StyleType Character` entry whose `\TextType` is `NoteText`
+//! ([`UsfmWriter::is_note_text`]). The closer of such a child is left out when
+//! what follows it is another one of them, or the note's own closing marker,
+//! and written otherwise — the rule and its one sharp edge are on
+//! [`UsfmWriter::omitted_closers`]. Two cases keep it for reasons of their
+//! own: an attribute list runs to the closing marker, so a `\xt` that has one
+//! is always closed; and `\xt` is the only note-internal marker that may nest,
+//! so a sibling standing in front of a closed `\xt` keeps its closer too, or
+//! the `\xt` would be read as its child.
+//!
+//! The omitted form reads back to the identical tree *and* to the identical
+//! diagnostics: the parser says nothing about a character style implicitly
+//! closed inside a note, neither by a sibling nor by the note's end, so the
+//! round trip's "the second parse gains no code" holds with nothing to spare.
+//! Outside a note the rule does not apply at all, `\xt` in a paragraph
+//! included: there is nothing there to close it.
 //!
 //! # Escaping
 //!
@@ -74,7 +101,7 @@ use usfm_ast::{
     Milestone, Note, OptBreak, Para, Periph, Sidebar, StyleId, TableCell, TableRow, Text, VerseEnd,
     VerseStart,
 };
-use usfm_style::StyleSheet;
+use usfm_style::{StyleSheet, TextType};
 
 /// The document as USFM text.
 ///
@@ -128,6 +155,21 @@ impl<'s, W: Write> UsfmWriter<'s, '_, W> {
     fn marker(&self, style: StyleId) -> &'s str {
         let style_sheet: &'s StyleSheet = self.style_sheet;
         &style_sheet.get_rule(style.index()).marker
+    }
+
+    /// Whether a style is one of the note-internal character styles, which the
+    /// stylesheet names rather than this crate: a `\StyleType Character` entry
+    /// whose `\TextType` is `NoteText`. In Paratext's `usfm.sty` that is
+    /// exactly the twenty-two markers a note's content is made of — `\fr`,
+    /// `\ft`, `\fq`, `\fqa`, `\fk`, `\fl`, `\fp`, `\fv`, `\fw`, `\fdc`, `\fs`,
+    /// `\xo`, `\xt`, `\xk`, `\xq`, `\xta`, `\xot`, `\xnt`, `\xdc`, `\xop`,
+    /// `\xtSee` and `\cat` — and a derived style keeps its base's text type, so
+    /// a `\ft2` the parser invented is one too.
+    ///
+    /// This is the only thing the writer asks about a style beyond its name.
+    fn is_note_text(&self, style: StyleId) -> bool {
+        let rule = self.style_sheet.get_rule(style.index());
+        rule.is_character() && rule.text_type == TextType::NoteText
     }
 
     fn push(&mut self, text: &str) {
@@ -274,6 +316,83 @@ impl<'s, W: Write> UsfmWriter<'s, '_, W> {
         }
         self.in_char = outer;
     }
+
+    /// A note's own children, which are the one place a closing marker is left
+    /// out — see the module docs. `in_char` is cleared for them: a character
+    /// style directly inside a note is not nested.
+    fn write_note_children(&mut self, children: &[Inline<'_>]) {
+        let omitted = self.omitted_closers(children);
+        let outer = std::mem::replace(&mut self.in_char, false);
+        for (index, child) in children.iter().enumerate() {
+            match child {
+                Inline::Char(char) if omitted[index] => self.write_char(char, false),
+                child => self.visit_inline(child),
+            }
+        }
+        self.in_char = outer;
+    }
+
+    /// Which of a note's children are written without their closing marker.
+    ///
+    /// Three conditions on a child, all of them about what the parser will
+    /// read back:
+    ///
+    /// * the style is note-internal ([`UsfmWriter::is_note_text`]), so a
+    ///   following marker of the same family closes it with no diagnostic —
+    ///   the parser is silent about an implicit close inside a note;
+    /// * it carries no attribute list, because `|` and its pairs run to the
+    ///   closing marker and would otherwise swallow whatever comes next;
+    /// * what comes next either is nothing at all, in which case the note's
+    ///   own closing marker ends it, or another note-internal style *that is
+    ///   itself written without a closer or may not nest*.
+    ///
+    /// Anything else — text, a milestone, an optional break, a character style
+    /// from outside the note vocabulary — keeps the closer, because without it
+    /// the text or the node would be read as part of this style's content.
+    ///
+    /// The last clause is the one that is not obvious, and `\xt` is the only
+    /// note-internal marker it can bite: it is the only one with `NEST` in its
+    /// `\OccursUnder`, and the parser reads an unmarked `\xt` as nested exactly
+    /// when its own `\xt*` lies ahead. So `\fq a\fq*\xt b|link-href="x"\xt*`
+    /// keeps *both* closers: drop the `\fq*` and the `\xt*` ahead turns the
+    /// `\xt` into a child of the `\fq` rather than its sibling. Because a
+    /// child's answer depends on the one after it, the flags are computed from
+    /// the right.
+    fn omitted_closers(&self, children: &[Inline<'_>]) -> Vec<bool> {
+        let mut omitted = vec![false; children.len()];
+        for index in (0..children.len()).rev() {
+            let Inline::Char(char) = &children[index] else {
+                continue;
+            };
+            if char.attributes.is_some() || !self.is_note_text(char.style) {
+                continue;
+            }
+            omitted[index] = match children.get(index + 1) {
+                None => true,
+                Some(Inline::Char(next)) if self.is_note_text(next.style) => {
+                    !self.style_sheet.get_rule(next.style.index()).nest || omitted[index + 1]
+                }
+                Some(_) => false,
+            };
+        }
+        omitted
+    }
+
+    /// One character style. `close` is false only for the note-internal styles
+    /// of [`UsfmWriter::write_note_children`].
+    fn write_char(&mut self, char: &Char<'_>, close: bool) {
+        let marker = self.marker(char.style);
+        let nested = self.in_char;
+        self.open_marker(marker, nested);
+        self.push(" ");
+        self.write_children(&char.children, true);
+        if let Some(attributes) = &char.attributes {
+            self.write_attributes(attributes);
+        }
+        if close {
+            self.close_marker(marker, nested);
+        }
+    }
 }
 
 impl<W: Write> Visit for UsfmWriter<'_, '_, W> {
@@ -302,15 +421,20 @@ impl<W: Write> Visit for UsfmWriter<'_, '_, W> {
 
     fn visit_chapter_start(&mut self, chapter: &ChapterStart<'_>) {
         self.push_fmt(format_args!("\\c {}", chapter.number));
+        self.newline();
+        // Each on a line of its own, which is how the spec's own example and
+        // every corpus in the repo spell them; `\c` looks past the line break
+        // for both. `\ca` is a character style and is closed; `\cp` has no
+        // closing marker at all — the parser reads the one word after it, and
+        // a `\cp*` would be an unmatched closing marker.
         if let Some(alt) = &chapter.alt_number {
-            self.push_fmt(format_args!(" \\ca {alt}\\ca*"));
+            self.push_fmt(format_args!("\\ca {alt}\\ca*"));
+            self.newline();
         }
         if let Some(published) = &chapter.pub_number {
-            // `\cp` has no closing marker: the parser reads the one word after
-            // it, and a `\cp*` would be an unmatched closing marker.
-            self.push_fmt(format_args!(" \\cp {published}"));
+            self.push_fmt(format_args!("\\cp {published}"));
+            self.newline();
         }
-        self.newline();
     }
 
     /// Nothing: a chapter end is synthesized, and the parser re-emits it.
@@ -399,15 +523,7 @@ impl<W: Write> Visit for UsfmWriter<'_, '_, W> {
     fn visit_verse_end(&mut self, _verse: &VerseEnd) {}
 
     fn visit_char(&mut self, char: &Char<'_>) {
-        let marker = self.marker(char.style);
-        let nested = self.in_char;
-        self.open_marker(marker, nested);
-        self.push(" ");
-        self.write_children(&char.children, true);
-        if let Some(attributes) = &char.attributes {
-            self.write_attributes(attributes);
-        }
-        self.close_marker(marker, nested);
+        self.write_char(char, true);
     }
 
     fn visit_note(&mut self, note: &Note<'_>) {
@@ -417,9 +533,7 @@ impl<W: Write> Visit for UsfmWriter<'_, '_, W> {
         if let Some(category) = &note.category {
             self.write_category(category);
         }
-        // A character style directly inside a note is not nested: `\+ft` there
-        // is `nested-marker-not-nested`.
-        self.write_children(&note.children, false);
+        self.write_note_children(&note.children);
         self.close_marker(marker, false);
     }
 
@@ -492,13 +606,24 @@ mod tests {
         writes(source, "\\id GEN\n\\usfm 3.1\n\\p text\n");
     }
 
+    /// Each on its own line, and `\c` finds them there — which is the spelling
+    /// the spec's example and the corpora use, whichever line the source put
+    /// them on. `\ca` is closed, `\cp` is not: the parser reads one word after
+    /// it.
     #[test]
     fn a_chapter_keeps_its_alternate_and_published_numbers() {
-        // `\ca` is closed, `\cp` is not: the parser reads one word after it.
+        writes(
+            "\\id GEN\n\\c 3\n\\ca 4\\ca*\n\\cp K\n\\p text\n",
+            "\\id GEN\n\\c 3\n\\ca 4\\ca*\n\\cp K\n\\p text\n",
+        );
+        // The same chapter written on one line comes back on three.
         writes(
             "\\id GEN\n\\c 3 \\ca 4\\ca* \\cp K\n\\p text\n",
-            "\\id GEN\n\\c 3 \\ca 4\\ca* \\cp K\n\\p text\n",
+            "\\id GEN\n\\c 3\n\\ca 4\\ca*\n\\cp K\n\\p text\n",
         );
+        // One without the other, and a chapter with neither, keep their lines.
+        writes("\\id GEN\n\\c 3 \\cp K\n\\p t\n", "\\id GEN\n\\c 3\n\\cp K\n\\p t\n");
+        writes("\\id GEN\n\\c 3\n\\p t\n", "\\id GEN\n\\c 3\n\\p t\n");
     }
 
     #[test]
@@ -528,12 +653,12 @@ mod tests {
 
     /// A character style directly inside a *note* is not nested: `\+ft` there
     /// is `nested-marker-not-nested`, so only `\pn`, one level further in,
-    /// gets a `+`.
+    /// gets a `+`. The `\ft` still ends with the note, so its own closer goes.
     #[test]
     fn a_character_style_inside_a_note_is_not_nested() {
         writes_body(
             "\\p \\f + \\ft see \\+pn Rome\\+pn*\\f*\n",
-            "\\p \\f + \\ft see \\+pn Rome\\+pn*\\ft*\\f*\n",
+            "\\p \\f + \\ft see \\+pn Rome\\+pn*\\f*\n",
         );
     }
 
@@ -541,9 +666,109 @@ mod tests {
     fn a_note_keeps_its_caller_and_category() {
         writes_body(
             "\\p \\f + \\cat People\\cat* \\ft text\\f*\n",
-            "\\p \\f + \\cat People\\cat*\\ft text\\ft*\\f*\n",
+            "\\p \\f + \\cat People\\cat*\\ft text\\f*\n",
         );
-        writes_body("\\p \\f - \\ft text\\f*\n", "\\p \\f - \\ft text\\ft*\\f*\n");
+        writes_body("\\p \\f - \\ft text\\f*\n", "\\p \\f - \\ft text\\f*\n");
+    }
+
+    /// The idiom of ticket 34: a note's internal styles run into one another
+    /// and into the note's own closer, with no closing marker between them.
+    /// Every USFM writer spells a note this way, and the parser reports
+    /// nothing for an implicit close inside a note, so the codes of the second
+    /// parse are the codes of the first.
+    #[test]
+    fn note_internal_styles_run_into_one_another() {
+        writes_body(
+            "\\p \\f + \\fr 1.1 \\fq word \\ft the note\\f*\n",
+            "\\p \\f + \\fr 1.1 \\fq word \\ft the note\\f*\n",
+        );
+        // The explicitly closed spelling is the same tree, and comes back in
+        // the idiomatic one.
+        writes_body(
+            "\\p \\f + \\fr 1.1 \\fq word\\fq*\\ft the note\\ft*\\f*\n",
+            "\\p \\f + \\fr 1.1 \\fq word\\ft the note\\f*\n",
+        );
+        // A cross reference is the same rule with the `\x` vocabulary.
+        writes_body(
+            "\\p \\x - \\xo 1.1 \\xt Gen 1.1\\x*\n",
+            "\\p \\x - \\xo 1.1 \\xt Gen 1.1\\x*\n",
+        );
+    }
+
+    /// The closer stays when the next sibling is not another note-internal
+    /// style: without it the text, the milestone or the outside style would be
+    /// read as this style's content.
+    #[test]
+    fn a_note_internal_style_followed_by_anything_else_keeps_its_closer() {
+        // Text after it: `\fq b\fq* trailing`.
+        writes_body(
+            "\\p \\f + \\fq b\\fq* trailing\\f*\n",
+            "\\p \\f + \\fq b\\fq* trailing\\f*\n",
+        );
+        // A character style from outside the note vocabulary.
+        writes_body(
+            "\\p \\f + \\ft see\\ft*\\nd Lord\\nd*\\f*\n",
+            "\\p \\f + \\ft see\\ft*\\nd Lord\\nd*\\f*\n",
+        );
+        // A milestone.
+        writes_body(
+            "\\p \\f + \\ft see\\ft*\\qt-s |who=\"God\"\\*\\f*\n",
+            "\\p \\f + \\ft see\\ft*\\qt-s |who=\"God\"\\*\\f*\n",
+        );
+    }
+
+    /// An attribute list runs to the closing marker, so a note-internal style
+    /// that has one is closed whatever follows: `\xt ...|link-href="..."\xt*`.
+    #[test]
+    fn a_note_internal_style_with_attributes_keeps_its_closer() {
+        writes_body(
+            "\\p \\x - \\xo 1.1\\xo* \\xt Gen 1.1|link-href=\"GEN 1:1\"\\xt*\\x*\n",
+            "\\p \\x - \\xo 1.1\\xo* \\xt Gen 1.1|link-href=\"GEN 1:1\"\\xt*\\x*\n",
+        );
+        // Followed by another note-internal style rather than the note's end:
+        // still closed.
+        writes_body(
+            "\\p \\x - \\xt Gen 1.1|link-href=\"GEN 1:1\"\\xt*\\xq q\\x*\n",
+            "\\p \\x - \\xt Gen 1.1|link-href=\"GEN 1:1\"\\xt*\\xq q\\x*\n",
+        );
+    }
+
+    /// `\xt` is the one note-internal marker that may nest, and the parser
+    /// nests an unmarked one exactly when its own `\xt*` lies ahead. So a
+    /// sibling before an `\xt` that keeps its closer has to keep its own:
+    /// without it the `\xt` would be read as a child. When the `\xt` loses its
+    /// closer too, both go.
+    #[test]
+    fn a_style_before_a_closed_xt_keeps_its_closer() {
+        writes_body(
+            "\\p \\x - \\xq a\\xq*\\xt b|link-href=\"x\"\\xt*\\x*\n",
+            "\\p \\x - \\xq a\\xq*\\xt b|link-href=\"x\"\\xt*\\x*\n",
+        );
+        writes_body(
+            "\\p \\x - \\xq a\\xq*\\xt b\\xt*\\x*\n",
+            "\\p \\x - \\xq a\\xt b\\x*\n",
+        );
+    }
+
+    /// A style nested inside a note-internal one keeps its `\+` closer — it is
+    /// a child, not a sibling — while the style around it follows the rule.
+    #[test]
+    fn a_nested_style_inside_a_note_keeps_its_closer() {
+        writes_body(
+            "\\p \\f + \\ft text \\+nd Lord\\+nd* more\\f*\n",
+            "\\p \\f + \\ft text \\+nd Lord\\+nd* more\\f*\n",
+        );
+        writes_body(
+            "\\p \\f + \\ft text \\+nd Lord\\+nd*\\fq q\\f*\n",
+            "\\p \\f + \\ft text \\+nd Lord\\+nd*\\fq q\\f*\n",
+        );
+    }
+
+    /// The rule is a note's, not a paragraph's: `\xt` is note-internal by text
+    /// type and may also stand in a paragraph, where nothing would close it.
+    #[test]
+    fn a_note_internal_style_outside_a_note_keeps_its_closer() {
+        writes_body("\\p see \\xt Gen 1.1\\xt*\n", "\\p see \\xt Gen 1.1\\xt*\n");
     }
 
     #[test]

@@ -440,6 +440,36 @@ fn write_formats_a_file_in_place() {
     assert!(output.status.success(), "{}", stderr(&output));
 }
 
+/// The benchmark corpus's `web/` class, as it is committed: 86 whole books of
+/// the World English Bible, written by someone else's tool, and `--check`
+/// exits 0 over all of them without writing a line.
+///
+/// This is ticket 34's criterion, and the reason it is a test rather than a
+/// note in a README: the two shapes the writer used to impose — a closing
+/// marker on every note-internal style, and `\cp` on the `\c` line — were
+/// legal USFM that nobody writes, and nothing but a corpus this size would
+/// notice them coming back. One process, 5.5 MB, under a second in a debug
+/// build, so the whole corpus goes in rather than a sample.
+#[test]
+fn check_passes_on_the_whole_benchmark_corpus() {
+    let corpus = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tasks/benchmark/corpus/web");
+    let mut files: Vec<PathBuf> = std::fs::read_dir(&corpus)
+        .unwrap_or_else(|err| panic!("reading {}: {err}", corpus.display()))
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| path.extension().is_some_and(|extension| extension == "usfm"))
+        .collect();
+    files.sort();
+    assert_eq!(files.len(), 86, "the corpus is 86 books");
+
+    let mut args: Vec<&std::ffi::OsStr> = vec!["format".as_ref(), "--check".as_ref()];
+    args.extend(files.iter().map(|path| path.as_os_str()));
+    let output = usfm(args);
+    assert!(output.status.success(), "{}", stderr(&output));
+    assert!(stderr(&output).is_empty(), "{}", stderr(&output));
+    assert!(stdout(&output).is_empty(), "--check writes nothing");
+}
+
 /// `--write` and `--check` ask for opposite things, so clap refuses the pair
 /// outright: exit 2, the usage code, not a run with one of them winning.
 #[test]

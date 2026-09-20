@@ -40,7 +40,7 @@ fixtures.
 
 ## Answer
 
-Fixed by ticket 27 (PR #32, 2026-09-20), where the `roundtrip` fuzz target's
+Fixed by ticket 27 (`eab58a3`, PR #32, 2026-09-20), where the `roundtrip` fuzz target's
 seed scan hit `41MATTes.SFM` first. `parse_sidebar` pushes the sidebar
 *before* parsing the `\esbe` line, so the verse end is handed to the real
 block list and lands before the sidebar (D7), and the `\esbe` line places
