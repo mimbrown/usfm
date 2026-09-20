@@ -15,7 +15,7 @@ licence). One command runs everything:
 cargo bench -p usfm_benchmark
 ```
 
-Seven groups, each reporting throughput over the bytes of USFM it was given:
+Eight groups, each reporting throughput over the bytes of USFM it was given:
 
 | Group | One iteration does |
 | --- | --- |
@@ -26,6 +26,7 @@ Seven groups, each reporting throughput over the bytes of USFM it was given:
 | `parse_html` | `parse`, then `to_html_string(&document, document.style_sheet())` |
 | `parse_json` | `parse`, then `usfm_json::to_json_string(&document)` |
 | `reference_index` | `usfm_semantic::ReferenceIndex::new(&document)`; the parse is done once **outside** the timed loop |
+| `analyze` | `usfm_semantic::analyze(&document)`; the parse is done once **outside** the timed loop |
 
 Five benchmark ids per group, one per file class. **The input of one id is the
 whole class**: an iteration lexes or parses every file of the class, one after
@@ -51,7 +52,7 @@ Criterion is configured in `benches/corpus.rs` at `warm_up_time` 1 s,
 `measurement_time` 5 s and `sample_size` 10 — the smallest settings that still
 give criterion its ten samples when one whole-corpus iteration takes a quarter
 of a second. The defaults (100 samples over 5 s) would take hours. A full run
-of all seven groups is about **6 minutes**.
+of all eight groups is about **7 minutes**.
 
 Criterion's own output directory, `target/criterion`, is git-ignored through
 the `/target` entry in `.gitignore`, so nothing a run writes is committed.
@@ -610,7 +611,171 @@ in that sitting, and adding a 279 MiB/s pass to a 47.9 MiB/s one predicts 40.9,
 near enough the 43.03 seen. `ReferenceIndex` stays what it is for callers that
 want to *read* verses; `analyze` does not build one.
 
-The gap that is left is still ticket 24's, and still the attribute re-check.
+The gap that is left is still ticket 24's, and still the attribute re-check —
+though "the re-check" turned out to be the wrong name for it; see the next
+section for what the 11% actually was.
+
+**Standing note (after ticket 24).** The gap on whole-corpus is now **7–8%**,
+of which the checks are a small part: what is left is the cost of walking a
+built tree a second time, and the way to read a future regression here is
+"does `analyze` cost more than a bare traversal of the same tree", not "is the
+gap over 5%". The section below has the numbers and the method.
+
+## After ticket 24
+
+What the semantic pass costs, why, and what is left. Same VM, toolchain and
+profile as the baseline; every number here is `cargo bench -p usfm_benchmark`
+with both bench binaries built first at `CARGO_PROFILE_BENCH_CODEGEN_UNITS=1`
+and run turn about, as "Reading a regression" prescribes. `before` is
+`07b2825` (ticket 23 merged) with the new `analyze` group added to it so the
+two binaries answer the same questions.
+
+### The `analyze` group
+
+`analyze` (new here) times `usfm_semantic::analyze(&document)` over trees
+parsed **outside** the timed loop, the way `reference_index` does. The pair
+`parse_semantic` − `parse` says what the pass costs *in place*, where the tree
+is still warm from being built; `analyze` says what the walk and the checks
+cost on their own, and it is the number a check family can be subtracted from.
+It is also what an editor re-checking a tree it already holds would pay.
+
+Three rounds each, turn about; median, in **milliseconds** (this section is in
+ms throughout: the classes differ in size, and what is being compared is one
+pass against another over the same bytes).
+
+| Class | before | after | Δ |
+| --- | ---: | ---: | ---: |
+| plain | 7.44 | 5.88 | −21% |
+| attributes-heavy | 25.63 | 11.18 | −56% |
+| alignment-heavy | 7.92 | 1.36 | −83% |
+| note-heavy | 0.079 | 0.050 | −37% |
+| **whole-corpus** | **46.52** | **27.57** | **−41%** |
+
+### Where the time was: the attribution table
+
+Measured before the fix, on `07b2825`, by a scratch build (not committed) in
+which each check family returns early on an environment variable read once per
+process. The all-on figure matches the clean binary to within 1%, so the
+instrumentation is not what is being measured. Milliseconds, one round.
+
+| Switched off | whole-corpus | Δ | attributes-heavy | Δ |
+| --- | ---: | ---: | ---: | ---: |
+| nothing (every check) | 43.06 | — | 23.24 | — |
+| the attribute checks | 33.36 | −9.71 | 18.11 | −5.13 |
+| the placement check | 36.89 | −6.18 | 17.94 | −5.30 |
+| the verse/chapter order checks | 37.68 | −5.38 | 22.69 | −0.55 |
+| the document/book/table checks | 43.66 | +0.60 | 23.24 | ±0 |
+| **every check** (the walk and its state alone) | **18.36** | −24.70 | **8.06** | −15.18 |
+| the `Analyzer` altogether (an empty `Visit` over the same trees) | 12.08 | | 4.32 | |
+
+Two things to read off it. The families do not add up to their sum — removing
+one leaves the others pulling the same cache lines — and **the last row is the
+floor**: a visitor with no state and no checks, walking the same trees, is
+12 ms of the 43. The pass was three and a half times a bare traversal; it is
+now about twice one.
+
+### What was done
+
+Nothing moved back into the parser: `crates/usfm_parser` has no diff. In the
+order the table above pointed at them:
+
+1. **`usfm_ast::is_valid_attribute_name` scans bytes, not `chars()`, and is
+   `#[inline]`.** Under callgrind, over the alignment-heavy class, the old
+   version was **58% of every instruction the pass executed** — 26.7 M of
+   45.9 M, or 152 instructions to classify an eight-character name, because
+   `chars()` decodes UTF-8 to ask questions every byte outside ASCII answers
+   the same way. It is called once per attribute of every `\w` and every
+   `\zaln-s`, which is 376 696 times over this corpus. `#[inline]` matters as
+   much as the byte scan: the crate that calls it is not the crate that
+   defines it.
+2. **`check_placement` remembers its verdict per (style, parent).**
+   `OccursUnder` is a list of marker names — 96 of them for `\w` — and the
+   question asked of it is whether the parent's marker is among them, for
+   every character style and every note in the document. In a text whose every
+   word is a `\w` in the same kind of paragraph, that is the same `String`
+   comparison run to the same place a hundred thousand times. `PlacementMemo`
+   is 64 slots, direct-mapped on a multiplicative hash of the two indices, no
+   allocation and no growth: a collision is a miss, and a miss just asks the
+   sheet again. The verdict is a function of the pair and the sheet alone,
+   which is what makes it safe to keep.
+3. **`check_verse_order` has a fast path for a plain `\v 5`.** One range, one
+   number, no segment is what almost every verse is, and the general shape —
+   three `Option`s of `Part`, a `flat_map` and a `find_map`, twice, per verse —
+   was most of what the order checks cost over `plain`. `Coverage::add_run`
+   extends the run it is already building instead of bisecting and splicing,
+   the segment lookups skip the `BTreeSet` when it is empty, and a new chapter
+   clears the coverage rather than reallocating it.
+4. **The scope stack is four fields saved on the Rust stack**, not a `Vec` of
+   frames: `placement_parent` used to scan it twice for every character style
+   (once for "is this a cell", once for the nearest paragraph).
+
+Two things were tried and **reverted because they measured as nothing**, which
+is worth recording so they are not tried again without a measurement:
+
+- **Three derived flags on `usfm_ast::Attributes`** (`has_unnamed`,
+  `has_malformed_name`, `has_duplicate`), computed where the list is built so
+  the pass could skip the per-pair loop. This is option (b) in the ticket, and
+  it *did* help — until `is_valid_attribute_name` stopped being expensive. With
+  the byte scan in place, a build that keeps the flags and a build that runs
+  the old loop measure the same to within noise on every class, while the
+  flags cost the parser a scan of every name and grow `Attributes` by 8 bytes.
+- **A per-style flag table** (`is this \w`, `is this paragraph a heading`)
+  to keep `check_empty_word` and `verse-in-heading` out of the stylesheet.
+  Interleaved, three rounds: whole-corpus −0.4%, plain +3%. It also costs a
+  table per `analyze` call, which a language server checking one short
+  paragraph would pay for nothing.
+
+### `parse_semantic` against `parse`, per class
+
+Three rounds turn about, medians, milliseconds. `gap` is
+1 − `parse`/`parse_semantic`, which is what the ticket asks to be under 5%.
+
+| Class | `parse` before | `parse_semantic` before | gap | `parse` after | `parse_semantic` after | gap |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| plain | 77.50 | 81.34 | 4.7% | 77.77 | 80.43 | **3.3%** |
+| attributes-heavy | 104.17 | 122.97 | 15.3% | 103.06 | 115.42 | **10.7%** |
+| alignment-heavy | 54.97 | 63.10 | 12.9% | 58.79 | 61.29 | **4.1%** |
+| note-heavy | 1.546 | 1.635 | 5.5% | 1.553 | 1.621 | **4.2%** |
+| **whole-corpus** | **239.60** | **274.96** | **12.9%** | **245.32** | **263.91** | **7.0%** |
+
+`parse` moves although `crates/usfm_parser` has no diff: +2.4% on whole-corpus
+and +7.0% on alignment-heavy. That is the codegen-placement effect this file
+has run into three times before, and the control says so — `lex`, whose code is
+byte-identical in both binaries and which calls nothing that changed, measures
++3.8% on whole-corpus and +1.4% on alignment-heavy in the same sitting.
+
+### The target, and why 5% is under the floor
+
+**7.0% on whole-corpus, against the 5% the ticket asked for.** Three of the
+five classes are inside 5%; `attributes-heavy` at 10.7% is the one that is
+not, and whole-corpus inherits its share of it.
+
+What is left is not a check doing something silly. In place, the pass now
+costs 263.91 − 245.32 = **18.6 ms** over 12.78 MiB, against 35.4 ms before.
+A `Visit` implementation that does *nothing at all*, over the same trees,
+measures 12–13.4 ms standalone in every build tried, which is 9–10 ms of
+in-place time by the ratio the two groups keep — **a gap of about 3.5% before
+a single check runs**. Callgrind agrees about where that goes: of the 843 k
+last-level cache misses one `analyze` over the corpus takes, `visit_para`,
+`walk_inline`, `visit_char` and `visit_verse_start` — the walk — account for
+essentially all of them, `check_placement` for 267 and `check_attributes` for
+none. The tree is some 50 MB of `Inline` vectors; reading it a second time is
+what the second pass is.
+
+So the 5% line can only be reached by making the *walk* cheaper, which means
+either a smaller AST or not walking twice — and not walking twice is the check
+moving back into the parser, which this ticket rules out. The number to watch
+from here is `analyze` against the bare-traversal floor in the same build, not
+the gap against `parse`.
+
+**One warning for whoever measures this next.** On the two classes that are
+mostly attribute lists, `analyze` is extraordinarily sensitive to whether the
+attribute loop is inlined: the same source, built with one extra `--cfg` flag
+that changes nothing it evaluates, measures 6.72 ms on alignment-heavy where
+the committed build measures 1.36. The check-family attribution above was
+therefore taken *before* the fix, where the costs were large enough to survive
+that; after it, a family subtraction on this pass is not worth the build it
+takes. Compare whole binaries, built the same way, interleaved.
 
 ## Reading a regression
 

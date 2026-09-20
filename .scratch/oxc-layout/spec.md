@@ -157,6 +157,10 @@ Rebuilt in `apps/` on `ParseResult`, `usfm_semantic` and `usfm_codegen`
   *complement*, "chapter 3 of this book should have 24 verses and has 23", and
   that is a different check with a different input: it is not in this ticket
   and has none of its own yet.
+- M4: the semantic pass costs 7% of `parse` on the whole corpus after ticket
+  24 (was 12.9%); about half of that is the second walk of the tree itself.
+  Under 5% would need a smaller `Inline`/`Attribute` footprint, which is an
+  AST-shape question for a later milestone, not a check optimisation.
 - M4: whether verse-end emission is syntax or semantics. **Settled by ticket
   19: it stays in the parser.** It is not a check at all — it *builds* the
   tree, adding `Inline::VerseEnd` and `Block::ChapterEnd` nodes as the parse

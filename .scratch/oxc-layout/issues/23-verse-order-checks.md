@@ -26,7 +26,7 @@ codes.
 
 ## Answer
 
-Landed via PR #27 (2026-09-20). Four Warning codes on the analyzer's walk:
+Landed in `07b2825` (PR #27, 2026-09-20). Four Warning codes on the analyzer's walk:
 `duplicate-verse-number` (coverage by number with segments: `4a`/`4b`
 distinct, `4` covers its segments and vice versa, ranges cover their
 interior as a run in O(1)), `verse-out-of-order` (start below the previous

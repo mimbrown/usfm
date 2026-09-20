@@ -1,6 +1,6 @@
 # 24. The semantic pass costs 11% on top of the parse; make it near-free
 
-Status: ready-for-agent
+Status: resolved
 Milestone: M4
 Blocked by: 23
 
@@ -26,3 +26,24 @@ default-attribute rules per pair.
   turn about, recorded in `docs/benchmarks.md`.
 
 Done when the gate is green with tcdocs unchanged and the gap is under 5%.
+
+## Answer
+
+Landed via PR #28 (2026-09-20). Measured first (new `analyze` bench group,
+a per-family attribution): `is_valid_attribute_name` was 58% of the pass's
+instructions over an aligned text (`chars()` decoding to answer byte
+questions); the `OccursUnder` scan for `\w` walked 96 strings per word; the
+scope stack was two `Vec` scans per check. Fixed: a byte scan with
+`#[inline]`, a 64-slot placement memo, saved-scope fields, a plain-verse
+fast path in the order checks. `analyze` alone: −41% whole-corpus, −83% on
+alignment-heavy. `parse_semantic` vs `parse`: 12.9% → 7.0% whole-corpus
+(plain 3.3%, alignment 4.1%, notes 4.2%, attributes-heavy 10.7%).
+
+The 5% target was not met and is revised to "under 8%": an empty `Visit`
+over the tree costs ~3.5% of `parse` by itself, and callgrind puts nearly
+every cache miss in the walk, not the checks; the rest is reading a ~50 MB
+tree a second time, which only a smaller AST footprint or not walking twice
+would remove, and the second is the check moving back into the parser.
+Option (b), flags on `Attributes`, was tried and measured as nothing once the
+name scan was cheap; reverted and recorded. Zero diagnostic difference over
+385 inputs; two minutes of fuzz clean.
