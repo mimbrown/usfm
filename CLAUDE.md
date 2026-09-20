@@ -663,7 +663,10 @@ one item. M6's other exit criteria were checked and recorded in the spec on
 2026-09-20 (the boundary benchmark rerun is `docs/benchmarks.md`, "M6
 close": within noise). **The frontier is empty**: tickets 10 and 33 are the
 only open ones and both are ready-for-human, so an unattended session has
-nothing to take until one of them is answered.
+nothing to take until one of them is answered. What is left after that —
+the loose ends found on the way (tickets 38–42, `needs-triage`), the
+hardening plan's unchecked boxes, and the work with no plan yet — is listed
+in the spec under "After M6: what is left".
 Tickets are in
 `.scratch/oxc-layout/issues/`, written one milestone ahead. Unattended
 sessions follow `docs/agents/loop.md`; `scripts/gate.sh` is the gate before every push.
