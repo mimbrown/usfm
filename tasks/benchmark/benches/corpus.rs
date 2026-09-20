@@ -18,6 +18,7 @@ use std::sync::Arc;
 
 use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
 use usfm::ast::Document;
+use usfm::codegen::to_usfm_string;
 use usfm::html::to_html_string;
 use usfm::json::to_json_string;
 use usfm::parser::lexer::Lexer;
@@ -196,10 +197,25 @@ fn bench_analyze(c: &mut Criterion) {
     });
 }
 
+/// `to_usfm_string` alone, over a tree parsed outside the timed loop (ticket
+/// 25).
+///
+/// It belongs with `reference_index` and `analyze` rather than with the
+/// `parse_*` groups because the interesting number is what writing the markup
+/// back costs on its own: a formatter re-renders a tree it already has, and
+/// the round-trip property the crate exists for is measured tree-in,
+/// text-out. Throughput is still counted over the bytes of source the trees
+/// came from, which for this group is very nearly the bytes it writes.
+fn bench_codegen(c: &mut Criterion) {
+    built_tree_group(c, "codegen", |document| {
+        black_box(to_usfm_string(document));
+    });
+}
+
 criterion_group! {
     name = benches;
     config = configured();
     targets = bench_lex, bench_parse, bench_parse_semantic, bench_parse_usx, bench_parse_html,
-        bench_parse_json, bench_reference_index, bench_analyze
+        bench_parse_json, bench_codegen, bench_reference_index, bench_analyze
 }
 criterion_main!(benches);

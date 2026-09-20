@@ -4,6 +4,7 @@ members = [
   "apps/usfm_cli",
   "crates/usfm",
   "crates/usfm_ast",
+  "crates/usfm_codegen",
   "crates/usfm_diagnostics",
   "crates/usfm_html",
   "crates/usfm_json",
