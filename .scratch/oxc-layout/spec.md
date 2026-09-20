@@ -147,6 +147,16 @@ Rebuilt in `apps/` on `ParseResult`, `usfm_semantic` and `usfm_codegen`
 - M4: `usfm_semantic` should own verse-number uniqueness and order (a
   duplicated `\v 6` or a `\v 5` after `\v 7a` is reported nowhere today; found
   by ticket 09 in machine.py's `41MATTes.SFM`), which needs versification.
+  **Settled by ticket 23: it does, and it does not need versification.**
+  `duplicate-verse-number`, `verse-out-of-order`, `duplicate-chapter-number`
+  and `chapter-out-of-order` are four Warnings that ride the semantic walk
+  (verses per chapter, chapters per book — a second `\id` renumbers from 1),
+  and every one of them is a statement the document makes about itself — this
+  number is here twice, this number is lower than the one before it — which
+  needs no `.vrs` file to check. What versification would add is the
+  *complement*, "chapter 3 of this book should have 24 verses and has 23", and
+  that is a different check with a different input: it is not in this ticket
+  and has none of its own yet.
 - M4: whether verse-end emission is syntax or semantics. **Settled by ticket
   19: it stays in the parser.** It is not a check at all — it *builds* the
   tree, adding `Inline::VerseEnd` and `Block::ChapterEnd` nodes as the parse

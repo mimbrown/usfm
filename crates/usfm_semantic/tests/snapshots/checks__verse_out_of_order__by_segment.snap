@@ -1,0 +1,17 @@
+---
+source: crates/usfm_semantic/tests/checks.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 4b a \\v 4a b"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..31
+  VerseStart 4b@16..21
+  Text "a"@22..24
+  VerseEnd 4b
+  Text " "
+  VerseStart 4a@24..29
+  Text "b"@30..31
+  VerseEnd 4a
+ChapterEnd 1
+--- diagnostics
+warning[verse-out-of-order] @24..29: verse 4a comes after verse 4b in chapter 1

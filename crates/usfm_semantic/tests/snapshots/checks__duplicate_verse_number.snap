@@ -1,0 +1,21 @@
+---
+source: crates/usfm_semantic/tests/checks.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 a \\v 2 b \\v 2 c"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..36
+  VerseStart 1@16..20
+  Text "a"@21..23
+  VerseEnd 1
+  Text " "
+  VerseStart 2@23..27
+  Text "b"@28..30
+  VerseEnd 2
+  Text " "
+  VerseStart 2@30..34
+  Text "c"@35..36
+  VerseEnd 2
+ChapterEnd 1
+--- diagnostics
+warning[duplicate-verse-number] @30..34: verse 2 occurs more than once in chapter 1

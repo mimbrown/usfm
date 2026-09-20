@@ -1,6 +1,6 @@
 # 23. Verse and chapter order checks
 
-Status: ready-for-agent
+Status: resolved
 Milestone: M4
 Blocked by: 22
 
@@ -23,3 +23,20 @@ Found by ticket 09 in machine.py's `41MATTes.SFM`: a duplicated `\v 6` and a
 
 Done when the gate is green and `41MATTes.SFM`'s snapshot shows the two new
 codes.
+
+## Answer
+
+Landed via PR #27 (2026-09-20). Four Warning codes on the analyzer's walk:
+`duplicate-verse-number` (coverage by number with segments: `4a`/`4b`
+distinct, `4` covers its segments and vice versa, ranges cover their
+interior as a run in O(1)), `verse-out-of-order` (start below the previous
+verse's end; a verse reports at most one of the two), `duplicate-chapter-number`
+and `chapter-out-of-order`. Verses reset per chapter and chapters per book,
+because the CLI concatenates input files: two books each with `\c 1` report
+nothing. The first cut ran over `ReferenceIndex` and cost 9 points of
+`parse_semantic` for information the walk already passes; it moved into the
+walk (index unchanged, still exported). tcdocs 231 / 0 / 44; 79 genuine
+warnings over 34 suite inputs (spec snippets spliced from several books, the
+`out_of_sequence_*` fixtures); the corpus has none of the four and stays at
+zero errors; `41MATTes.SFM`'s twin test pins the three offsets. Two minutes
+of `parse_utf8` clean. `parse_semantic` gap 11.8% vs `parse` (ticket 24).

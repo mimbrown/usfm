@@ -133,6 +133,27 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **Verse and chapter order (ticket 23, M4).** Four Warnings, all
+  `usfm_semantic`'s, all riding the `Analyzer` walk (no `ReferenceIndex`: the
+  checks want a chapter number, a verse number and a span, and building an
+  index for them cost 9 points of `parse_semantic`):
+  `duplicate-verse-number` and `verse-out-of-order` over each chapter's verses,
+  `duplicate-chapter-number` and `chapter-out-of-order` over each book's `\c`
+  markers — **per book**, because a second `\id` starts a book whose chapters
+  number from 1 again and the CLI makes such a document out of several files.
+  Coverage is by number *with* its segment, so
+  `\v 4a` and `\v 4b` are two verses while a bare `\v 4` is the whole of verse
+  4 and collides with either; a range covers its endpoints as written and
+  everything between them unsegmented (`\v 3-4a` then `\v 4b` is fine, `\v 3-5`
+  then `\v 4` is a duplicate). A verse reports at most one of the two codes,
+  the duplicate first; a verse before the first `\c` of its book is skipped
+  (`verse-outside-chapter` has already said it). Versification stays out of
+  scope: nothing here reports a *missing* verse. Reported on the later verse's
+  `VerseStart` or the later `ChapterStart`. 22 codes are semantic now. tcdocs
+  is unchanged at 231 / 0 / 44 (Warnings cannot flip a case) but 34 of its
+  inputs now carry one — the spec's own multi-book examples, and the
+  `out_of_sequence_*` fixtures that are named for it; the benchmark corpus
+  carries none and still parses with zero errors
 - **Every `Code` audited, structure and tables moved (ticket 21, M4).** The
   rule is in `usfm_diagnostics`'s module doc as a table over all 55 codes: a
   code stays with the parser if deleting the check would change the tree, or

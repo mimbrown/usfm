@@ -65,6 +65,10 @@
 //! | `verse-in-heading` | E | nothing | **semantic** (21): a `VerseStart` in a `Title`/`Section` paragraph |
 //! | `verse-outside-chapter` | E | nothing | **semantic** (21): a `VerseStart` before any `ChapterStart` |
 //! | `verse-text-before-chapter` | E | nothing | **semantic** (21): a verse-text `Para` before any `ChapterStart` |
+//! | `duplicate-verse-number` | W | nothing | **semantic** (23): the chapter's verse numbers, in the order the walk passes them |
+//! | `verse-out-of-order` | W | nothing | **semantic** (23): as above |
+//! | `duplicate-chapter-number` | W | nothing | **semantic** (23): the book's chapter numbers, likewise |
+//! | `chapter-out-of-order` | W | nothing | **semantic** (23): as above |
 //! | `missing-chapter-number` | E | drops `\c` | parser: the marker is gone |
 //! | `malformed-chapter-number` | E | drops `\c` and the number | parser: the marker is gone |
 //! | `number-has-leading-zero` | E | reads the number without the zero | parser: `01` is the number 1 in the tree, and nothing remembers the zero |
@@ -303,6 +307,41 @@ pub enum Code {
     /// **Reported by:** `usfm_semantic` (ticket 21). The span is the
     /// paragraph node, which starts at the marker the parser reported.
     VerseTextBeforeChapter,
+    /// **Trigger:** a verse number already covered by an earlier verse of the
+    /// same chapter (`\v 6` twice; `\v 3-5` then `\v 4`; `\v 4` then `\v 4a`).
+    /// Coverage is by number *with* its segment, so `\v 4a` and `\v 4b` are
+    /// distinct while an unsegmented `\v 4` covers both.
+    /// **Recovery:** none. Both verses are in the tree as written.
+    /// **Severity:** Warning. The document is well-formed USFM; whether its
+    /// verses are unique is a judgement about the text.
+    /// **Reported by:** `usfm_semantic` (ticket 23), on its walk, at the later
+    /// verse's `VerseStart`.
+    DuplicateVerseNumber,
+    /// **Trigger:** a verse whose number starts lower than the previous verse
+    /// of the same chapter ended (`\v 7a` then `\v 5`). A verse that repeats a
+    /// number is [`Code::DuplicateVerseNumber`] instead, never both.
+    /// **Recovery:** none. The verses are in the tree in the order written.
+    /// **Severity:** Warning.
+    /// **Reported by:** `usfm_semantic` (ticket 23), on its walk, at the later
+    /// verse's `VerseStart`.
+    VerseOutOfOrder,
+    /// **Trigger:** a chapter number that an earlier `\c` of the same book
+    /// already used. Per book, not per document: a second `\id` starts a book
+    /// whose chapters number from 1 again, and the CLI makes such a document
+    /// whenever it is given several files.
+    /// **Recovery:** none. Both chapters are in the tree as written.
+    /// **Severity:** Warning.
+    /// **Reported by:** `usfm_semantic` (ticket 23), on its walk, at the later
+    /// `ChapterStart`.
+    DuplicateChapterNumber,
+    /// **Trigger:** a chapter numbered lower than the `\c` before it in the
+    /// same book (`\c 2` then `\c 1`). A chapter that repeats a number is
+    /// [`Code::DuplicateChapterNumber`] instead, never both.
+    /// **Recovery:** none.
+    /// **Severity:** Warning.
+    /// **Reported by:** `usfm_semantic` (ticket 23), on its walk, at the later
+    /// `ChapterStart`.
+    ChapterOutOfOrder,
     /// **Trigger:** `\c` not followed by a chapter number.
     /// **Recovery:** the chapter marker is dropped.
     /// **Severity:** Error.
@@ -520,6 +559,10 @@ impl Code {
         Code::VerseInHeading,
         Code::VerseOutsideChapter,
         Code::VerseTextBeforeChapter,
+        Code::DuplicateVerseNumber,
+        Code::VerseOutOfOrder,
+        Code::DuplicateChapterNumber,
+        Code::ChapterOutOfOrder,
         Code::MissingChapterNumber,
         Code::MalformedChapterNumber,
         Code::AlternateChapterNotClosed,
@@ -580,6 +623,10 @@ impl Code {
             Code::VerseInHeading => "verse-in-heading",
             Code::VerseOutsideChapter => "verse-outside-chapter",
             Code::VerseTextBeforeChapter => "verse-text-before-chapter",
+            Code::DuplicateVerseNumber => "duplicate-verse-number",
+            Code::VerseOutOfOrder => "verse-out-of-order",
+            Code::DuplicateChapterNumber => "duplicate-chapter-number",
+            Code::ChapterOutOfOrder => "chapter-out-of-order",
             Code::MissingChapterNumber => "missing-chapter-number",
             Code::MalformedChapterNumber => "malformed-chapter-number",
             Code::AlternateChapterNotClosed => "alternate-chapter-not-closed",
@@ -621,7 +668,11 @@ impl Code {
             | Code::CharacterStyleNotClosed
             | Code::VerseInCharacterStyle
             | Code::EmptyMilestoneAttributeList
-            | Code::UnlistedBookCode => Severity::Warning,
+            | Code::UnlistedBookCode
+            | Code::DuplicateVerseNumber
+            | Code::VerseOutOfOrder
+            | Code::DuplicateChapterNumber
+            | Code::ChapterOutOfOrder => Severity::Warning,
             Code::CharacterStyleImplicitlyClosed
             | Code::CharacterStyleNestedWithoutPlus
             | Code::MarkerNotListedHere
@@ -668,6 +719,10 @@ impl Code {
                 | Code::VerseInCharacterStyle
                 | Code::UnexpectedTableColumn
                 | Code::EmptyWord
+                | Code::DuplicateVerseNumber
+                | Code::VerseOutOfOrder
+                | Code::DuplicateChapterNumber
+                | Code::ChapterOutOfOrder
         )
     }
 
@@ -968,7 +1023,11 @@ mod tests {
             Code::VerseInCharacterStyle => Code::VerseInHeading,
             Code::VerseInHeading => Code::VerseOutsideChapter,
             Code::VerseOutsideChapter => Code::VerseTextBeforeChapter,
-            Code::VerseTextBeforeChapter => Code::MissingChapterNumber,
+            Code::VerseTextBeforeChapter => Code::DuplicateVerseNumber,
+            Code::DuplicateVerseNumber => Code::VerseOutOfOrder,
+            Code::VerseOutOfOrder => Code::DuplicateChapterNumber,
+            Code::DuplicateChapterNumber => Code::ChapterOutOfOrder,
+            Code::ChapterOutOfOrder => Code::MissingChapterNumber,
             Code::MissingChapterNumber => Code::MalformedChapterNumber,
             Code::MalformedChapterNumber => Code::NumberHasLeadingZero,
             Code::NumberHasLeadingZero => Code::AlternateChapterNotClosed,
