@@ -16,20 +16,23 @@ pub trait InlineContainer<'a> {
         // no milestone, so nothing is left to have eaten the space). Rule 6 is
         // about the tree, so it is enforced here rather than at every site
         // that can drop a node.
-        if matches!(
-            self.children().last(),
-            None | Some(Inline::VerseStart(_))
-        ) && let Inline::Text(text) = &mut child
+        //
+        // The cheapest question first: the text almost never starts with
+        // whitespace, and one byte answers that without touching the child
+        // list at all. A multi-byte character's first byte is never ASCII
+        // whitespace, so the byte test and `trim_start_matches` agree
+        // (ticket 37).
+        if let Inline::Text(text) = &mut child
+            && text.as_bytes().first().is_some_and(u8::is_ascii_whitespace)
+            && matches!(self.children().last(), None | Some(Inline::VerseStart(_)))
         {
             let trimmed = text.trim_start_matches(|c: char| c.is_ascii_whitespace());
-            if trimmed.len() != text.len() {
-                if trimmed.is_empty() {
-                    return;
-                }
-                // The span still covers the run the text was read from; see
-                // the note on `Text`.
-                text.content = Cow::Owned(trimmed.to_string());
+            if trimmed.is_empty() {
+                return;
             }
+            // The span still covers the run the text was read from; see
+            // the note on `Text`.
+            text.content = Cow::Owned(trimmed.to_string());
         }
         // If the last child is a text node, and the new child is also a text node, merge them
         let children = self.children_mut();
@@ -43,7 +46,14 @@ pub trait InlineContainer<'a> {
             // whitespace that starts the second are one space, not two. A
             // `Text` holding `"a  b"` is one no source could produce and no
             // writer could write back; the round-trip fuzz target found it.
-            let addition: &str = if prev_text.ends_with(|c: char| c.is_ascii_whitespace()) {
+            // The last byte answers it: a character that is ASCII whitespace
+            // is one byte, and no other byte of a UTF-8 sequence can be
+            // mistaken for one (ticket 37).
+            let ends_in_space = prev_text
+                .as_bytes()
+                .last()
+                .is_some_and(u8::is_ascii_whitespace);
+            let addition: &str = if ends_in_space {
                 child_text.trim_start_matches(|c: char| c.is_ascii_whitespace())
             } else {
                 &child_text
