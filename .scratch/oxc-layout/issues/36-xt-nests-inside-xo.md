@@ -83,7 +83,7 @@ point.
 
 ## Answer
 
-Landed via PR #35 (2026-09-20). The evidence went against the rule the
+Landed in `2440a92` (PR #35, 2026-09-20). The evidence went against the rule the
 ticket proposed and for a narrower one. Three `paratextTests` references
 read a closed style after `\xo` as its sibling (`NestingInCrossReferencesInvalid`,
 whose `metadata.xml` says "Grammar is accepting nesting of character styles

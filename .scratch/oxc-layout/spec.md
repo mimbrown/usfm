@@ -157,10 +157,50 @@ ticket 35**: the rule is recorded on `Block::Milestone`, that finding and the
 one the next run turned up are fixed, `tasks/fuzz/findings/` is gone, and
 `roundtrip` ran 56 987 execs in 601 s from the pruned seeds with no crash.
 
+Closed 2026-09-20 (tickets 25–27, 34–36; `b4a832f`, `f5a3853`, `eab58a3`,
+`4e95440`, `beac640`, `2440a92`; ticket 36 came out of 34). Checked on `main`
+at `2440a92`:
+- Property test parse -> codegen -> parse yields an equal tree on the tcdocs
+  `pass` corpus: `crates/usfm_codegen/tests/roundtrip.rs` over all 223 `pass`
+  cases of both roots, the 86 benchmark books and the machine.py fixtures,
+  `KNOWN` empty; and stronger than asked, the same property (equal tree
+  ignoring spans, no diagnostic code gained, a fixed point) over every case
+  `pass` or `fail` in the gate (`--roundtrip`, 275 / 275, known list empty)
+  and over arbitrary bytes (`tasks/fuzz`'s `roundtrip`, ten minutes clean from
+  the seeds after twenty bugs). Yes.
+- A `format` subcommand in the CLI: `usfm format` (`--write`, `--check`,
+  `--force`) and `usfm parse --format usfm`, tested by running the binary;
+  `--check` exits 0 over the whole benchmark corpus since ticket 34. Yes.
+- The invariant held on every ticket: tcdocs 215 / 0 / 44 and usfm-grammar
+  16 / 0, baseline empty, gate green.
+- Benchmarks at the boundary (`docs/benchmarks.md`, "M5 close", against
+  `f181eab`): `parse` −3.9%, over the 3% threshold, so **ticket 37** is
+  written and M6's first ticket is blocked on it, as the loop's invariant
+  asks; `parse_semantic` −3.4% and `parse_html` −3.1% ride on it; everything
+  else within noise.
+Also in M5: the writer's spellings are the idiomatic ones (notes unclosed,
+`\cp` on its own line, ticket 34); the `\periph` title line drops nothing
+silently (35); nothing nests inside `\xo` without `\+`, from the references
+(36), which shrank a tcdocs patch. Found on the way and left: `\cp`'s number
+is the one raw `Word` token the tree keeps as text (ticket 35 notes the
+asymmetry with `\vp`); the writer keeps an `\xo*` before a closed `\xt`
+one case more than it needs to (36). M6 ticketed: 30–33 (in the scratch
+tracker since the M4 boundary, committed now), with 30 blocked by 37.
+
 ## M6. Language server (hardening Phase 5)
+
+Ticketed 2026-09-20 at the M5 boundary: 30 (`apps/usfm_language_server`
+rebuilt on `usfm::parse`, diagnostics first; blocked by 37), 31 (formatting
+and hover), 32 (document symbols, completion, code actions), 33 (delete
+`wip/`, the lexicon question — ready-for-human).
 
 Rebuilt in `apps/` on `ParseResult`, `usfm_semantic` and `usfm_codegen`
 (formatting).
+
+Exit: the VS Code extension runs against the new server with diagnostics,
+formatting, hover, symbols, completion and code actions, each with a test
+that speaks JSON-RPC to the binary; `wip/usfm_language_server` is deleted;
+the gate runs the server's tests.
 
 ## Open, to settle when reached
 

@@ -824,6 +824,42 @@ The output is 0.17% larger than the input over the 309 round-trip cases
 spelling costing a few bytes: the closing markers the source left implicit,
 and the `\+` on a style the source nested without one.
 
+## M5 close: measured against `f181eab`
+
+The rerun `docs/agents/loop.md` asks for at every milestone boundary, against
+the commit the M4 close was recorded on. Method as for "M3 close": both
+binaries built with `CARGO_PROFILE_BENCH_CODEGEN_UNITS=1` (`f181eab` in a
+`git worktree`), run turn about, three rounds each, on the whole-corpus id of
+every group both have (`codegen` did not exist at `f181eab`: 227.6 / 223.0 /
+219.8 MiB/s here, for the record). Cells are criterion's point estimate in
+MiB/s; Δ is new median over base median, so **positive is faster**. The M5
+tree is `2440a92` (ticket 36).
+
+| Id | `f181eab` R1 | R2 | R3 | median | `2440a92` R1 | R2 | R3 | median | Δ |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `lex/whole-corpus` | 150.1 | 151.4 | 150.8 | **150.8** | 149.3 | 147.7 | 149.6 | **149.3** | **−1.0%** |
+| `parse/whole-corpus` | 52.3 | 52.2 | 52.3 | **52.3** | 50.9 | 49.4 | 50.2 | **50.2** | **−3.9%** |
+| `parse_semantic/whole-corpus` | 49.0 | 49.1 | 48.1 | **49.0** | 47.7 | 46.2 | 47.4 | **47.4** | **−3.4%** |
+| `parse_usx/whole-corpus` | 19.3 | 18.6 | 17.7 | **18.6** | 18.1 | 18.4 | 18.3 | **18.3** | **−1.5%** |
+| `parse_html/whole-corpus` | 44.6 | 43.6 | 43.7 | **43.7** | 42.3 | 42.6 | 42.3 | **42.3** | **−3.1%** |
+| `parse_json/whole-corpus` | 7.1 | 7.6 | 7.0 | **7.1** | 7.7 | 7.7 | 7.2 | **7.7** | **+8.4%** |
+| `reference_index/whole-corpus` | 281.6 | 271.7 | 277.7 | **277.7** | 281.1 | 277.4 | 265.8 | **277.4** | **−0.1%** |
+| `analyze/whole-corpus` | 362.3 | 357.9 | 357.4 | **357.9** | 372.3 | 370.4 | 355.0 | **370.4** | **+3.5%** |
+
+**Verdict: `parse` is over the 3% threshold, and that is ticket 37.**
+`parse_semantic` and `parse_html` ride on the parser and move with it;
+`lex` did not change and is within its spread; `parse_usx`,
+`reference_index` and `parse_json` are inside their own noise (`parse_json`'s
+spread is 7–8% on both sides). Nothing in M5 was meant to touch the parse
+path — `usfm_codegen` is a new crate the parser does not see — but the
+round-trip fixes of tickets 27, 35 and 36 all landed in it, and several are
+per-node work in hot places (`InlineContainer::add_child` now checks the
+last child and trims on every `Text`; `parse_char`'s close path resolves a
+marker *name* for every character style to fold `\va`/`\vp`; the paragraph
+close compares a marker name for `\cp`). Spread over the three rounds is
+0.3% / 2.9% on `parse` (base / M5), so the first job of the ticket is to
+confirm the number, then attribute it as ticket 24 did.
+
 ## Reading a regression
 
 The VM is a shared 4-vCPU cloud instance, so the numbers move on their own.
