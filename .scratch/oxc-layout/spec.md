@@ -242,6 +242,34 @@ tree per document (milliseconds per book; revisit if a measurement says so).
 Frontier after this: empty — tickets 10 and 33 are ready-for-human. The
 loop stops here.
 
+## After M6: what is left, and where it is written down
+
+Recorded 2026-09-20 when the loop stopped, so that nothing lives only in a
+session's context. Three tiers.
+
+**Blocked on Michael** (the two open tickets; both small once answered):
+ticket 33 (delete `wip/`; the lexicon question) and ticket 10 (the usfm-js
+aligned fixtures; a licence call). With those done every milestone of this
+spec is closed.
+
+**Loose ends found on the way, deliberately left, now ticketed at
+`needs-triage`** so a loop does not take them until someone says they are
+wanted: 38 (`ReferenceIndex` does not see a `\periph` division's chapters),
+39 (the server parses once per request rather than per document version),
+40 (formatting as a minimal diff rather than one whole-document edit), 41
+(two writer/parser asymmetries: `\cp`'s raw-word number, the kept `\xo*`).
+Beside them, the hardening plan's own unchecked boxes
+(`docs/plans/hardening.md`): marker-at-end-of-line handling, `\fig`
+attribute naming, a malformed real-world corpus, and a benchmark gate in
+CI (numbers are compared by hand at each boundary, per "Reading a
+regression" in `docs/benchmarks.md`).
+
+**Work with no plan yet**, which needs a spec section before a loop could
+run it: ticket 42 (a USX reader into `Document`, so USX -> USFM -> USX can
+be checked); the lexicon feature if ticket 33's answer wants it back;
+output formats beyond USX, HTML, JSON and SILE, which CLAUDE.md's "Output
+Generation" stream names and this spec never scheduled.
+
 ## Open, to settle when reached
 
 - M2: which corpus. Settled: WEB (public domain) via its USFX rendering, since
