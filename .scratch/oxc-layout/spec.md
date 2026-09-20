@@ -112,7 +112,36 @@ attribute validation that needs the stylesheet) and `ReferenceIndex` into
 Exit: the parser reports only what it needs to recover; every moved `Code` still
 has its test; the facade's `parse()` returns the union, so tcdocs is unchanged.
 
+Closed 2026-09-20 (tickets 18–24; `09f2ca4`, `bb33209`, `dea9548`, `738e588`,
+`f18f402`, `07b2825`, `f181eab`). Checked on `main` at `f181eab`:
+- The parser reports only what it needs to recover: every one of the 59
+  codes was audited (ticket 21; the table is the `usfm_diagnostics` module
+  doc), 22 are semantic (`Code::is_semantic()`, `usfm_semantic::EMITS`), the
+  37 the parser still emits each describe a repair or something no longer
+  visible in the tree (a dropped verse, a normalised leading zero, a per-name
+  unknown milestone, the nesting decision). Yes.
+- Every moved code still has its test: `recovery_table_is_covered` requires a
+  `recovery__<code>.snap` for every parser code, `semantic_checks_are_covered`
+  a `checks__<code>.snap` for every semantic code, and
+  `semantic_emits_exactly_the_semantic_codes` ties `EMITS` to
+  `is_semantic()` in both directions. Yes.
+- The facade's `parse()` returns the union: `usfm::parse_with_options` merges
+  the parser's and `analyze`'s diagnostics, stably sorted by span; the
+  conformance harness, the CLI, the fuzz targets and the benches go through
+  it. tcdocs 215 / 0 / 44 and usfm-grammar 16 / 0, baseline empty, on every
+  ticket; three empirical diffs over all 385 inputs found no diagnostic gained
+  or lost across the moves. Yes.
+Also in M4: `ReferenceIndex` lives in `usfm_semantic`; four new order codes
+(ticket 23); the semantic pass costs 7% of `parse` (ticket 24, floor about
+3.5% for the second walk). Found on the way and left: no sub-span fields on
+nodes (M6 revisits if the language server wants narrower diagnostics).
+
 ## M5. Codegen and round trip
+
+Ticketed 2026-09-20 at the M4 boundary: 25 (`usfm_codegen` and the
+round-trip property test on the `pass` corpus), 26 (`usfm format` and
+`--format usfm`), 27 (the round trip as a fuzz target and a gated
+conformance step).
 
 `usfm_codegen` writes USFM from the AST.
 
