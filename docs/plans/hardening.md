@@ -511,15 +511,21 @@ and `unlisted-book-code` is the first check to have moved.
 
 ### Phase 5. Language server on the parser
 
-- [ ] Rebuild `usfm_language_server` on `ParseResult`: diagnostics from the parser's
+- [x] Rebuild `usfm_language_server` on `ParseResult`: diagnostics from the parser's
       diagnostics, document symbols from `ReferenceIndex`, hover on markers from the
       stylesheet. Full-document reparse per change is fine at 10 ms per book.
-      **Started 2026-09-20 (M6, ticket 30): `apps/usfm_language_server` is a new
-      crate on the `usfm` facade — full text sync, a document store, and
+      Done 2026-09-20 (M6, tickets 30–32): `apps/usfm_language_server` is a new
+      crate on the `usfm` facade — full text sync, a document store,
       `publishDiagnostics` from `usfm::parse_with` (the parser's diagnostics and
-      `usfm_semantic`'s together) after every open and change, with no debounce.
-      The parked `wip/` server is replaced, not fixed; ticket 33 deletes it.
-      Symbols and hover are tickets 31 and 32.**
+      `usfm_semantic`'s together) after every open and change with no debounce
+      (30); formatting through `usfm_codegen` and hover from the stylesheet's
+      `\Name`/`\Description`/`\OccursUnder` or the reference (31); the outline,
+      completion filtered by `usfm_semantic::placement::check`, and quick fixes
+      for five parser repairs (32). Symbols come from a walk rather than
+      `ReferenceIndex`, which does not see the chapters of a `\periph` division.
+      Each feature has a unit-tested module and a stdio JSON-RPC test. The parked
+      `wip/` server is replaced, not fixed; its deletion is ticket 33
+      (ready-for-human, with the lexicon question).
 - [ ] Lexicon checking becomes a separate, optional feature layered on the AST's text
       nodes rather than raw text, so markers and attributes are never spell-checked.
       (Ticket 33 asks whether it should come back at all.)

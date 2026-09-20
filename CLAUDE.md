@@ -658,7 +658,12 @@ tickets are done**: the language server is rebuilt in
 hover (31) and symbols, completion and code actions (32). What remains is
 **ticket 33** — delete `wip/`, and the question of whether the lexicon
 feature is wanted back — which is **ready-for-human** and not an agent's to
-pick up; until it is answered, `wip/` stays parked and M6 stays open.
+pick up; until it is answered, `wip/` stays parked and M6 stays open on that
+one item. M6's other exit criteria were checked and recorded in the spec on
+2026-09-20 (the boundary benchmark rerun is `docs/benchmarks.md`, "M6
+close": within noise). **The frontier is empty**: tickets 10 and 33 are the
+only open ones and both are ready-for-human, so an unattended session has
+nothing to take until one of them is answered.
 Tickets are in
 `.scratch/oxc-layout/issues/`, written one milestone ahead. Unattended
 sessions follow `docs/agents/loop.md`; `scripts/gate.sh` is the gate before every push.

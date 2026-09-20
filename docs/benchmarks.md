@@ -983,6 +983,44 @@ binary is the same; the sitting is not — the confirmation ran that one id
 alone, this run works through eight groups before reaching it. Compare
 medians within one interleaved sitting, never a table against a table.
 
+## M6 close: measured against the ticket 37 binary
+
+The boundary rerun, against the M5 tree as ticket 37 left it (`0b05aa9`; the
+`corpus-fix` binary that ticket recorded) and the M6 tree at `e304772`, both
+at `CARGO_PROFILE_BENCH_CODEGEN_UNITS=1`, three rounds turn about on every
+whole-corpus id. M6 added `apps/usfm_language_server`, two `Option<String>`
+fields to `StyleRule` and the `placement` module to `usfm_semantic`; nothing
+in the parse path was meant to move.
+
+| Id | `0b05aa9` R1 | R2 | R3 | median | `e304772` R1 | R2 | R3 | median | Δ |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `lex/whole-corpus` | 146.7 | 148.5 | 148.5 | **148.5** | 149.5 | 147.2 | 149.5 | **149.5** | **+0.7%** |
+| `parse/whole-corpus` | 49.8 | 52.9 | 53.2 | **52.9** | 50.3 | 52.6 | 51.0 | **51.0** | **−3.6%** |
+| `parse_semantic/whole-corpus` | 48.0 | 49.0 | 48.8 | **48.8** | 48.2 | 48.4 | 47.9 | **48.2** | **−1.1%** |
+| `parse_usx/whole-corpus` | 18.4 | 18.7 | 18.9 | **18.7** | 18.3 | 18.6 | 18.9 | **18.6** | **−0.3%** |
+| `parse_html/whole-corpus` | 42.7 | 44.4 | 44.6 | **44.4** | 43.1 | 43.4 | 43.3 | **43.3** | **−2.5%** |
+| `parse_json/whole-corpus` | 7.3 | 7.2 | 7.9 | **7.3** | 7.5 | 7.1 | 7.1 | **7.1** | **−1.5%** |
+| `codegen/whole-corpus` | 217.5 | 221.0 | 221.7 | **221.0** | 216.0 | 218.8 | 213.2 | **216.0** | **−2.3%** |
+| `reference_index/whole-corpus` | 274.1 | 276.1 | 281.2 | **276.1** | 267.9 | 284.4 | 280.9 | **280.9** | **+1.7%** |
+| `analyze/whole-corpus` | 359.3 | 366.2 | 360.2 | **360.2** | 357.6 | 357.8 | 350.8 | **357.6** | **−0.7%** |
+
+The `parse` row reads over the threshold, but look at its rounds: 49.8 / 52.9
+/ 53.2 on one side and 50.3 / 52.6 / 51.0 on the other, spreads of 6.4% and
+4.5% where this id normally moves 0.3–2.9%. So it was confirmed the way
+ticket 37's regression was, on `parse/whole-corpus` alone, turn about, in one
+sitting:
+
+| | R1 | R2 | R3 | median |
+| --- | ---: | ---: | ---: | ---: |
+| `0b05aa9` | 52.5 | 51.2 | 52.3 | **52.3** |
+| `e304772` | 52.4 | 52.9 | 51.6 | **52.4** |
+
+**+0.2%: no regression, no ticket.** The eight-group table's `parse` row is
+the first round of each binary being slow (the machine had just finished a
+build), which the one-id rerun did not reproduce. The rule stands: a
+whole-corpus row over the threshold is confirmed on that id alone before it
+becomes a ticket, and the confirmation is what decides.
+
 ## Reading a regression
 
 The VM is a shared 4-vCPU cloud instance, so the numbers move on their own.
