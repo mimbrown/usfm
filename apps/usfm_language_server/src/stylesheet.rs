@@ -183,6 +183,31 @@ mod tests {
         assert!(Arc::ptr_eq(&sheet, &again));
     }
 
+    /// A `custom.sty` saved with a byte-order mark, as Paratext's own
+    /// project sheets can be: its first marker used to vanish, so `\zgrk`
+    /// was reported as an unknown custom marker and dropped.
+    #[test]
+    fn a_custom_sty_with_a_byte_order_mark_keeps_its_first_marker() {
+        let directory = scratch("bom");
+        std::fs::write(
+            directory.join(PROJECT_STYLESHEET),
+            "\u{feff}\\Marker zgrk\r\n\\Name grk - Change to Greek font\r\n\\Endmarker zgrk*\r\n\
+             \\StyleType character\r\n\\OccursUnder p q1 f\r\n\
+             \\TextProperties nonpublishable nonvernacular\r\n",
+        )
+        .expect("writing custom.sty");
+
+        let mut sheets = Stylesheets::default();
+        let (sheet, warning) = sheets.for_document(Some(&book(&directory)));
+        assert_eq!(warning, None);
+        assert!(sheet.get_rule_by_marker("zgrk").is_some());
+        let parse = usfm::parse_with(
+            "\\id MAT\n\\c 1\n\\p \\v 1 a \\zgrk logos\\zgrk* b\n",
+            &sheet,
+        );
+        assert!(parse.diagnostics.is_empty(), "{:?}", parse.diagnostics);
+    }
+
     #[test]
     fn a_configured_path_wins_over_the_file_beside_the_document() {
         let directory = scratch("configured");
