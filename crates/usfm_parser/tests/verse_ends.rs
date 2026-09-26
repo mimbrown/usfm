@@ -321,31 +321,72 @@ p: v2 "the earth" /2
     );
 }
 
-/// Peripheral matter closes no verse, and that has to include the `\periph`
-/// line itself. A `\v` there used to emit the open verse's end into the
-/// paragraph *before* the periph while its own `VerseStart` was thrown away
-/// with the rest of the title line, leaving a `VerseEnd` with no `VerseStart`
-/// — a tree no source produces and no writer can write back. The round-trip
-/// fuzz target found it on `" i\periph\v 2"`, and verse tracking is suspended
-/// across a periph since (ticket 27).
+/// A `\v` on the `\periph` line. It used to emit the open verse's end into
+/// the paragraph *before* the periph while its own `VerseStart` was thrown
+/// away with the rest of the title line (the round-trip fuzz target found it
+/// on `" i\periph\v 2"`, ticket 27); ticket 35 kept the start, in an
+/// implicit `\p` at the head of the division, which is the same tree
+/// `\periph` followed by `\p \v 2` gives and what the writer writes.
 ///
-/// The `VerseStart` itself is kept now (ticket 35): only text is the title,
-/// and everything else on the line opens an implicit `\p` at the head of the
-/// division rather than vanishing. That is the same tree `\periph` followed by
-/// `\p \v 2` has always given, which is what the writer writes — and no end
-/// comes with it either way, because the periph suspends tracking.
+/// Since ticket 44 a division tracks verses and chapters like the top level:
+/// the chapter open before `\periph` ends before it (nothing after the line
+/// is outside the division), and the verse the line opens ends with the
+/// division.
 #[test]
-fn a_verse_on_a_periph_line_opens_no_verse_end() {
+fn a_verse_on_a_periph_line_ends_with_the_division() {
     let expected = r#"
 id Gen
 c1
 p: "a"
+/c1
 periph:
-  p: v2
-/c1"#;
+  p: v2 /2"#;
     check("\\id GEN\n\\c 1\n\\p a\n\\periph\\v 2", expected);
     // The spelling the writer produces, which must read back the same.
     check("\\id GEN\n\\c 1\n\\p a\n\\periph\n\\p \\v 2", expected);
+}
+
+/// Ticket 44: chapters and verses inside a division are closed like any
+/// others — `usx.rnc`'s `PeripheralContent` allows `Chapter` — and whatever
+/// is open when the division ends ends inside it, before the next `\periph`.
+#[test]
+fn chapters_and_verses_inside_a_periph_division_are_closed() {
+    check(
+        "\\id FRT\n\\periph Title|id=\"title\"\n\\c 1\n\\p \\v 1 a\n\\c 2\n\\p \\v 1 b\n\\periph Next\n\\p c",
+        r#"
+id Frt
+periph:
+  c1
+  p: v1 "a" /1
+  /c1
+  c2
+  p: v1 "b" /1
+  /c2
+periph:
+  p: "c""#,
+    );
+}
+
+/// The verse and chapter open before a `\periph` end before it, in the last
+/// paragraph of verse text, since everything after the line is the
+/// division's; a `\v` inside the division before any `\c` opens a verse of
+/// its own that ends with it.
+#[test]
+fn a_periph_division_ends_the_verse_and_chapter_before_it() {
+    check(
+        "\\id GEN\n\\c 1\n\\p \\v 1 a\n\\periph Maps\n\\p \\v 2 b\n\\id EXO\n\\c 1\n\\p \\v 1 c",
+        r#"
+id Gen
+c1
+p: v1 "a" /1
+/c1
+periph:
+  p: v2 "b" /2
+id Exo
+c1
+p: v1 "c" /1
+/c1"#,
+    );
 }
 
 #[test]
