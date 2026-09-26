@@ -2,10 +2,10 @@
 //! Protocol.
 //!
 //! The server the VS Code extension in `vscode/` spawns. It is the rebuild
-//! M6 asks for (ticket 30): the parked `wip/usfm_language_server` checked
-//! words against a SQLite lexicon with regexes and never saw a parse tree,
-//! while this one is a thin shell around the facade — every diagnostic it
-//! publishes is `usfm::parse_with`'s, which is the parser's repairs and
+//! M6 asks for (ticket 30): the server it replaced (deleted by ticket 33)
+//! checked words against a SQLite lexicon with regexes and never saw a parse
+//! tree, while this one is a thin shell around the facade — every diagnostic
+//! it publishes is `usfm::parse_with`'s, which is the parser's repairs and
 //! `usfm_semantic`'s checks together, the same list `usfm parse` prints.
 //!
 //! What it answers: diagnostics on every change (ticket 30); since ticket 31

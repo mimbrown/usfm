@@ -34,7 +34,7 @@ seeds and to the round-trip test's inputs like the other vendored corpora.
 
 ## Answer
 
-2026-09-26. `tasks/benchmark/corpus/aligned/` (CC BY-SA 4.0: `LICENSE` is the
+Landed in `94b83f9` (PR #43, 2026-09-26). `tasks/benchmark/corpus/aligned/` (CC BY-SA 4.0: `LICENSE` is the
 legal code, `README.md` the provenance, plus a `NOTICE.md` entry) holds
 usfm-js at `0ecae6f169f912e1c30da6f519a7724d31dcd841`:
 `large.usfm` as `45-ACT.ult.usfm` (the ULT, aligned) and

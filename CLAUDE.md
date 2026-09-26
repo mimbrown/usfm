@@ -27,14 +27,13 @@ This project has three parallel work streams, all in progress:
      is, from the document's own sheet, `\` the trigger character) and
      `textDocument/codeAction` (a `quickfix` per parser repair that has an
      obvious edit)
-   - The stream's tickets are done. What is left of M6 is ticket 33
-     (delete `wip/`, and the lexicon question), which is **ready-for-human**:
-     do not work on it. Whatever comes next, advertise a capability only once
-     it works, and keep the diagnostics path as it is — the server holds no
-     rules of its own, it publishes the toolchain's
-   - `wip/usfm_language_server/` is the old, parked server: outside the
-     workspace, does not build, replaced rather than fixed, and deleted by
-     ticket 33. Do not work on it.
+   - The stream's M6 tickets are done, and M6 is closed (2026-09-26). The
+     old server it replaced is deleted (ticket 33), and the lexicon feature
+     that server had — a SQLite word list checked with regexes — was
+     decided against on 2026-09-26 (ticket 33): it is not coming back for
+     now. Whatever comes next, advertise a capability only once it works,
+     and keep the diagnostics path as it is — the server holds no rules of
+     its own, it publishes the toolchain's
 
 3. **Output Generation** (`crates/usfm_style/`, future crates)
    - Transform AST to HTML, Dart, XML, etc.
@@ -687,16 +686,13 @@ closed (exit criteria recorded in the spec; M5 on 2026-09-20, tickets 25–27
 and 34–36). Ticket 37 paid back the M5 parse regression, and **M6's agent
 tickets are done**: the language server is rebuilt in
 `apps/usfm_language_server` with diagnostics (ticket 30), formatting and
-hover (31) and symbols, completion and code actions (32). What remains is
-**ticket 33** — delete `wip/`, and the question of whether the lexicon
-feature is wanted back — which is **ready-for-human** and not an agent's to
-pick up; until it is answered, `wip/` stays parked and M6 stays open on that
-one item. M6's other exit criteria were checked and recorded in the spec on
-2026-09-20 (the boundary benchmark rerun is `docs/benchmarks.md`, "M6
-close": within noise). **The frontier is empty**: ticket 10 is done
-(2026-09-26) and ticket 33 is the only open one, ready-for-human, so an
-unattended session has nothing to take until it is answered. What is left
-after that — the loose ends found on the way (tickets 38–43, `needs-triage`), the
+hover (31) and symbols, completion and code actions (32), and **M6 is
+closed** (2026-09-26): ticket 33 deleted the old server and its SQLite
+lexicon crate, and the lexicon feature was decided against. M6's other exit
+criteria were checked and recorded in the spec on 2026-09-20 (the boundary
+benchmark rerun is `docs/benchmarks.md`, "M6 close": within noise). Tickets
+10 and 33, the two that waited on Michael, are both answered and done
+(2026-09-26), so nothing is blocked on him. What is left — the loose ends found on the way (tickets 38–43, `needs-triage`), the
 hardening plan's unchecked boxes, and the work with no plan yet — is listed
 in the spec under "After M6: what is left".
 Tickets are in
@@ -762,15 +758,11 @@ usfm-tools/
 │   │                      #   round-trip checks share
 │   ├── benchmark/         # criterion benches over a committed corpus
 │   └── fuzz/              # cargo-fuzz targets (own workspace, nightly)
-├── tcdocs/                # Git submodule: official USFM test suite
-└── wip/                   # Outside the workspace, does not build; ticket 33
-    │                       #   deletes it now that M6 is under way
-    ├── usfm_language_server/  # The old LSP server, replaced by `apps/`
-    └── data_layer/            # Data persistence (parked)
+└── tcdocs/                # Git submodule: official USFM test suite
 ```
 
 Every crate the ADR's tree calls for now exists: `crates/usfm_semantic`
-arrived with ticket 19 and `crates/usfm_codegen` with ticket 25. M6 rebuilds
+arrived with ticket 19 and `crates/usfm_codegen` with ticket 25. M6 rebuilt
 the language server under `apps/`.
 
 ## Running Tests
@@ -817,7 +809,7 @@ To fetch or update docs: `python3 .claude/import_docs.py`
 ## Context
 
 - Custom lexer/parser (not tree-sitter)
-- Workspace with 6 crates
+- A Cargo workspace: twelve `crates/`, two `apps/`, and the `tasks/` packages (`tasks/fuzz` has its own workspace)
 - Test suite from usfm-bible/tcdocs (git submodule)
 - Tests validate USFM → USX (XML) conversion
 - USFM spec: https://ubsicap.github.io/usfm/

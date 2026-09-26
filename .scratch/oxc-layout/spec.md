@@ -223,10 +223,12 @@ Checked 2026-09-20 on `main` at `e304772` (tickets 30–32; `c258619`,
 - The gate runs the server's tests: `cargo test --workspace` in
   `scripts/gate.sh` and CI; `scripts/miri.sh` leaves the crate out and says
   why. Yes.
-- `wip/usfm_language_server` is deleted: **no.** Ticket 33 couples the
-  deletion with the `wip/data_layer` lexicon question and is ready-for-human;
-  the deletion has no open question of its own and is a one-line change
-  once Michael answers. M6 stays open on that one item.
+- `wip/usfm_language_server` is deleted: **no** on 2026-09-20 — ticket 33
+  coupled the deletion with the `wip/data_layer` lexicon question and was
+  ready-for-human, so M6 stayed open on that one item. **Met 2026-09-26**:
+  Michael answered "delete both", and ticket 33 removed `wip/` (the old
+  server and `data_layer`) and the root `Cargo.toml`'s `exclude` entry for
+  it; the lexicon feature was decided against. **M6 is closed** (2026-09-26).
 - Benchmarks at the boundary (`docs/benchmarks.md`, "M6 close", against the
   ticket 37 binary): every group within noise; `parse` read −3.6% in the
   eight-group table with 4–6% spreads and +0.2% on a confirmation run of
@@ -239,20 +241,21 @@ top-level blocks only, so a `\periph` division's chapters are not in it
 (32 worked around it with a walk; a ticket if a caller ever needs the index
 to see them); the server re-parses on every request rather than caching a
 tree per document (milliseconds per book; revisit if a measurement says so).
-Frontier after this: empty — tickets 10 and 33 are ready-for-human. The
-loop stops here.
+Frontier after this (2026-09-20): empty — tickets 10 and 33 were
+ready-for-human, and the loop stopped there. Both were answered on
+2026-09-26 and are done, which closed M6.
 
 ## After M6: what is left, and where it is written down
 
 Recorded 2026-09-20 when the loop stopped, so that nothing lives only in a
 session's context. Three tiers.
 
-**Blocked on Michael** (the two open tickets; both small once answered):
-ticket 33 (delete `wip/`; the lexicon question) and ticket 10 (the usfm-js
-aligned fixtures; a licence call). With those done every milestone of this
-spec is closed. Ticket 10 was answered on 2026-09-26 ("vendor them") and is
-done: `tasks/benchmark/corpus/aligned/` is the benchmark's `aligned` class,
-so ticket 33 is the only one left in this tier.
+**Blocked on Michael: nothing.** The tier held ticket 33 (delete `wip/`;
+the lexicon question) and ticket 10 (the usfm-js aligned fixtures; a licence
+call). Both were answered on 2026-09-26 and both are done: ticket 10
+("vendor them") made `tasks/benchmark/corpus/aligned/` the benchmark's
+`aligned` class, and ticket 33 ("delete both") deleted `wip/` and decided the
+lexicon feature against. Every milestone of this spec is closed.
 
 **Loose ends found on the way, deliberately left, now ticketed at
 `needs-triage`** so a loop does not take them until someone says they are
@@ -269,8 +272,7 @@ regression" in `docs/benchmarks.md`).
 
 **Work with no plan yet**, which needs a spec section before a loop could
 run it: ticket 42 (a USX reader into `Document`, so USX -> USFM -> USX can
-be checked); the lexicon feature if ticket 33's answer wants it back;
-output formats beyond USX, HTML, JSON and SILE, which CLAUDE.md's "Output
+be checked); output formats beyond USX, HTML, JSON and SILE, which CLAUDE.md's "Output
 Generation" stream names and this spec never scheduled.
 
 ## Open, to settle when reached

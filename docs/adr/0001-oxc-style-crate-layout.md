@@ -42,8 +42,11 @@ tasks/
   conformance        tcdocs runner (was `tests/`, moved by ticket 17)
   benchmark          criterion benches over a fixed corpus
   fuzz               cargo-fuzz targets
-wip/                 outside the workspace: old language server, data_layer
 ```
+
+The tree first had a `wip/` directory beside these, outside the workspace,
+holding the old language server and `data_layer`; the parked `wip/` tree was
+deleted by ticket 33 (2026-09-26) once `apps/usfm_language_server` replaced it.
 
 Dependencies point one way: span <- style, ast <- diagnostics <- parser <-
 semantic <- outputs <- pipeline <- facade <- apps. No output crate depends on

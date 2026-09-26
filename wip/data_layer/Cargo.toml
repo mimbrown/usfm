@@ -1,9 +1,0 @@
-[package]
-name = "data_layer"
-version = "0.1.0"
-edition = "2024"
-license = "MIT"
-
-[dependencies]
-rusqlite_regex = { workspace = true }
-rusqlite = { workspace = true }
