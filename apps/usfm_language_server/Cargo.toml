@@ -5,8 +5,7 @@ edition = "2024"
 license = "MIT"
 
 # The language server the VS Code extension in `vscode/` spawns (ticket 30,
-# M6), rebuilt in `apps/` on the facade. The parked `wip/usfm_language_server`
-# is the one it replaces.
+# M6), built in `apps/` on the facade.
 [[bin]]
 name = "usfm-language-server"
 path = "src/main.rs"

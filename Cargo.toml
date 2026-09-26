@@ -18,11 +18,10 @@ members = [
   "tasks/benchmark",
   "tasks/conformance",
 ]
-# `wip/` is parked outside the workspace (ticket 01); M6 rebuilds the language
-# server in `apps/`. `tasks/fuzz` is a cargo-fuzz crate: it needs nightly and
+# `tasks/fuzz` is a cargo-fuzz crate: it needs nightly and
 # `-Zsanitizer=address`, so it keeps its own workspace and lockfile and is run
 # on demand (`tasks/fuzz/README.md`), not by the gate.
-exclude = ["wip", "tasks/fuzz"]
+exclude = ["tasks/fuzz"]
 resolver = "2"
 
 [workspace.dependencies]
@@ -36,8 +35,7 @@ regex = "1.11.1"
 regex-automata = "0.4.9"
 serde = "1.0.210"
 serde_json = "1.0"
-# The language server's runtime (ticket 30; both were workspace dependencies
-# before ticket 01 parked `wip/`). `tower-lsp-server` is the maintained fork of
+# The language server's runtime (ticket 30). `tower-lsp-server` is the maintained fork of
 # `tower-lsp` and carries its own `lsp_types`. `apps/usfm_language_server` is
 # the only async crate in the workspace, so tokio is named for it alone and
 # with the features an stdio LSP loop needs rather than `full`.

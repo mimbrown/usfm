@@ -26,7 +26,8 @@ AST shape is frozen; Phase 2 (conformance) and Phase 3 (traversal) are done. The
 2026-09-19 (`.scratch/oxc-layout/issues/02-clippy-clean-and-gated.md`); it runs in
 `scripts/gate.sh`, which CI calls.
 The workspace builds since 2026-09-19: `usfm_language_server` and `data_layer`
-moved to `wip/`, outside the workspace (`.scratch/oxc-layout/issues/01-move-wip-crates-out-of-workspace.md`).
+moved to `wip/`, outside the workspace (`.scratch/oxc-layout/issues/01-move-wip-crates-out-of-workspace.md`),
+and were deleted by ticket 33 on 2026-09-26.
 
 Only **2** failures are now an error reported on valid input, down from 9:
 `advanced/nesting1` and `advanced/periph`, neither milestone-related.
@@ -275,8 +276,9 @@ paragraph-level attributes (`unexpected-pipe`).
       `.scratch/oxc-layout/issues/01-move-wip-crates-out-of-workspace.md`): both
       `usfm_language_server` and `data_layer` are now `wip/` crates with
       `exclude = ["wip"]` in the root `Cargo.toml`, so `cargo build --workspace`
-      passes with no `--exclude`. They still do not compile (8 errors); Phase 5 / M6
-      rebuilds the server on the parser.
+      passes with no `--exclude`. They never compiled again (8 errors); Phase 5 / M6
+      rebuilt the server on the parser in `apps/`, and ticket 33 deleted `wip/`
+      and dropped its `exclude` entry on 2026-09-26.
 - [x] Delete root `build.rs` (references files that do not exist). Deleted
       2026-09-12; the root `Cargo.toml` is `[workspace]`-only, so Cargo never ran it.
 - [x] Stop the `usfm_parser` build script writing into `src/`. Done 2026-09-12:
@@ -523,12 +525,14 @@ and `unlisted-book-code` is the first check to have moved.
       completion filtered by `usfm_semantic::placement::check`, and quick fixes
       for five parser repairs (32). Symbols come from a walk rather than
       `ReferenceIndex`, which does not see the chapters of a `\periph` division.
-      Each feature has a unit-tested module and a stdio JSON-RPC test. The parked
-      `wip/` server is replaced, not fixed; its deletion is ticket 33
-      (ready-for-human, with the lexicon question).
-- [ ] Lexicon checking becomes a separate, optional feature layered on the AST's text
-      nodes rather than raw text, so markers and attributes are never spell-checked.
-      (Ticket 33 asks whether it should come back at all.)
+      Each feature has a unit-tested module and a stdio JSON-RPC test. The old
+      server was replaced, not fixed, and deleted by ticket 33 (2026-09-26).
+- ~~Lexicon checking becomes a separate, optional feature layered on the AST's text
+  nodes rather than raw text, so markers and attributes are never spell-checked.~~
+  **Decided against 2026-09-26** (ticket 33, Michael): the lexicon feature is not
+  coming back for now, and `wip/data_layer`, the SQLite lexicon the old server
+  used, was deleted with it. Not done, and not open: reopening it takes a new
+  ticket with a design.
 - [x] Re-enable the `LanguageClient` in the VS Code extension. Done 2026-09-20
       (ticket 30): `client/extension.ts` constructs and starts the client again,
       spawns `usfm-language-server`, and shows the server's
@@ -610,6 +614,8 @@ Decide before Phase 1 starts. Each is an ADR candidate.
    not stored in the AST.
 5. **Language server scope.** Is the lexicon feature something to keep at all, or was
    it an experiment? It drives the `data_layer` and `rusqlite` dependencies.
+   **Decided 2026-09-26 (ticket 33): not kept.** Both crates are deleted and
+   `rusqlite` has not been a dependency since ticket 01.
 
 ## Sequencing summary
 
