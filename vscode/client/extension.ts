@@ -191,9 +191,9 @@ export async function activate(context: ExtensionContext) {
       }
     }
     const ext = process.platform === "win32" ? ".exe" : "";
-    // NOTE: The `./target/release` path is aligned with the path defined in .github/workflows/release_vscode.yml
-    // The binary is `apps/usfm_language_server`'s, built by `npm run
-    // server:build:release` (ticket 30).
+    // The binary is `apps/usfm_language_server`'s, built into
+    // `vscode/target/release` by `npm run server:build:release` (ticket 30)
+    // and packaged through `.vscodeignore`.
     return (
       process.env.SERVER_PATH_DEV ??
       join(context.extensionPath, `./target/release/usfm-language-server${ext}`)
