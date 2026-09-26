@@ -401,8 +401,11 @@ Recent progress:
     `\periph` in a sidebar swallows the `\esbe` that closes it);
   - `\periph` lines close no verse (a `\v` there emitted an end into the
     paragraph before the periph while its own start was thrown away with the
-    rest of the line; verses are suspended across a periph now, and ticket 35
-    keeps the start), and a default attribute value that
+    rest of the line; ticket 35 keeps the start, and since ticket 44 a
+    division tracks verses and chapters itself — what is open before
+    `\periph` ends before it, what the division opens ends inside it — where
+    ticket 27 had suspended them across the whole division, leaving every
+    `\c` and `\v` in one without its `eid`), and a default attribute value that
     ends one drops its trailing whitespace, which the line break the writer
     ends that line with eats anyway;
   - two writers were wrong rather than the parser: `usfm_codegen` wrote a

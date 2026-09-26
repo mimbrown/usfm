@@ -1,6 +1,6 @@
 # 44. No verse or chapter ends inside a `\periph` division
 
-Status: needs-triage
+Status: resolved
 Milestone: after M6
 
 Found by ticket 38. A `\c` and `\v` written inside a `\periph` division get
@@ -41,3 +41,23 @@ division, which is why nothing caught it.
 
 Done when the example above writes one `eid` per `sid` and no `vid` on the
 second paragraph, and the gate is green.
+
+## Answer
+
+Picked by Michael on 2026-09-26. The rule is the one proposed above, and it
+amends plan D7 ("peripheral matter has no verses"), which now says so.
+`parse_periph` no longer suspends verse tracking. Before the `\periph` line
+it ends the open verse (in the last verse-text block before the division)
+and the open chapter, since nothing written after that line is outside the
+division; when the division ends it ends whatever the division opened,
+inside it. Sidebars still suspend tracking, and a periph inside a sidebar
+tracks nothing, as before.
+
+Tests: `verse_ends.rs`'s `chapters_and_verses_inside_a_periph_division_are_closed`
+and `a_periph_division_ends_the_verse_and_chapter_before_it`; the old
+`a_verse_on_a_periph_line_opens_no_verse_end` is now
+`a_verse_on_a_periph_line_ends_with_the_division` (both spellings still agree);
+`usx_text.rs`'s `chapters_inside_a_periph_division_are_closed` pins the `eid`s
+and the missing `vid`; `recovery__block_after_a_periph_that_nothing_ended`
+gains its `VerseEnd`. No conformance case has a `\v` in a division, so tcdocs
+is unchanged.

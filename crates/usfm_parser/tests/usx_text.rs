@@ -228,3 +228,24 @@ fn a_closed_style_inside_ft_still_nests_in_usx() {
         "{output}"
     );
 }
+
+/// Ticket 44: chapters inside a `\periph` division get their `eid`s, and a
+/// paragraph that opens with its own `\v` is not marked as continuing one
+/// (`vid`), which it was while the division left every verse open.
+#[test]
+fn chapters_inside_a_periph_division_are_closed() {
+    let output = usx(
+        "\\id FRT\n\\periph Title|id=\"title\"\n\\c 1\n\\p \\v 1 a\n\\c 2\n\\p \\v 1 b\n",
+    );
+    for closer in [
+        r#"<verse eid="FRT 1:1" />"#,
+        r#"<chapter eid="FRT 1" />"#,
+        r#"<verse eid="FRT 2:1" />"#,
+        r#"<chapter eid="FRT 2" />"#,
+    ] {
+        assert!(output.contains(closer), "no {closer} in\n{output}");
+    }
+    assert!(!output.contains("vid="), "{output}");
+    let close = output.find(r#"<chapter eid="FRT 2" />"#).unwrap();
+    assert!(close < output.find("</periph>").unwrap(), "{output}");
+}

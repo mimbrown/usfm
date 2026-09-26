@@ -266,7 +266,7 @@ wanted: 38 (`ReferenceIndex` does not see a `\periph` division's chapters),
 43 (recovering usfm-js's unclosed "old format" milestones, found by ticket 10).
 Michael picked 38, 41 and 43 on 2026-09-26 and all three are resolved;
 38 found ticket 44 (no verse or chapter ends inside a `\periph` division),
-also at `needs-triage`. 39, 40 and 42 wait as they were.
+which Michael picked next and is resolved too. 39, 40 and 42 wait as they were.
 Beside them, the hardening plan's own unchecked boxes
 (`docs/plans/hardening.md`): marker-at-end-of-line handling, `\fig`
 attribute naming, a malformed real-world corpus, and a benchmark gate in

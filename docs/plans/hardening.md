@@ -217,6 +217,11 @@ wants. Consequences, all derived from tcdocs:
   of input, and USX writes `<periph alt="Title" id="x">`. Its attribute list is the
   one paragraph-level attribute list in USFM and ends at the line break. Neither
   container is walked by the verse-end pass; peripheral matter has no verses.
+  *Amended 2026-09-26 (ticket 44, Michael's call):* a periph division does
+  track its verses and chapters. `usx.rnc`'s `PeripheralContent` allows
+  `Chapter`, and a division runs to the next `\periph` or `\id`, so what is
+  open before `\periph` ends before it and what the division opens ends
+  inside it. Sidebars are unchanged: a verse still runs across one.
 - A verse open at `\c` ends in its own chapter: the end-insertion pass records
   chapter starts as boundaries, so it no longer lands in the next chapter's `\d`.
 - `//` is `Inline::OptBreak { span }`, USX `<optbreak/>`, HTML `<wbr>`; the

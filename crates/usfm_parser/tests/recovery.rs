@@ -908,9 +908,8 @@ fn a_periph_inside_a_sidebar_ends_with_the_sidebar() {
 /// dropped marker ends nothing, so the blocks after it are still the
 /// division's. (A block left beside the periph would be swallowed by it when
 /// the tree is written out, which is how the round-trip fuzz target found
-/// this, ticket 27.) Verses stay suspended across the continuation, as they
-/// are anywhere in peripheral matter: the `\v` below opens no verse, so
-/// nothing goes looking for its end.
+/// this, ticket 27.) Since ticket 44 a division tracks its verses, so the
+/// `\v` below opens one, and its end goes inside the division too.
 #[test]
 fn a_block_after_a_periph_that_nothing_ended_is_inside_it() {
     let source = "\\periph\\id\n\\p x \\v 3 y";
@@ -920,8 +919,8 @@ fn a_block_after_a_periph_that_nothing_ended_is_inside_it() {
         "the paragraph should be inside the periph:\n{rendered}"
     );
     assert!(
-        !rendered.contains("VerseEnd"),
-        "a verse inside a periph is not tracked:\n{rendered}"
+        rendered.contains("  Para p") && rendered.contains("    VerseEnd 3"),
+        "the verse ends inside the periph:\n{rendered}"
     );
     snapshot("block_after_a_periph_that_nothing_ended", source);
 }
