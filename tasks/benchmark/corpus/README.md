@@ -1,7 +1,7 @@
 # Benchmark corpus
 
-The fixed USFM the M2 benchmarks (ticket 04) and the fuzz seeds (ticket 06)
-run against. Everything here is committed, including the tools that produced
+The fixed USFM the M2 benchmarks (ticket 04) run against, and the
+aligned books the fuzz seeds (ticket 06) take from it. Everything here is committed, including the tools that produced
 it, so a number in `docs/benchmarks.md` can always be tied to the exact bytes
 it was measured on.
 
@@ -10,13 +10,20 @@ corpus/
   web/                       86 files, the whole World English Bible
   synthetic/
     attributes-heavy/        3 books, every word carries \w attributes
-    alignment-heavy/         Luke, every word inside \zaln-s/\zaln-e
+  aligned/                   unfoldingWord's Acts from usfm-js (ticket 10):
+                             the English ULT, every word inside
+                             \zaln-s/\zaln-e, and the Greek UGNT it is
+                             aligned to. CC BY-SA 4.0; its own README
   tools/
     usfx_to_usfm.py          USFX -> USFM 3, one file per book
     synthesize.py            web/ -> synthetic/, seeded and deterministic
+    usfmjs_oldformat.py      closes usfm-js's unclosed milestones -> aligned/
 ```
 
 ## Source and licence
+
+`aligned/` has its own source, licence and README; everything else here is
+the WEB.
 
 The text is the **World English Bible** (WEB), which is in the **public
 domain** — no copyright, no attribution requirement, no restriction on
@@ -138,7 +145,8 @@ Every file was run through `target/release/usfm parse <file> -o out.usx`
 | --- | --- | --- |
 | — | — | 0 |
 
-`synthetic/` — 4 files, **no errors**:
+`synthetic/` — 3 files since ticket 10 (the 4 counted here when it held the
+synthetic `alignment-heavy` Luke too), **no errors**:
 
 | Code | Severity | Count |
 | --- | --- | --- |
@@ -147,26 +155,61 @@ Every file was run through `target/release/usfm parse <file> -o out.usx`
 
 The two Info codes are expected and realistic: `\w` inside `\wj` (Luke) and
 inside `\qs` (Psalms) is what unfoldingWord's aligned texts write too, and
-`\zaln-s`/`\zaln-e` are custom milestones no stylesheet declares.
+`\zaln-s`/`\zaln-e` are custom milestones no stylesheet declares. (The two
+`unknown-custom-milestone` were the synthetic Luke's; `attributes-heavy` alone
+reports only the first code.)
+
+`aligned/` — 2 files (ticket 10), measured with `usfm parse <file>
+--diagnostics json` on the files as committed, that is with their milestones
+closed (see `aligned/README.md`):
+
+| Code | Severity | `45-ACT.ult.usfm` | `45-ACT.ugnt.usfm` |
+| --- | --- | ---: | ---: |
+| `content-outside-paragraph` | Error | 28 | 0 |
+| `marker-not-listed-here` | Info | 17077 | 0 |
+| `unknown-custom-milestone` | Info | 2 | 0 |
+| `character-style-nested-without-plus` | Info | 0 | 59 |
+
+Every one of them is the source, not the parser. The ULT is a 2018
+translationCore export that writes a paragraph marker at the **end** of the
+line holding the paragraph's last word (`\zaln-e\*.\p`) and never after a
+`\c`: each `\c` is followed directly by `\v 1`, which opens an implicit `\p`
+and reports it (28 chapters, 28 Errors). unfoldingWord's `\s5` chunk marker
+— 299 of them, nearly all flush after a verse's last word — is a heading
+paragraph in USFM, so every verse after one sits inside that `\s5` until the
+next of the 99 `\p`, 17 `\q` or 16 `\m`, and every `\w` there is
+`marker-not-listed-here` (17 066 `\w`, 11 `\f`). `\zaln-s`/`\zaln-e` are
+custom milestones, reported once each. The UGNT's 59 are `\w` inside `\fqa`
+in footnotes, which Paratext reads as nested.
+
+Upstream, before the milestones are closed, the same two files report
+19 140 `unexpected-pipe` Errors and 19 140 `unknown-custom-marker` Warnings
+(the ULT) and 156 `unknown-marker` plus 156 `unexpected-pipe` Errors (the
+UGNT's `\k-s`), and keep every attribute list as verse text. That is correct
+— tcdocs marks the unclosed shape `validated=fail` — which is why the class
+is the closed files: the old shape measures the recovery path, not
+alignment.
 
 Both tables are the output of `usfm parse`, which since ticket 19 is the
 facade's — the parser's diagnostics *and* `usfm_semantic`'s. Ticket 23 added
 four verse- and chapter-order warnings to the second half, and the counts
 above are unchanged by them:
 
-| Code | Severity | `web/` | `synthetic/` |
-| --- | --- | --- | --- |
-| `duplicate-verse-number` | Warning | 0 | 0 |
-| `verse-out-of-order` | Warning | 0 | 0 |
-| `duplicate-chapter-number` | Warning | 0 | 0 |
-| `chapter-out-of-order` | Warning | 0 | 0 |
+| Code | Severity | `web/` | `synthetic/` | `aligned/` |
+| --- | --- | --- | --- | --- |
+| `duplicate-verse-number` | Warning | 0 | 0 | 0 |
+| `verse-out-of-order` | Warning | 0 | 0 | 0 |
+| `duplicate-chapter-number` | Warning | 0 | 0 | 0 |
+| `chapter-out-of-order` | Warning | 0 | 0 | 0 |
 
 A published Bible is the case these checks are quiet on, and the WEB is one:
 every chapter of all 86 books numbers its verses once, upwards, including the
 deuterocanon, whose Greek Esther and Daniel additions are the obvious place
 for a chapter to repeat. (Verse ranges do occur — five of them, all in
-Sirach, `\v 15-16` through `\v 19-27` — and none overlaps its neighbours.) The corpus therefore still parses with **zero
-errors**, which is the property the benches and the fuzz seeds rely on.
+Sirach, `\v 15-16` through `\v 19-27` — and none overlaps its neighbours.) `web/` and `synthetic/` therefore still parse with **zero
+errors**, which is the property the benches rely on; `aligned/`'s 28 are the
+paragraph missing after each `\c` above, and the parse that follows each is
+an ordinary one.
 
 ### Fixed: a `*` note caller
 
@@ -208,30 +251,43 @@ Ticket 04's benches report throughput per class and over the whole corpus.
 | --- | --- | --- | --- |
 | plain | `web/` | 86 | 5354.6 KB |
 | attributes-heavy | `synthetic/attributes-heavy/` | 3 | 3940.2 KB |
-| alignment-heavy | `synthetic/alignment-heavy/` | 1 | 3792.1 KB |
+| aligned | `aligned/` | 2 | 5405.0 KB |
 | note-heavy | `web/71-WIS.usfm` (already in `web/`) | 1 | 78.3 KB |
-| | **total, not double-counting note-heavy** | **90** | **13086.8 KB (12.8 MB)** |
+| | **total, not double-counting note-heavy** | **91** | **14699.8 KB (14.4 MB)** |
 
 Per file:
 
-| File | plain | attributes-heavy | alignment-heavy |
+| File | plain | attributes-heavy | aligned |
 | --- | --- | --- | --- |
 | `01-GEN.usfm` | 200.6 KB | 1387.2 KB | — |
 | `19-PSA.usfm` | 254.6 KB | 1596.2 KB | — |
-| `43-LUK.usfm` | 144.5 KB | 956.8 KB | 3792.1 KB |
+| `43-LUK.usfm` | 144.5 KB | 956.8 KB | — |
+| `45-ACT.ult.usfm` | — | — | 3829.4 KB |
+| `45-ACT.ugnt.usfm` | — | — | 1575.6 KB |
+
+**aligned replaced alignment-heavy (ticket 10).** Until then the aligned class
+was `synthetic/alignment-heavy/`, Luke with generated `\zaln-s` groups (3792.1
+KB, 90 files and 12.8 MB in all); every number in `docs/benchmarks.md` before
+the "usfm-js aligned corpus" section, `whole-corpus` included, is over that
+corpus. The class is now real text: unfoldingWord's English ULT of Acts, each
+word in an alignment milestone that names the Greek word it translates, and
+the Greek UGNT of Acts those milestones point into, each word a `\w` with a
+lemma, a Strong's number and a morphology code. The two are one class because
+they are one aligned pair and neither is a class on its own: the UGNT has no
+`\zaln` at all, and its markup density is the attributes class's. The
+synthetic Luke is no longer committed; `tools/synthesize.py --class
+alignment-heavy` regenerates it byte for byte.
 
 attributes-heavy takes three books: the longest Old Testament prose book
 (Genesis), the Psalms (poetry: 2508 `\q` plus 2969 `\q2` in 254.6 KB, the
 densest paragraph markup in the corpus) and the longest New Testament book
 (Luke, which is also the only one of the three with `\wj` and `\x`).
 
-alignment-heavy takes **Luke alone**. Alignment markup expands the source
-about twenty-sixfold, so three books came to 15.6 MB — too much repository
-weight for one benchmark class when the class measures markup density rather
-than book variety. The New Testament is where unfoldingWord's alignment shape
-comes from, and Luke at 3.8 MB is already an order of magnitude past anything
-else the benches read. `synthesize.py` carries the per-class book list, so a
-regeneration reproduces exactly what is committed.
+The synthetic alignment-heavy class took **Luke alone**. Alignment markup
+expands the source about twenty-sixfold, so three books came to 15.6 MB — too
+much repository weight for one benchmark class when the class measures markup
+density rather than book variety. `synthesize.py` carries the per-class book
+list, so a regeneration reproduces exactly what was committed.
 
 **note-heavy needs no synthetic file.** Wisdom of Solomon is the densest book
 in the corpus at **3.42 footnotes per KB** (268 `\f` in 78.3 KB), ahead of
@@ -241,10 +297,11 @@ exercises note-internal character runs as well as the note path itself.
 
 ### What the synthetic files are for
 
-No public project file with word-level attributes or alignment milestones is
-available under a licence we can commit — unfoldingWord's en_ult and en_ust
-are CC BY-SA 4.0 but live on `git.door43.org`, which this environment cannot
-reach. So both classes are generated from the WEB by `tools/synthesize.py`,
+When ticket 03 built the corpus, no public project file with word-level
+attributes or alignment milestones was available under a licence we could
+commit — unfoldingWord's en_ult and en_ust are CC BY-SA 4.0 but live on
+`git.door43.org`, which this environment cannot reach. So both classes were
+generated from the WEB by `tools/synthesize.py`,
 in the markup shape unfoldingWord's aligned texts use:
 
 ```
@@ -263,4 +320,14 @@ here should be mistaken for a translation resource.
 Only verse text is wrapped: identification lines, headings, chapter lines,
 Hebrew titles (`\d`) and the inside of notes are left as they are, as a real
 aligned text leaves them. Each paragraph stays on one line, as in `web/`, so
-the only difference between the three classes is markup density.
+the only difference between the classes is markup density.
+
+Ticket 10 then found real aligned text that could be committed — usfm-js's
+test resources carry a whole book of it, under unfoldingWord's CC BY-SA 4.0
+— and it replaced the synthetic alignment class. The real file differs from
+the synthetic one in shape as much as in content: one word or one milestone
+per line rather than one paragraph per line; nested `\zaln-s` where one
+English word translates several Greek ones (2 180 words two deep, 227 three
+deep, a handful up to eight); punctuation after `\zaln-e\*`; and paragraph
+and `\s5` markers at the ends of lines, so most verse text sits in a `\s5`
+heading. `attributes-heavy` stays synthetic.

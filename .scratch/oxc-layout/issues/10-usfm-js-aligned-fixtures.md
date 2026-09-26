@@ -1,6 +1,6 @@
 # 10. Real word-aligned USFM from usfm-js (licence call)
 
-Status: claimed
+Status: resolved
 Milestone: M2
 
 Assessed by ticket 03. https://github.com/unfoldingWord/usfm-js
@@ -31,3 +31,27 @@ synthetic `alignment-heavy` class as the benchmark's aligned input. The
 synthetic generator and its other classes stay. Rerun the benchmarks so
 `docs/benchmarks.md` has the new class's numbers, and add the files as fuzz
 seeds and to the round-trip test's inputs like the other vendored corpora.
+
+## Answer
+
+2026-09-26. `tasks/benchmark/corpus/aligned/` (CC BY-SA 4.0: `LICENSE` is the
+legal code, `README.md` the provenance, plus a `NOTICE.md` entry) holds
+usfm-js at `0ecae6f169f912e1c30da6f519a7724d31dcd841`:
+`large.usfm` as `45-ACT.ult.usfm` (the ULT, aligned) and
+`45-ACT.ugnt.oldformat.usfm` as `45-ACT.ugnt.usfm` (the UGNT). The
+`45-ACT.ugnt.usfm` this ticket named is a 130-byte placeholder upstream now,
+and the only other aligned whole book not in tcdocs (`phm.hi.alignment`) is
+the Hindi IRV, not unfoldingWord's, so neither was taken.
+
+Both upstream files are usfm-js's old format (milestones never closed with
+`\*`), which tcdocs judges `fail` and the parser reports as 19 140 + 156
+`unexpected-pipe` Errors. Committed is upstream with every milestone closed,
+by `tasks/benchmark/corpus/tools/usfmjs_oldformat.py`, which checks it
+changed nothing else. The closed files show no parser bug; the recovery of the
+unclosed shape is ticket 43 (`needs-triage`).
+
+The benchmark class is `aligned`, replacing the synthetic `alignment-heavy`
+(no longer committed; `synthesize.py --class alignment-heavy` regenerates it).
+`docs/benchmarks.md`, "usfm-js aligned corpus (ticket 10)": `parse` reads the
+real text at 90.2 MiB/s against the synthetic Luke's 88.4 in the same
+sitting. Both books round-trip and are fuzz seeds (`usfm-js__*`).
