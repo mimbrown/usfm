@@ -7,5 +7,6 @@ Periph periph@0..22
     Text "x "@14..16
     VerseStart 3@16..20
     Text "y"@21..22
+    VerseEnd 3
 --- diagnostics
 error[missing-book-code] @7..10: `\id` must be followed by a book code

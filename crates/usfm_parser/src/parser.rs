@@ -187,7 +187,8 @@ pub struct ParserImpl<'a> {
     /// places it before the child it is about to add, or hands it further
     /// out; depth 0 is a paragraph or table cell, handed to block level.
     pending_verse_end: Option<(OpenVerse, usize)>,
-    /// Depth inside sidebars and periphs, where verses are not tracked.
+    /// Depth inside sidebars, where verses are not tracked. (A `\periph`
+    /// division tracks its own since ticket 44.)
     verses_suspended: usize,
     /// End offset of the last consumed token; see `prev_token_end`.
     pub(crate) prev_token_end: u32,
@@ -720,12 +721,21 @@ impl<'a> ParserImpl<'a> {
             attributes: None,
             span: marker_span,
         });
-        // Peripheral matter has no verses, and that includes this line: only
-        // the title's *text* survives it, so a `\v` here would open a verse
-        // whose start is thrown away with the rest of the line while its end
-        // is still emitted — into the paragraph before the periph. The
-        // suspension is lifted after the periph's blocks, below.
-        self.verses_suspended += 1;
+        // A division runs to the next `\periph` or `\id`, so nothing written
+        // after this line is outside it: the verse and the chapter open
+        // before it end here, before the periph (ticket 44). Inside, verses
+        // and chapters are tracked as at the top level — `usx.rnc`'s
+        // `PeripheralContent` allows `Chapter`, and every chapter in USX is
+        // closed — and whatever is still open when the division ends ends
+        // inside it, below. A `\v` on this line opens its verse like any
+        // other: the line's non-text content becomes the division's implicit
+        // `\p` (ticket 35), which is where that verse's end will go.
+        if self.tracking_verses() {
+            self.end_verse_before_block(blocks);
+            if let Some(number) = self.open_chapter.take() {
+                blocks.push(Block::ChapterEnd(ChapterEnd { number, span: SPAN }));
+            }
+        }
         self.in_periph_title = true;
         let closer = self.parse_inner_list(&mut head);
         self.in_periph_title = false;
@@ -810,8 +820,6 @@ impl<'a> ParserImpl<'a> {
         // nothing — the blocks after it are still the division's. Written out,
         // a block left beside the periph is swallowed by it anyway, so this
         // is also the only reading a writer can reproduce (ticket 27).
-        // Verses stay suspended across the whole loop, as they must: a `\v`
-        // in the continued division is inside a periph however it got there.
         let mut book = None;
         let mut id_span = None;
         let mut pending = pending;
@@ -843,7 +851,13 @@ impl<'a> ParserImpl<'a> {
                 break;
             }
         }
-        self.verses_suspended -= 1;
+        // Whatever the division opened ends with it.
+        if self.tracking_verses() {
+            self.end_verse_before_block(&mut periph.blocks);
+            if let Some(number) = self.open_chapter.take() {
+                periph.blocks.push(Block::ChapterEnd(ChapterEnd { number, span: SPAN }));
+            }
+        }
         periph.span.end = match (id_span, pending) {
             (Some(span), _) | (None, Some((_, span))) => span.start,
             (None, None) => self.prev_token_end(),
