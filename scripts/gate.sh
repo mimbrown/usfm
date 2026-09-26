@@ -22,6 +22,11 @@ cargo run --package usfm_tests -- --baseline tasks/conformance/tcdocs-baseline.t
 # conformance case of every root, `pass` and `fail` alike, gated against the
 # known-failure list the way the baseline is. About a second on the corpus.
 cargo run --package usfm_tests -- --roundtrip tasks/conformance/roundtrip-known.txt
+# Every crate the shipped binaries link must carry a licence file, or the
+# extension's ThirdPartyNotices.txt (`npm run notices`) would name a licence
+# without its text. The npm half needs node_modules, so it is checked when the
+# notices are written rather than here.
+python3 scripts/third_party_notices.py --check --no-npm
 # Ticket 05: Miri over the lexer, the parser's byte handling and
 # `string_parser`. Needs nightly + miri; `scripts/session-start.sh` installs it.
 scripts/miri.sh

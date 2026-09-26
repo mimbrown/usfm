@@ -93,5 +93,11 @@ derives from the following, which keep their own terms.
   > OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   > SOFTWARE.
 
+What ships is covered separately: the VS Code extension's `.vsix` carries
+`ThirdPartyNotices.txt`, which `npm run notices` (part of `npm run build` in
+`vscode/`) writes with `scripts/third_party_notices.py` from the Rust crates
+the two binaries link, the npm packages bundled into the client and the
+stylesheet and oxc entries above, each with its licence text.
+
 The USFM reference documentation is not redistributed here. Run
 `python3 .claude/import_docs.py` to fetch a local copy into `.claude/docs/`.

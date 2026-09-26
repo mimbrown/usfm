@@ -115,7 +115,8 @@
     ]
   },
   "scripts": {
-    "build": "npm run server:build:release && npm run compile && npm run package",
+    "build": "npm run server:build:release && npm run compile && npm run notices && npm run package",
+    "notices": "python3 ../scripts/third_party_notices.py --output ThirdPartyNotices.txt",
     "compile": "esbuild client/extension.ts --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node --target=node16 --minify --sourcemap",
     "watch": "npm run compile -- --watch",
     "write": "node build.ts",
