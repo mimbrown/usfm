@@ -1,6 +1,6 @@
 # 41. Two writer/parser asymmetries M5 left on purpose
 
-Status: needs-triage
+Status: resolved
 Milestone: after M6
 
 Both are recorded in code comments and round-trip correctly; neither is a
@@ -25,3 +25,19 @@ bug. They are listed so they are not rediscovered.
 
 Done when either is changed with its test, or this ticket is marked
 `wontfix` with the reason.
+
+## Answer
+
+Picked by Michael on 2026-09-26.
+
+1. **`\cp`: wontfix.** No project in either conformance root, the benchmark
+   corpus or the machine.py fixtures writes a published chapter number
+   with a `\`, `|`, `"` or `~`, and reading it as text would move spans and
+   change `pub_number` for every consumer (USX writes it as an attribute).
+   Reopen as a new ticket if a real project needs it.
+2. **`\xo*`: changed.** `omitted_closers` now drops the closer of an `\xo`
+   before any note-internal style, mirroring the parser's
+   `parent_holds_plain_text`, so `\xo 1.1 \xt b|link-href="x"\xt*` is
+   written without the `\xo*`. `a_closed_xt_after_xo_is_written_as_a_sibling`
+   asserts the new spelling and that it reads back to the same tree; the
+   round-trip suites are unchanged.
