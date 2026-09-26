@@ -122,8 +122,8 @@
     "package": "vsce package --no-dependencies -o usfm_language_server.vsix",
     "install-extension": "code --install-extension usfm_language_server.vsix --force",
     "reinstall": "npm run build && npm run install-extension",
-    "server:build:debug": "cargo build -p usfm_language_server",
-    "server:build:release": "cross-env CARGO_TARGET_DIR=./target cargo build -p usfm_language_server --release"
+    "server:build:debug": "cargo build -p usfm_language_server -p usfm_cli",
+    "server:build:release": "cross-env CARGO_TARGET_DIR=./target cargo build -p usfm_language_server -p usfm_cli --release"
   },
   "devDependencies": {
     "@types/minimatch": "^6.0.0",

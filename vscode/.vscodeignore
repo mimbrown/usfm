@@ -7,5 +7,7 @@
 !configuration-schema.json
 !language-configuration.json
 !usfm.tmLanguage.json
-!target/release/usfm_parser
-!target/release/usfm_parser.exe
+!target/release/usfm-language-server
+!target/release/usfm-language-server.exe
+!target/release/usfm
+!target/release/usfm.exe
