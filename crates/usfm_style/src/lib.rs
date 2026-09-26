@@ -323,6 +323,16 @@ impl FromStr for StyleSheetBuilder {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut builder = StyleSheetBuilder::new();
+        builder.read(s)?;
+        Ok(builder)
+    }
+}
+
+impl StyleSheetBuilder {
+    /// Read a `.sty` text into this builder: a `\Marker` already here amends
+    /// that rule, a new one adds a rule (and needs a `\StyleType`).
+    fn read(&mut self, s: &str) -> Result<(), StyleParseError> {
+        let builder = self;
         // A byte-order mark (Paratext and Windows editors write one) would
         // hide the first line's `\`, and with it the first `\Marker`: every
         // field after it would then belong to no rule, silently.
@@ -385,8 +395,7 @@ impl FromStr for StyleSheetBuilder {
                 }
             }
         }
-        builder.cut_rule()?;
-        Ok(builder)
+        builder.cut_rule()
     }
 }
 
@@ -439,6 +448,23 @@ impl StyleSheet {
 
     pub fn get_rule(&self, marker: usize) -> &StyleRule {
         &self.rules[marker]
+    }
+
+    /// Read a project's `.sty` (Paratext's `custom.sty`) over this sheet, the
+    /// way Paratext does: an entry for a marker the sheet has **amends** that
+    /// rule — `\Marker p` with only a `\FirstLineIndent` changes nothing we
+    /// read and keeps `p` a paragraph — and an entry for a new marker adds a
+    /// rule, which then needs its `\StyleType`. Existing rules keep their
+    /// index, so a `StyleId` into the sheet stays valid.
+    pub fn extend_from_str(&mut self, s: &str) -> Result<(), StyleParseError> {
+        let mut builder = StyleSheetBuilder {
+            rules: self.rules.clone(),
+            rule_by_marker_map: self.rule_by_marker_map.clone(),
+            ..StyleSheetBuilder::new()
+        };
+        builder.read(s)?;
+        *self = StyleSheet::from_builder(builder);
+        Ok(())
     }
 
     pub fn add_rule(&mut self, rule: StyleRule) -> usize {
@@ -503,6 +529,40 @@ mod tests {
         let sheet = StyleSheet::from_str("\\Marker p\n\\Name\n\\StyleType Paragraph\n")
             .expect("a well-formed sheet");
         assert_eq!(sheet.get_rule_by_marker("p").unwrap().name, None);
+    }
+
+    /// A project sheet over a base sheet: an entry for a marker the base has
+    /// amends that rule in place (no `\\StyleType` needed, nothing it does
+    /// not mention changed, same index), and a new marker adds a rule.
+    #[test]
+    fn extending_amends_known_markers_and_adds_new_ones() {
+        let mut sheet = StyleSheet::from_str(
+            "\\Marker p\n\\Name Paragraph\n\\StyleType Paragraph\n\\OccursUnder c\n\
+             \n\\Marker nd\n\\StyleType Character\n",
+        )
+        .expect("a well-formed sheet");
+        let p_index = *sheet.get_marker_index("p").unwrap();
+
+        sheet
+            .extend_from_str(
+                "\\Marker p\n\\FirstLineIndent 0.5\n\\OccursUnder c id\n\
+                 \n\\Marker zgrk\n\\StyleType character\n",
+            )
+            .expect("a well-formed project sheet");
+
+        assert_eq!(*sheet.get_marker_index("p").unwrap(), p_index);
+        let p = sheet.get_rule_by_marker("p").unwrap();
+        assert!(p.is_paragraph());
+        assert_eq!(p.name.as_deref(), Some("Paragraph"));
+        assert_eq!(p.occurs_under, ["c", "id"]);
+        assert!(sheet.get_rule_by_marker("nd").unwrap().is_character());
+        assert!(sheet.get_rule_by_marker("zgrk").unwrap().is_character());
+
+        // A new marker still needs to say what it is.
+        assert!(matches!(
+            sheet.extend_from_str("\\Marker zz\n\\Bold\n"),
+            Err(StyleParseError::StyleTypeRequired)
+        ));
     }
 
     /// A sheet saved with a UTF-8 byte-order mark keeps its first rule.
