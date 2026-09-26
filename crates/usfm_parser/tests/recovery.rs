@@ -1267,13 +1267,12 @@ fn machine_py_44jhn_empty() {
 }
 
 /// `Tes/custom.sty`, the project stylesheet beside those books, defines
-/// `\test` as a character style. There is no one-call API for extending a
-/// sheet from a `.sty` string: a caller reads the file with
-/// `StyleSheet::from_str` and adds its rules to a clone of the default sheet,
-/// which is what a Paratext project's stylesheet override amounts to. With
-/// that sheet `\test` is an ordinary character style instead of an unknown
-/// marker, and 41MAT — which uses none of the project's own markers — parses
-/// exactly as it does with the default sheet.
+/// `\test` as a character style. `StyleSheet::extend_from_str` reads it over
+/// a clone of the default sheet, which is what a Paratext project's
+/// stylesheet override amounts to. With that sheet `\test` is an ordinary
+/// character style instead of an unknown marker, and 41MAT — which uses none
+/// of the project's own markers — parses exactly as it does with the default
+/// sheet.
 #[test]
 fn machine_py_custom_stylesheet() {
     use std::str::FromStr;
@@ -1289,9 +1288,9 @@ fn machine_py_custom_stylesheet() {
         vec!["test"],
     );
     let mut extended = (**DEFAULT_STYLESHEET).clone();
-    for rule in custom.rules {
-        extended.add_rule(rule);
-    }
+    extended
+        .extend_from_str(MACHINE_PY_CUSTOM_STY)
+        .expect("custom.sty extends the default sheet");
     let extended = Arc::new(extended);
 
     let source = "\\id GEN\n\\c 1\n\\p \\v 1 a \\test custom\\test* b";
