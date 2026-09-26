@@ -1,6 +1,6 @@
 # 38. `ReferenceIndex` does not see the chapters of a `\periph` division
 
-Status: needs-triage
+Status: resolved
 Milestone: after M6
 
 Found by ticket 32. `usfm_semantic::ReferenceIndex::new` reads chapters
@@ -24,3 +24,25 @@ followed by chapters.
 
 Done when the decision is recorded on `ReferenceIndex`'s doc and pinned by a
 test either way.
+
+## Answer
+
+Picked by Michael on 2026-09-26. **The index descends into `Periph`, and
+not into `Sidebar`.** `usx.rnc`'s `PeripheralContent` lists `Chapter`, so
+a `\c` inside a division is one of the book's chapters; a sidebar's
+content (`Section | Para | List | Table | Footnote | CrossReference`)
+allows none. `ChapterEntry` records which container it is in (`periph:
+Option<usize>`, the division's top-level index), `ChapterRef::start` and
+`blocks` read from that container, and a division written after a `\c`
+ends that chapter, since everything after `\periph` is the division's. The
+decision is on `ReferenceIndex::new`'s doc, pinned by
+`chapters_inside_a_periph_division_are_indexed` and
+`a_periph_division_ends_the_chapter_before_it` in `reference.rs`.
+
+`symbols.rs` keeps its own walk: the outline needs the containers
+themselves, which the index does not model. Its module doc now says so and
+no longer cites this gap.
+
+Found on the way: inside a division the parser emits no verse or chapter
+ends, and puts a `vid` on a paragraph that opens with its own `\v`. That is
+ticket 44.

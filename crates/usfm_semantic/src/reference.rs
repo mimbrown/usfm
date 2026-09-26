@@ -36,9 +36,12 @@ pub struct ReferenceIndex<'a> {
 
 struct ChapterEntry {
     number: usize,
-    /// Block index of the `ChapterStart`.
+    /// Index of the `Block::Periph` the chapter is written in, or `None`
+    /// for a chapter among the document's own blocks.
+    periph: Option<usize>,
+    /// Index of the `ChapterStart` in its container's blocks.
     start: usize,
-    /// Block index of the `ChapterEnd`, or of the next chapter, or the
+    /// Index of the `ChapterEnd`, or of the next chapter, or the container's
     /// block count: the chapter's blocks are `start + 1 .. end`.
     end: usize,
     /// Indices into `verses`.
@@ -55,9 +58,14 @@ struct VerseEntry {
 }
 
 impl<'a> ReferenceIndex<'a> {
-    /// Index `document`. Chapters are read from the top-level blocks; verse
-    /// starts are found anywhere, including inside sidebars and periphs,
-    /// where the parser never places an end.
+    /// Index `document`. Chapters are read from the top-level blocks and
+    /// from the blocks of each `\periph` division, because a division runs
+    /// to the next `\periph` or `\id` and so holds every `\c` written after
+    /// it — and `usx.rnc`'s `PeripheralContent` lists `Chapter`, so those are
+    /// the book's chapters, not something beside it (ticket 38). A sidebar
+    /// is not descended into: `usx.rnc` allows no chapter there. Verse starts
+    /// are found anywhere, including inside sidebars and periphs, where the
+    /// parser never places an end.
     ///
     /// Nothing is deduplicated or reordered: the tree is reported as it
     /// stands, which is what lets a check over the index say that a verse
@@ -69,46 +77,12 @@ impl<'a> ReferenceIndex<'a> {
             chapters: Vec::new(),
             verses: Vec::new(),
         };
-        let blocks = &document.blocks;
-        for (position, block) in blocks.iter().enumerate() {
-            match block {
-                Block::Book(book) => {
-                    index.book.get_or_insert(book.code);
-                }
-                Block::ChapterStart(chapter) => {
-                    if let Some(last) = index.chapters.last_mut()
-                        && last.end == usize::MAX
-                    {
-                        last.end = position;
-                    }
-                    index.chapters.push(ChapterEntry {
-                        number: chapter.number,
-                        start: position,
-                        end: usize::MAX,
-                        verses: 0..0,
-                    });
-                }
-                Block::ChapterEnd(chapter) => {
-                    if let Some(last) = index.chapters.last_mut()
-                        && last.end == usize::MAX
-                        && last.number == chapter.number
-                    {
-                        last.end = position;
-                    }
-                }
-                _ => {}
-            }
-        }
-        if let Some(last) = index.chapters.last_mut()
-            && last.end == usize::MAX
-        {
-            last.end = blocks.len();
-        }
+        index.read_chapters(&document.blocks, None);
 
         let mut path = Vec::new();
         NodeRef::Document(document).descendants(&mut path, &mut |path, node| match node {
             NodeRef::VerseStart(verse) => {
-                let chapter = index.chapter_holding(path[0]);
+                let chapter = index.chapter_holding(path);
                 index.verses.push(VerseEntry {
                     chapter,
                     number: verse.number.clone(),
@@ -129,8 +103,9 @@ impl<'a> ReferenceIndex<'a> {
             _ => {}
         });
 
-        // Verses are in document order and chapters are top-level, so each
-        // chapter's verses are one contiguous run.
+        // Verses and chapters are both in document order, and a chapter's
+        // blocks are one run of one container, so each chapter's verses are
+        // one contiguous run.
         for (position, verse) in index.verses.iter().enumerate() {
             if let Some(chapter) = verse.chapter {
                 let range = &mut index.chapters[chapter].verses;
@@ -146,10 +121,76 @@ impl<'a> ReferenceIndex<'a> {
         index
     }
 
-    fn chapter_holding(&self, block: usize) -> Option<usize> {
-        self.chapters
-            .iter()
-            .position(|chapter| chapter.start < block && block < chapter.end)
+    /// Record the chapters among `blocks`, the document's own
+    /// (`periph == None`) or a `\periph` division's, descending into each
+    /// division as it is met so that chapters stay in document order.
+    fn read_chapters(&mut self, blocks: &'a [Block<'a>], periph: Option<usize>) {
+        let first = self.chapters.len();
+        for (position, block) in blocks.iter().enumerate() {
+            match block {
+                Block::Book(book) => {
+                    self.book.get_or_insert(book.code);
+                }
+                Block::ChapterStart(chapter) => {
+                    self.close_open_chapter(first, position);
+                    self.chapters.push(ChapterEntry {
+                        number: chapter.number,
+                        periph,
+                        start: position,
+                        end: usize::MAX,
+                        verses: 0..0,
+                    });
+                }
+                Block::ChapterEnd(chapter) => {
+                    if let Some(last) = self.chapters[first..].last_mut()
+                        && last.end == usize::MAX
+                        && last.number == chapter.number
+                    {
+                        last.end = position;
+                    }
+                }
+                Block::Periph(division) if periph.is_none() => {
+                    // A division ends the chapter it is written in: what
+                    // follows it is the division's, not the chapter's.
+                    self.close_open_chapter(first, position);
+                    self.read_chapters(&division.blocks, Some(position));
+                }
+                _ => {}
+            }
+        }
+        self.close_open_chapter(first, blocks.len());
+    }
+
+    /// End the last chapter of this container (those from `first` on) at
+    /// `position`, if nothing has ended it yet.
+    fn close_open_chapter(&mut self, first: usize, position: usize) {
+        if let Some(last) = self.chapters[first..].last_mut()
+            && last.end == usize::MAX
+        {
+            last.end = position;
+        }
+    }
+
+    /// The chapter whose blocks hold the node at `path`.
+    fn chapter_holding(&self, path: &[usize]) -> Option<usize> {
+        self.chapters.iter().position(|chapter| {
+            let block = match chapter.periph {
+                None => path[0],
+                Some(periph) if path[0] == periph && path.len() > 1 => path[1],
+                Some(_) => return false,
+            };
+            chapter.start < block && block < chapter.end
+        })
+    }
+
+    fn container(&self, chapter: &ChapterEntry) -> &'a [Block<'a>] {
+        match chapter.periph {
+            None => &self.document.blocks,
+            Some(periph) => match &self.document.blocks[periph] {
+                Block::Periph(division) => &division.blocks,
+                _ => unreachable!("chapter entries point at periph divisions"),
+            },
+        }
     }
 
     pub fn document(&self) -> &'a Document<'a> {
@@ -212,7 +253,8 @@ impl<'i, 'a> ChapterRef<'i, 'a> {
 
     /// The `\c` node.
     pub fn start(&self) -> &'a ChapterStart<'a> {
-        match &self.index.document.blocks[self.entry().start] {
+        let entry = self.entry();
+        match &self.index.container(entry)[entry.start] {
             Block::ChapterStart(chapter) => chapter,
             _ => unreachable!("chapter entries point at chapter starts"),
         }
@@ -221,7 +263,7 @@ impl<'i, 'a> ChapterRef<'i, 'a> {
     /// The blocks between the chapter's start and end milestones.
     pub fn blocks(&self) -> &'a [Block<'a>] {
         let entry = self.entry();
-        &self.index.document.blocks[entry.start + 1..entry.end]
+        &self.index.container(entry)[entry.start + 1..entry.end]
     }
 
     /// The chapter's verses in document order, one per `\v` between its start
@@ -497,5 +539,58 @@ mod tests {
         assert!(starts.windows(2).all(|w| w[0] < w[1]), "{starts:?}");
         // The lookup takes the first chapter 1, whose verse is `a`.
         assert_eq!(index.verse(1, 1).unwrap().text(), "a");
+    }
+
+    /// A `\periph` division runs to the next `\periph` or `\id`, so in a
+    /// front-matter book every `\c` after it is inside `Block::Periph`.
+    /// `usx.rnc`'s `PeripheralContent` lists `Chapter`, so they are the
+    /// book's chapters and the index reads them (ticket 38).
+    #[test]
+    fn chapters_inside_a_periph_division_are_indexed() {
+        let document = parse(concat!(
+            "\\id FRT\n\\periph Title|id=\"title\"\n",
+            "\\c 1\n\\p \\v 1 a \\v 2 b\n",
+            "\\c 2\n\\p \\v 1 c\n",
+        ));
+        assert!(matches!(document.blocks[1], Block::Periph(_)));
+        let index = ReferenceIndex::new(&document);
+        assert_eq!(index.book(), Some(BookCode::Frt));
+        let numbers: Vec<usize> = index.chapters().map(|c| c.number()).collect();
+        assert_eq!(numbers, [1, 2]);
+        let first = index.chapter(1).unwrap();
+        assert_eq!(first.start().number, 1);
+        // The paragraph after `\c 1`, inside the division.
+        assert_eq!(first.blocks().len(), 1);
+        let verses: Vec<String> = first.verses().map(|v| v.number().to_string()).collect();
+        assert_eq!(verses, ["1", "2"]);
+        assert_eq!(index.verse(1, 2).unwrap().text(), "b");
+        assert_eq!(index.verse(2, 1).unwrap().text(), "c");
+        assert_eq!(index.verse(2, 1).unwrap().chapter().unwrap().number(), 2);
+    }
+
+    /// A division written after a chapter ends that chapter: what follows
+    /// `\periph` is the division's, and a `\c` inside it is a new chapter.
+    #[test]
+    fn a_periph_division_ends_the_chapter_before_it() {
+        let document = parse(concat!(
+            "\\id GEN\n\\c 1\n\\p \\v 1 a\n",
+            "\\periph Map|id=\"maps\"\n\\p \\v 2 b\n",
+            "\\c 2\n\\p \\v 1 c\n",
+        ));
+        let index = ReferenceIndex::new(&document);
+        let numbers: Vec<usize> = index.chapters().map(|c| c.number()).collect();
+        assert_eq!(numbers, [1, 2]);
+        let in_first: Vec<String> = index
+            .chapter(1)
+            .unwrap()
+            .verses()
+            .map(|v| v.number().to_string())
+            .collect();
+        assert_eq!(in_first, ["1"]);
+        // `\v 2` stands in the division before its first `\c`: in no chapter.
+        let orphan = index.verses().nth(1).unwrap();
+        assert_eq!(orphan.number().to_string(), "2");
+        assert!(orphan.chapter().is_none());
+        assert_eq!(index.verse(2, 1).unwrap().text(), "c");
     }
 }
