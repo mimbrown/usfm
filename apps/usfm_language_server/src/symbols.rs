@@ -8,18 +8,13 @@
 //! # Where the numbers come from
 //!
 //! One walk of the tree ([`found`]), not `usfm_semantic::ReferenceIndex`.
-//! The index was the obvious source and is not the right one here, for two
-//! reasons:
-//!
-//! * it reads chapters from the document's **top-level** blocks, and a `\c`
-//!   is not always one. A `\periph` division runs to the next `\periph` or
-//!   `\id` (ticket 27), so everything written after one is inside it, and an
-//!   outline built from the index would lose every chapter of a book with
-//!   front matter;
-//! * the outline needs the block containers themselves — a sidebar, a
-//!   `\periph` — which the index does not model, so a walk is needed
-//!   whatever the chapters come from. One walk that finds five kinds of node
-//!   is less than an index plus a walk.
+//! The index was the obvious source and is not the right one here: the
+//! outline needs the block containers themselves — a sidebar, a `\periph` —
+//! which the index does not model, so a walk is needed whatever the chapters
+//! come from, and one walk that finds five kinds of node is less than an
+//! index plus a walk. (When this was written the index also read chapters
+//! from the top-level blocks only, and so lost every chapter of a book with
+//! front matter; ticket 38 made it descend into `\periph` divisions.)
 //!
 //! What the index would have given is the verse-to-chapter mapping, and
 //! document order gives the same answer: the chapter a verse is in is the
