@@ -91,7 +91,9 @@ const TCDOCS_FIXTURES: &[&str] = &[
     "paratextTests/CharStyleCrossesFootnote",
     "paratextTests/CrossReferencesQuoteOutsideNote",
     "biblica/CrossRefWithPipe",
-    "biblica/PublishingVersesNotClosed",
+    // Not `biblica/PublishingVersesNotClosed`: it quotes the NIV, Biblica's
+    // copyright rather than open data. The unclosed `\vp` it shows is
+    // `recovery.rs`'s `published_verse_number_not_closed`.
 ];
 
 fn snapshot_file(name: &str, path: &Path) {

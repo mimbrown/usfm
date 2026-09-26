@@ -106,7 +106,10 @@ it breaks and what fixing it would take — so it is not lost.
 per target, listed in the script's `targets` array — named after the test they
 came from:
 
-- the tcdocs inputs (`tcdocs/tests/*/*/origin.usfm`), as `<category>__<case>.usfm`;
+- the tcdocs inputs (`tcdocs/tests/*/*/origin.usfm`), as `<category>__<case>.usfm`,
+  except `biblica/PublishingVersesNotClosed` and
+  `biblica/PublishingVersesWithFormatting`, which quote the NIV (Biblica's
+  copyright, not open data) and are left out by the script's `excluded` list;
 - the vendored usfm-grammar fixtures
   (`tasks/conformance/fixtures/usfm-grammar/{autofix/*,bugfixes/*/origin.usfm}`), as
   `usfm-grammar__<dir>__<name>.usfm`. The `autofix` inputs are deliberately
@@ -118,8 +121,8 @@ came from:
   ticket 10), as `usfm-js__<book>.usfm`: unfoldingWord's Acts, the English
   ULT in `\zaln-s`/`\zaln-e` and the Greek UGNT with `\w` attributes and
   `\k-s` key terms. Both are whole books, so both seeds are truncated. With
-  them there are 297 seeds per target, where the runs recorded below started
-  from 295.
+  them there were 297 seeds per target, where the runs recorded below started
+  from 295; without the two NIV inputs there are 295 again.
 
 It is idempotent, and it truncates a seed longer than `-max_len` to the last
 whole line that fits, which is what libFuzzer would do with it anyway. Run

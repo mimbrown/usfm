@@ -13,6 +13,9 @@ derives from the following, which keep their own terms.
   `basic__*`, `biblica__*`, `introductions__*`, `mandatory__*`,
   `paratextTests__*`, `samples-from-wild__*`, `specExamples__*`,
   `special-cases__*`, `usfmjsTests__*`), which are copies of its test inputs.
+  The two inputs that quote the New International Version
+  (`biblica/PublishingVersesNotClosed` and `…WithFormatting`) are Biblica's
+  copyright rather than open data, and neither is copied into this repository.
   Scripture excerpts inside those inputs belong to their respective publishers,
   and any licence notice an input carries (a `\rem` line) is kept in the copy.
 - **usfm-grammar test fixtures** (`tasks/conformance/fixtures/usfm-grammar/`, from

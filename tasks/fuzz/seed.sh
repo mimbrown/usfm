@@ -77,10 +77,18 @@ stage() {
   rm -f "$staged"
 }
 
+# Not seeded: the two tcdocs inputs that quote the New International Version,
+# which is Biblica's copyright rather than open data (NOTICE.md). The markup
+# they exercise, \vp inside a verse, is in other seeds too.
+excluded=(biblica/PublishingVersesNotClosed biblica/PublishingVersesWithFormatting)
+
 while IFS= read -r -d '' origin; do
   # tcdocs/tests/<category>/<case>/origin.usfm -> <category>__<case>.usfm
   relative=${origin#"$TCDOCS/tests/"}
   relative=${relative%/origin.usfm}
+  for skip in "${excluded[@]}"; do
+    [[ $relative == "$skip" ]] && continue 2
+  done
   stage "$origin" "${relative//\//__}.usfm"
 done < <(find "$TCDOCS/tests" -name origin.usfm -print0 | sort -z)
 
