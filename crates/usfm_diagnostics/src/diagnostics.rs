@@ -179,8 +179,13 @@ pub enum Code {
     /// **Severity:** Error.
     UnmatchedMilestoneEnd,
     /// **Trigger:** a milestone (`\qt-s |...`) not terminated by `\*` before
-    /// the next marker or end of input.
-    /// **Recovery:** the milestone is closed where the `\*` should have been.
+    /// the next marker or end of input; or a start milestone (`\zaln-s`,
+    /// `\k-s`, known to the stylesheet or not) whose attribute list runs to
+    /// the end of its line with no `\*`, usfm-js's pre-USFM-3 "old format"
+    /// (ticket 43).
+    /// **Recovery:** the milestone is closed where the `\*` should have been:
+    /// at the end of its line, in the second case, with the line break left
+    /// as the text it would be after `\*`.
     /// **Severity:** Error.
     MilestoneNotClosed,
     /// **Trigger:** a `\` that does not begin a marker or an escape

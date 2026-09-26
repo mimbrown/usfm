@@ -1,6 +1,6 @@
 # 43. Recovering usfm-js's unclosed milestones (the "old format")
 
-Status: needs-triage
+Status: resolved
 Milestone: after M6
 
 Found by ticket 10. unfoldingWord's aligned texts from before USFM 3.0 was
@@ -56,3 +56,32 @@ Question for triage: is recovering a pre-USFM-3 dialect worth a rule, given
 that usfm-js itself converts it and `tasks/benchmark/corpus/tools/usfmjs_oldformat.py`
 does the same edit mechanically? Related: the hardening plan's unchecked
 "a malformed real-world corpus" box — the upstream `large.usfm` is one.
+
+## Answer
+
+Picked by Michael on 2026-09-26: yes, worth a rule.
+
+A start milestone (`-s`) followed by `|` whose attribute list reaches a line
+break or the end of input, with no `\*`, is closed there
+(`take_unclosed_milestone` in `parser.rs`). It keeps its attributes, the line
+break stays where it is (so the tree is the one the closed spelling gives),
+and it reports the existing `milestone-not-closed` Error on the marker —
+rather than a new code, since that is what an unclosed milestone already
+reports. Both paths read it: an unknown marker (`take_unknown_milestone`,
+the first `\zaln-s`, and every derived `\k-s`) and a known one
+(`parse_milestone_node`, every `\zaln-s` after the first registers it, and
+`\qt-s`). Anything else is unchanged: a list that stops at a marker on its
+own line is the old `milestone-not-closed`, and a marker without `-s` stays
+unknown.
+
+Measured on the aligned corpus with its `\*` taken off again (the inverse of
+`usfmjs_oldformat.py`): the ULT reads to exactly the committed file's tree
+with 19 140 `milestone-not-closed` and nothing else new, the UGNT with 156.
+That is now a test (`the_old_format_aligned_books_read_as_their_closed_spelling`),
+beside a snapshot of each shape (`recovery__milestone_not_closed__at_line_end`),
+a tree-equality test on a small sample, and a negative case. tcdocs is
+unchanged: its `*.oldformat` cases still report an Error.
+
+The hardening plan's "malformed real-world corpus" box is not ticked by
+this: upstream's `large.usfm` would be one, but it is not committed (only its
+closed form is), and the test above rebuilds it from the committed file.

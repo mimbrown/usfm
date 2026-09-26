@@ -181,11 +181,16 @@ Recent progress:
   130-byte placeholder upstream). **CC BY-SA 4.0**, with the licence's legal
   code as `LICENSE`, a README and a `NOTICE.md` entry. Both upstream files are
   usfm-js's *old format* — a milestone's attribute list runs to the line's end
-  with no `\*`, which tcdocs judges `fail` and which parses as 19 140
+  with no `\*`, which tcdocs judges `fail` and which parsed as 19 140
   `unexpected-pipe` Errors with every attribute list kept as text — so what is
   committed is upstream passed through `tools/usfmjs_oldformat.py`, which
   appends the `\*` and checks it changed nothing else. The parser was right
-  about the old shape; its recovery of it is ticket 43 (`needs-triage`). The
+  about the old shape, and since ticket 43 it recovers it: a `-s` milestone
+  whose attribute list reaches the line's end with no `\*` is closed there,
+  keeps its attributes and reports one `milestone-not-closed`, so upstream's
+  files parse to exactly the committed files' trees with 19 140 and 156
+  Errors (`recovery.rs`'s
+  `the_old_format_aligned_books_read_as_their_closed_spelling`). The
   closed files report no parser finding: 28 `content-outside-paragraph`
   (the ULT never writes a `\p` after `\c`) and Infos. The class is **`aligned`**,
   replacing the synthetic `alignment-heavy` Luke, which is no longer committed

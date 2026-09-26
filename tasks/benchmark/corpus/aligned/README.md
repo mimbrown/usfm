@@ -62,9 +62,12 @@ milestone's attribute list runs to the end of its line and is never closed.
 USFM 3 requires `\zaln-s |...\*`, which is how usfm-js has written them
 since; tcdocs judges the old shape `validated=fail`
 (`usfmjsTests/acts_1_milestone.oldformat`, `tit1-1_alignment.oldformat`).
-Read as it is, `large.usfm` reports 19 140 `unexpected-pipe` Errors and
-drops every milestone, keeping its attributes as verse text — a benchmark of
-the recovery path, not of alignment. So the files here are the upstream files
+Read as it is, `large.usfm` reported 19 140 `unexpected-pipe` Errors and
+dropped every milestone, keeping its attributes as verse text — a benchmark of
+the recovery path, not of alignment. (Since ticket 43 the parser closes such a
+milestone at the end of its line, with one `milestone-not-closed` Error each,
+and reads upstream to the same tree as the files here; the recovery path is
+still not what the benchmark is meant to measure.) So the files here are the upstream files
 passed through `../tools/usfmjs_oldformat.py`, which appends `\*` to every
 `\zaln-s |` or `\k-s |` line whose attribute list reaches the line's end
 (19 140 in the ULT, 156 in the UGNT) and checks that nothing else changed:

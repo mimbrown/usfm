@@ -254,6 +254,137 @@ fn milestone_not_closed() {
     );
 }
 
+/// usfm-js's "old format" (ticket 43): a start milestone's attribute list
+/// runs to the end of its line with no `\*`. It is closed at the line break
+/// and keeps its attributes — the custom `\zaln-s` the first time (which
+/// registers it), the same marker again once it is known, a derived `\k-s`
+/// with a default value holding `//`, and a list that ends the input.
+#[test]
+fn milestone_not_closed_at_line_end() {
+    check_variant(
+        Code::MilestoneNotClosed,
+        "at_line_end",
+        concat!(
+            "\\id ACT\n\\c 1\n\\p\n\\v 1\n",
+            "\\zaln-s |x-strong=\"G35880\" x-content=\"τὸν\"\n",
+            "\\w The|x-occurrence=\"1\"\\w*\n",
+            "\\zaln-e\\*\n",
+            "\\zaln-s |x-strong=\"G43130\"\n",
+            "\\w first\\w*\n",
+            "\\zaln-e\\*\n",
+            "\\k-s |rc://x//y \n",
+            "\\w b|lemma=\"b\"\\w*\n",
+            "\\k-e\\*\n",
+            "\\qt-s |who=\"Paul\"",
+        ),
+    );
+}
+
+/// The old format reads back as exactly the tree its closed spelling
+/// gives, with one `milestone-not-closed` per unclosed start and nothing
+/// else the closed spelling does not report.
+#[test]
+fn an_unclosed_milestone_is_the_closed_one_at_the_line_break() {
+    use usfm_parser::DEFAULT_STYLESHEET;
+    use usfm_parser::parser::Parser;
+    let open = concat!(
+        "\\id ACT\n\\c 1\n\\p\n\\v 1\n",
+        "\\zaln-s |x-strong=\"G35880\"\n\\w The\\w*\n\\zaln-e\\*\n",
+        "\\zaln-s |x-strong=\"G43130\"\n\\w first\\w*\n\\zaln-e\\*\n",
+        "\\k-s |rc://x//y \n\\w b\\w*\n\\k-e\\*\n",
+        "\\qt-s |who=\"Paul\"\nsaid\n\\qt-e\\*\n",
+    );
+    let closed = concat!(
+        "\\id ACT\n\\c 1\n\\p\n\\v 1\n",
+        "\\zaln-s |x-strong=\"G35880\"\\*\n\\w The\\w*\n\\zaln-e\\*\n",
+        "\\zaln-s |x-strong=\"G43130\"\\*\n\\w first\\w*\n\\zaln-e\\*\n",
+        "\\k-s |rc://x//y\\*\n\\w b\\w*\n\\k-e\\*\n",
+        "\\qt-s |who=\"Paul\"\\*\nsaid\n\\qt-e\\*\n",
+    );
+    let open = Parser::new(open).parse(&DEFAULT_STYLESHEET);
+    let closed = Parser::new(closed).parse(&DEFAULT_STYLESHEET);
+    assert!(
+        usfm_ast::eq_ignoring_spans(&open.document, &closed.document),
+        "{:#?}\n{:#?}",
+        open.document,
+        closed.document
+    );
+    let mut extra: Vec<Code> = open.diagnostics.iter().map(|d| d.code).collect();
+    for diagnostic in &closed.diagnostics {
+        let position = extra.iter().position(|code| *code == diagnostic.code);
+        extra.remove(position.expect("the open spelling reports what the closed one does"));
+    }
+    assert_eq!(extra, [Code::MilestoneNotClosed; 4]);
+}
+
+/// Only a `-s` marker whose list reaches the line break is read that way. A
+/// list that stops at a marker on the same line is the ordinary
+/// `milestone-not-closed` (above), and an unknown marker with no `-s` stays
+/// unknown, its `|` kept as text, as before.
+#[test]
+fn only_a_start_milestone_list_to_the_line_end_is_closed_there() {
+    let codes = common::codes("\\id ACT\n\\c 1\n\\p \\v 1 \\zfoo |x=\"1\"\nb\n");
+    assert!(codes.contains(&Code::UnknownCustomMarker), "{codes:?}");
+    assert!(!codes.contains(&Code::MilestoneNotClosed), "{codes:?}");
+}
+
+/// The whole of usfm-js's old format, not a sample: the aligned benchmark
+/// books are upstream with `\*` appended by `usfmjs_oldformat.py`, so taking
+/// those closers off again gives the files as upstream wrote them. Each must
+/// parse to the committed file's tree with exactly one extra
+/// `milestone-not-closed` per closer taken off (19 140 in the ULT, 156 in
+/// the UGNT).
+#[test]
+fn the_old_format_aligned_books_read_as_their_closed_spelling() {
+    use usfm_parser::DEFAULT_STYLESHEET;
+    use usfm_parser::parser::Parser;
+    for (closed, expected) in [
+        (include_str!("../../../tasks/benchmark/corpus/aligned/45-ACT.ult.usfm"), 19_140),
+        (include_str!("../../../tasks/benchmark/corpus/aligned/45-ACT.ugnt.usfm"), 156),
+    ] {
+        let (open, removed) = reopen_milestones(closed);
+        assert_eq!(removed, expected);
+        let open = Parser::new(&open).parse(&DEFAULT_STYLESHEET);
+        let closed = Parser::new(closed).parse(&DEFAULT_STYLESHEET);
+        assert!(usfm_ast::eq_ignoring_spans(&open.document, &closed.document));
+        let count = |result: &usfm_parser::diagnostics::ParseResult<'_>, code| {
+            result.diagnostics.iter().filter(|d| d.code == code).count()
+        };
+        assert_eq!(count(&open, Code::MilestoneNotClosed), expected);
+        assert_eq!(count(&closed, Code::MilestoneNotClosed), 0);
+        assert_eq!(open.diagnostics.len(), closed.diagnostics.len() + expected);
+    }
+}
+
+/// The inverse of `tasks/benchmark/corpus/tools/usfmjs_oldformat.py`: drop
+/// the `\*` that ends a line whose last `\zaln-s |` or `\k-s |` has no other
+/// `\` after it.
+fn reopen_milestones(source: &str) -> (String, usize) {
+    let mut removed = 0;
+    let mut out = String::with_capacity(source.len());
+    for line in source.split_inclusive('\n') {
+        let (body, end) = match line.strip_suffix('\n') {
+            Some(body) => (body, "\n"),
+            None => (line, ""),
+        };
+        let reopened = body.strip_suffix("\\*").filter(|list| {
+            ["\\zaln-s |", "\\k-s |"].iter().any(|start| {
+                list.rfind(start)
+                    .is_some_and(|at| !list[at + start.len()..].contains('\\'))
+            })
+        });
+        match reopened {
+            Some(list) => {
+                removed += 1;
+                out.push_str(list);
+            }
+            None => out.push_str(body),
+        }
+        out.push_str(end);
+    }
+    (out, removed)
+}
+
 #[test]
 fn stray_backslash() {
     check(
