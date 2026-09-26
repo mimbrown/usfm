@@ -266,7 +266,8 @@ wanted: 38 (`ReferenceIndex` does not see a `\periph` division's chapters),
 43 (recovering usfm-js's unclosed "old format" milestones, found by ticket 10).
 Michael picked 38, 41 and 43 on 2026-09-26 and all three are resolved;
 38 found ticket 44 (no verse or chapter ends inside a `\periph` division),
-which Michael picked next and is resolved too. 39, 40 and 42 wait as they were.
+which Michael picked next and is resolved too. 39 and 40 wait as they were.
+Ticket 42 became M7 (below) on 2026-09-26.
 Beside them, the hardening plan's own unchecked boxes
 (`docs/plans/hardening.md`): marker-at-end-of-line handling, `\fig`
 attribute naming, a malformed real-world corpus, and a benchmark gate in
@@ -274,9 +275,99 @@ CI (numbers are compared by hand at each boundary, per "Reading a
 regression" in `docs/benchmarks.md`).
 
 **Work with no plan yet**, which needs a spec section before a loop could
-run it: ticket 42 (a USX reader into `Document`, so USX -> USFM -> USX can
-be checked); output formats beyond USX, HTML, JSON and SILE, which CLAUDE.md's "Output
+run it: output formats beyond USX, HTML, JSON and SILE, which CLAUDE.md's "Output
 Generation" stream names and this spec never scheduled.
+
+## M7. USX reader
+
+Specified 2026-09-26 by ticket 42, on Michael's go-ahead in the project thread
+("Agreed, proceed"). Ticketed at the same time, since no milestone before it is
+open: 45 (the reader), 46 (the two USX properties in the gate), 47 (real-world
+USX and USX 2), 48 (the facade and `usfm parse --from usx`), 49 (fuzz, Miri,
+benchmark, and the close).
+
+Nothing reads USX into a `Document`. `usfm_usx` writes it and has an
+`XmlDocument` reader the conformance harness compares with, but no
+`XmlDocument -> Document`, so the round trip the hardening plan first asked
+for (USX -> USFM -> USX) cannot be checked and a pipeline that starts from a
+Paratext or DBL export has no way in.
+
+Exit:
+- `usfm_usx` reads every reference file of both conformance roots (the 258
+  tcdocs `origin.xml` and the 13 usfm-grammar ones) with no Error, and for
+  every case the harness compares today, writing the tree back gives the
+  reference under the harness's own comparison (its patches, its whitespace
+  rules). Gated, known list empty.
+- USX -> USFM -> USX over the same set: read, `usfm_codegen`, parse, write
+  USX, and the result is the reference. Gated, known list empty.
+- A USX 2 file (no `sid`/`eid`) reads to the verse and chapter ends the parser
+  would build: every reference with its `eid` milestones stripped reads back
+  to the same tree as the reference itself.
+- Real USX that no tool of ours wrote reads with pinned diagnostics: the
+  public-domain WEB books and the deliberately malformed test book in
+  sillsdev/machine.py, vendored.
+- `usfm::parse_usx` on the facade and `usfm parse --from usx` in the CLI, so
+  `usfm parse book.usx --format usfm` converts.
+- Fuzz targets for the reader ten minutes clean each, the reader's tests under
+  Miri, and a benchmark group with its number recorded.
+
+Decisions, settled by ticket 42 so a loop need not reopen them:
+
+- **Library: `roxmltree`** (0.21, MIT OR Apache-2.0, ships both licence
+  files, one dependency — `memchr` — and `#![forbid(unsafe_code)]`). It gives
+  every node, attribute name and attribute value a byte range, which is the
+  `Span` a node needs; `xml-rs`, which `usfm_usx` already reads with, reports
+  row and column only. Not our own XML parser: well-formedness (entities,
+  CDATA, encodings, a BOM) is a solved problem unrelated to USFM, and a file
+  that is not well-formed XML is one Error, not something to recover from.
+  Recovery happens one level up, over the USX vocabulary. `roxmltree` only
+  reads; the writer stays ours. Whether the harness and `XmlDocument` move to
+  it too, retiring `xml-rs`, is left for when someone wants it (`xml-rs` 1.0
+  is out; the workspace pins 0.8).
+- **Where**: a `read` module in `usfm_usx` (`usfm_usx::read_usx(&str) ->
+  ParseResult<Document<'_>>`), which then depends on `usfm_diagnostics` —
+  allowed, since diagnostics sit below the outputs. Spans are byte ranges
+  into the XML: an element's span is the element's, a `Text`'s the text node
+  it was read from, and as with USFM, `&source[span]` is not expected to equal
+  `content` (entities are resolved). `Document::span` is the whole file.
+- **Stylesheet**: USX names a style and carries no sheet, so the reader
+  resolves `style` through `DEFAULT_STYLESHEET` (or a sheet it is given, the
+  way `parse_with` takes one) and derives an entry for a style the sheet does
+  not list, as the parser does for an unknown marker — reported with the
+  parser's own codes (`unknown-marker`, `unknown-custom-marker`) so a USX
+  file and its USFM report the same thing.
+- **Codes**: what only a USX reader can find gets a `Code` of its own,
+  spelled `usx-…`: at least `usx-not-well-formed` (Error, empty document),
+  `usx-unknown-element` (Warning, element dropped, its text kept where that is
+  meaningful), `usx-unmatched` (the `<unmatched>` element, which the AST does
+  not model: the 15 tcdocs references that carry one are `fail` cases),
+  `usx-verse-end-mismatch` (an `eid` naming a verse that is not open). Their
+  tests live in `crates/usfm_usx/tests/reader.rs`, so the coverage rule grows
+  a third home: `Code::is_semantic()` becomes `Code::origin() -> Origin
+  { Parser, Semantic, Usx }` (or `is_usx()` beside it, if that reads better),
+  and each of the three test files covers the codes of its own origin.
+- **Whitespace**: text inside a `<para>` is read by the AST's own rules 1–6
+  (a run of ASCII whitespace is one space), because DBL's USX is
+  pretty-printed *inside* mixed content (`<verse … />\n    <char …>` in
+  machine.py's WEB). Whitespace-only text between block elements is
+  formatting and is dropped. The harness already compares whitespace this
+  way at note and cell ends.
+- **What USX does not carry**: a USX file cannot say whether a default
+  attribute was written bare (`\w a|b\w*` and `\w a|lemma="b"\w*` are one
+  `<char lemma="b">`), whether a `\+` was written, or whether a milestone had
+  an empty `|`. The reader writes the canonical form (`usfm_codegen`'s
+  spelling) and the tree-level comparison with `usfm::parse` of the matching
+  `origin.usfm` is equality *modulo* that list, which ticket 45 measures and
+  records in the test that asserts it. The gate's two properties are on the
+  USX side and need no such list.
+- **Verse ends**: a USX 3 file's `eid` milestones are read where they stand.
+  A USX 2 file has none, and the reader builds them by the parser's placement
+  rules (plan D4, `crates/usfm_parser/tests/verse_ends.rs`): the tree is the
+  same whichever version a file is. Whether that shares the parser's code or
+  mirrors it is ticket 47's call; the test is the exit criterion's (strip the
+  `eid`s from every reference, read, compare).
+- **Out of scope**: USJ (the JSON form of USX) and writing USX 2.
+
 
 ## Open, to settle when reached
 
