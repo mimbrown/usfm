@@ -323,6 +323,10 @@ impl FromStr for StyleSheetBuilder {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut builder = StyleSheetBuilder::new();
+        // A byte-order mark (Paratext and Windows editors write one) would
+        // hide the first line's `\`, and with it the first `\Marker`: every
+        // field after it would then belong to no rule, silently.
+        let s = s.strip_prefix('\u{feff}').unwrap_or(s);
         for line in s.lines() {
             let line = line.trim_start_matches("#!").trim();
             if line.starts_with('\\') {
@@ -499,5 +503,15 @@ mod tests {
         let sheet = StyleSheet::from_str("\\Marker p\n\\Name\n\\StyleType Paragraph\n")
             .expect("a well-formed sheet");
         assert_eq!(sheet.get_rule_by_marker("p").unwrap().name, None);
+    }
+
+    /// A sheet saved with a UTF-8 byte-order mark keeps its first rule.
+    #[test]
+    fn a_byte_order_mark_does_not_hide_the_first_marker() {
+        let sheet = StyleSheet::from_str(
+            "\u{feff}\\Marker zgrk\n\\Endmarker zgrk*\n\\StyleType character\n",
+        )
+        .expect("a well-formed sheet");
+        assert!(sheet.get_rule_by_marker("zgrk").unwrap().is_character());
     }
 }
