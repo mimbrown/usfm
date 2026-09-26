@@ -51,3 +51,20 @@
 #  already lists both on `\xo` and `\xt` and only forgets them on `\xta`.
 \Marker xta
 \OccursUnder x ex
+
+#  `s5`, a level-5 section heading. Not in usfm.sty or usx.rnc: unfoldingWord's
+#  texts (tcdocs' `usfmjsTests`, the `doo43` samples) write `\s5` as a chunk
+#  break, and this entry, carried in usfm.sty itself before it was restored to
+#  the distributed file, keeps it a paragraph rather than an unknown marker.
+\Marker s5
+\Name s5 - Heading - Section Level 5
+\Description A section heading, level 5
+\OccursUnder c
+\TextType Section
+\TextProperties paragraph publishable vernacular level_5
+\StyleType Paragraph
+\FontSize 12
+\Italic
+\Justification Left
+\SpaceBefore 6
+\SpaceAfter 3

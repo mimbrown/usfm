@@ -106,7 +106,10 @@ Conformance status (276 tests across two roots, 2026-09-19):
 - `crates/usfm_parser/usfm-extra.sty` is appended to Paratext's `usfm.sty` by
   `crates/usfm_parser/build.rs`: the markers that sheet predates (`\ipc`, `\ta`,
   `\wl`) and the one entry it gets wrong (`\xta` occurs under `\ex` too),
-  each citing `tcdocs/grammar/usx.rnc`.
+  each citing `tcdocs/grammar/usx.rnc`, plus `\s5`, unfoldingWord's chunk
+  break, which no schema lists. `usfm.sty` itself is byte for byte tcdocs'
+  `grammar/usfm_sb.sty` (CC BY 4.0, `NOTICE.md`): add to the extra sheet,
+  never to it.
 - AST snapshot corpus: `cargo test -p usfm_parser --test snapshot` (review with `cargo insta review`)
 - Run `git submodule update --init tcdocs` first. Without it the `usfm_tests` build
   fails on purpose, so a zero-test run can never report a pass rate.
