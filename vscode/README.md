@@ -23,6 +23,7 @@ Server**.
 npm install
 npm run server:build:debug     # cargo build -p usfm_language_server
 npm run compile                # bundle client/extension.ts into out/main.js
+npm run notices                # ThirdPartyNotices.txt, which the .vsix carries
 npm run build                  # release server + bundle + .vsix
 ```
 
