@@ -361,14 +361,10 @@ impl<'s, W: Write> UsfmWriter<'s, '_, W> {
     /// rather than its sibling. Because a child's answer depends on the one
     /// after it, the flags are computed from the right.
     ///
-    /// That clause is deliberately one case wider than the parser: since
-    /// ticket 36 nothing nests inside `\xo` without `\+`, so
-    /// `\xo 1.1 \xt b|link-href="x"\xt*` would read back unchanged with the
-    /// `\xo*` left out as well. The writer keeps it. Nothing in the corpora
-    /// writes that shape — the three places either root produces an `\xo*` at
-    /// all have text or a non-note style after the `\xo` — and `\xo*` is
-    /// USFM the parser reads back to the identical tree, so the output stays
-    /// a fixed point either way.
+    /// The clause mirrors the parser's `parent_holds_plain_text` (ticket 36):
+    /// nothing nests inside `\xo` without `\+`, so after an `\xo` the next
+    /// style is a sibling whatever it is, and `\xo 1.1 \xt b|link-href="x"\xt*`
+    /// drops the `\xo*` too (ticket 41).
     fn omitted_closers(&self, children: &[Inline<'_>]) -> Vec<bool> {
         let mut omitted = vec![false; children.len()];
         for index in (0..children.len()).rev() {
@@ -381,7 +377,9 @@ impl<'s, W: Write> UsfmWriter<'s, '_, W> {
             omitted[index] = match children.get(index + 1) {
                 None => true,
                 Some(Inline::Char(next)) if self.is_note_text(next.style) => {
-                    !self.style_sheet.get_rule(next.style.index()).nest || omitted[index + 1]
+                    self.marker(char.style) == "xo"
+                        || !self.style_sheet.get_rule(next.style.index()).nest
+                        || omitted[index + 1]
                 }
                 Some(_) => false,
             };
@@ -822,9 +820,8 @@ mod tests {
     /// Ticket 36: nothing nests inside `\xo`, so a closed `\xt` after one is
     /// the note's next run and comes back out as one — the writer's `\+xt`,
     /// which was the ticket's complaint, is gone with the nesting that made
-    /// it. The `\xo*` in the attributed case is the writer being one case
-    /// stricter than the parser needs (see [`UsfmWriter::omitted_closers`]);
-    /// both spellings parse to the same tree.
+    /// it. Since ticket 41 the attributed case drops the `\xo*` as well:
+    /// the parser nests nothing inside `\xo`, closed `\xt` ahead or not.
     #[test]
     fn a_closed_xt_after_xo_is_written_as_a_sibling() {
         writes_body(
@@ -833,7 +830,7 @@ mod tests {
         );
         writes_body(
             "\\p \\x - \\xo 1.1 \\xt Gen 1.1|link-href=\"x\"\\xt*\\x*\n",
-            "\\p \\x - \\xo 1.1 \\xo*\\xt Gen 1.1|link-href=\"x\"\\xt*\\x*\n",
+            "\\p \\x - \\xo 1.1 \\xt Gen 1.1|link-href=\"x\"\\xt*\\x*\n",
         );
     }
 

@@ -442,10 +442,9 @@ Recent progress:
   closing marker, and `\xt` is the only note-internal marker with `NEST`, so a
   sibling in front of a *closed* `\xt` keeps its own closer or the `\xt`
   becomes its child (`omitted_closers` decides the note's children from the
-  right for exactly that reason; since ticket 36 that clause is one case wider
-  than the parser needs, because an `\xo` takes no un-plussed child at all, and
-  the writer keeps the `\xo*` anyway — no corpus writes the shape and `\xo*`
-  reads back to the same tree). The parser reports nothing for an implicit
+  right for exactly that reason; an `\xo` is the exception, since it takes no
+  un-plussed child at all (ticket 36), so its closer goes before a closed
+  `\xt` too — ticket 41). The parser reports nothing for an implicit
   close inside a note — `parse_char_body` is silent when `note_depth > 0` —
   so the second parse gains no code and the round trip holds unchanged.
   `\ca` and `\cp` now go on lines of their own after `\c N`, which is what the
