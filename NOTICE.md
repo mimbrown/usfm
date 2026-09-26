@@ -37,6 +37,20 @@ derives from the following, which keep their own terms.
   same public-domain WEB, while the word attributes, alignment milestones,
   lemmas, Strong's numbers and morphology in them are machine-generated
   filler for benchmarking and carry no linguistic claim.
+- **unfoldingWord® Literal Text and Greek New Testament, Acts**
+  (`tasks/benchmark/corpus/aligned/`, from the test resources of
+  https://github.com/unfoldingWord/usfm-js at commit
+  `0ecae6f169f912e1c30da6f519a7724d31dcd841`, fetched 2026-09-26). The
+  scripture text is unfoldingWord's ULT and UGNT, **CC BY-SA 4.0**; attribution:
+  unfoldingWord, https://www.unfoldingword.org/ult and
+  https://www.unfoldingword.org/ugnt. The licence's legal code is copied
+  verbatim to `tasks/benchmark/corpus/aligned/LICENSE`. usfm-js itself is ISC
+  (its `package.json`); none of its code is vendored. The two files are
+  adapted: `tasks/benchmark/corpus/tools/usfmjs_oldformat.py` closes the
+  alignment and key-term milestones with `\*`, and changes nothing else (the
+  directory's README has the details). They are under CC BY-SA 4.0 as
+  adapted, and so are the fuzz seeds named `usfm-js__*` in
+  `tasks/fuzz/corpus/`, which are copies of them truncated to 64 KiB.
 - **`crates/usfm_parser/usfm.sty`**: the default USFM stylesheet distributed with
   Paratext, by United Bible Societies and SIL International, unmodified apart
   from what its own header records. Documentation: https://ubsicap.github.io/usfm/

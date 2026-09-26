@@ -75,6 +75,12 @@ Conformance status (276 tests across two roots, 2026-09-19):
   expectation is the parser's own tree and diagnostics, snapshotted by the
   `machine_py_*` tests in `crates/usfm_parser/tests/recovery.rs`. All seven books are
   fuzz seeds.
+- `tasks/benchmark/corpus/aligned/` (unfoldingWord's ULT and UGNT of Acts, from
+  usfm-js's test resources, **CC BY-SA 4.0** — not MIT; its own `LICENSE` and
+  README, and a `NOTICE.md` entry) is not a harness root either: it is the
+  benchmark's `aligned` class (ticket 10), a round-trip input and two fuzz
+  seeds. Its files are upstream's with every milestone closed (`\*`), since
+  usfm-js's old format leaves them open, which is not USFM 3.
 - `BookCode::Other([u8; 3])` holds a code USX accepts that the enum does not
   name: `book@code` in `usx.rnc` is the book list *or* the pattern
   `[A-Z][A-Z0-9]{2}|[0-9][A-Z][0-9]|[0-9]{2}[A-Z]`, so `\id TST` is valid and
@@ -163,6 +169,32 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **Real aligned USFM in the benchmark corpus (ticket 10).** Michael's answer
+  was "vendor them": `tasks/benchmark/corpus/aligned/` holds unfoldingWord's
+  Acts from usfm-js's test resources (commit `0ecae6f`, fetched 2026-09-26),
+  the English **ULT** with every word in `\zaln-s`/`\zaln-e` (`large.usfm`
+  upstream, 3.9 MB) and the Greek **UGNT** it is aligned to, every word a
+  `\w` with `lemma`/`strong`/`x-morph` and 156 `\k-s` key terms
+  (`45-ACT.ugnt.oldformat.usfm`; the `45-ACT.ugnt.usfm` the ticket named is a
+  130-byte placeholder upstream). **CC BY-SA 4.0**, with the licence's legal
+  code as `LICENSE`, a README and a `NOTICE.md` entry. Both upstream files are
+  usfm-js's *old format* — a milestone's attribute list runs to the line's end
+  with no `\*`, which tcdocs judges `fail` and which parses as 19 140
+  `unexpected-pipe` Errors with every attribute list kept as text — so what is
+  committed is upstream passed through `tools/usfmjs_oldformat.py`, which
+  appends the `\*` and checks it changed nothing else. The parser was right
+  about the old shape; its recovery of it is ticket 43 (`needs-triage`). The
+  closed files report no parser finding: 28 `content-outside-paragraph`
+  (the ULT never writes a `\p` after `\c`) and Infos. The class is **`aligned`**,
+  replacing the synthetic `alignment-heavy` Luke, which is no longer committed
+  (`synthesize.py --class alignment-heavy` still writes it byte for byte;
+  `attributes-heavy` is unchanged); `whole-corpus` is now 91 files, 14.36 MiB,
+  so no earlier `whole-corpus` number compares with a later one. Measured in
+  one sitting against the synthetic Luke, `parse` reads the real text at
+  90.2 MiB/s against 88.4 — the synthetic class was a fair stand-in
+  (`docs/benchmarks.md`, "usfm-js aligned corpus"). Both books round-trip
+  (`the_benchmark_corpus_round_trips` reads `aligned` beside `web/`) and are
+  fuzz seeds as `usfm-js__*`
 - **Symbols, completion and code actions (ticket 32, M6).** Three more
   capabilities, three more modules of pure functions with the wiring in
   `main.rs`. **`textDocument/documentSymbol`** (`symbols.rs`) is the outline:
@@ -661,10 +693,10 @@ feature is wanted back — which is **ready-for-human** and not an agent's to
 pick up; until it is answered, `wip/` stays parked and M6 stays open on that
 one item. M6's other exit criteria were checked and recorded in the spec on
 2026-09-20 (the boundary benchmark rerun is `docs/benchmarks.md`, "M6
-close": within noise). **The frontier is empty**: tickets 10 and 33 are the
-only open ones and both are ready-for-human, so an unattended session has
-nothing to take until one of them is answered. What is left after that —
-the loose ends found on the way (tickets 38–42, `needs-triage`), the
+close": within noise). **The frontier is empty**: ticket 10 is done
+(2026-09-26) and ticket 33 is the only open one, ready-for-human, so an
+unattended session has nothing to take until it is answered. What is left
+after that — the loose ends found on the way (tickets 38–43, `needs-triage`), the
 hardening plan's unchecked boxes, and the work with no plan yet — is listed
 in the spec under "After M6: what is left".
 Tickets are in

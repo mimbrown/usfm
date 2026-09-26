@@ -114,6 +114,12 @@ came from:
 - the vendored machine.py fixtures (`tasks/conformance/fixtures/machine-py/*/*.SFM`), as
   `machine-py__<project>__<book>.usfm`. Among them are a zero-byte book and
   two whose `\id` disagrees with their filename.
+- the benchmark corpus's real aligned text (`tasks/benchmark/corpus/aligned/*.usfm`,
+  ticket 10), as `usfm-js__<book>.usfm`: unfoldingWord's Acts, the English
+  ULT in `\zaln-s`/`\zaln-e` and the Greek UGNT with `\w` attributes and
+  `\k-s` key terms. Both are whole books, so both seeds are truncated. With
+  them there are 297 seeds per target, where the runs recorded below started
+  from 295.
 
 It is idempotent, and it truncates a seed longer than `-max_len` to the last
 whole line that fits, which is what libFuzzer would do with it anyway. Run

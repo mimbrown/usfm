@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# Seed both fuzz corpora from the conformance inputs: the tcdocs submodule and
-# the vendored usfm-grammar and machine.py fixtures. Idempotent: rerun it after
+# Seed the fuzz corpora from the conformance inputs — the tcdocs submodule and
+# the vendored usfm-grammar and machine.py fixtures — and from the benchmark
+# corpus's real aligned text, usfm-js's Acts (ticket 10). Idempotent: rerun it after
 # `git submodule update` and only new or changed files are written.
 #
 # A seed is named after the test it came from, with `/` replaced by `__`, so a
 # finding traces back to a real file. usfm-grammar's carry a `usfm-grammar__`
 # prefix (`usfm-grammar__bugfixes__q4.usfm`,
 # `usfm-grammar__autofix__slash_in_text.usfm`) and machine.py's a `machine-py__`
-# one (`machine-py__Tes__41MATTes.usfm`). Both targets get their own copy
+# one (`machine-py__Tes__41MATTes.usfm`), and the aligned books a `usfm-js__`
+# one (`usfm-js__45-ACT.ult.usfm`). Every target gets its own copy
 # (a copy, not a symlink, so a Windows checkout works and so libFuzzer can
 # prune one corpus without touching the other).
 #
@@ -27,6 +29,7 @@ MAX_LEN=${MAX_LEN:-65536}
 TCDOCS=../../tcdocs
 FIXTURES=../conformance/fixtures/usfm-grammar
 MACHINE_PY=../conformance/fixtures/machine-py
+ALIGNED=../benchmark/corpus/aligned
 
 if [[ ! -d $TCDOCS/tests ]]; then
   echo "tcdocs is not checked out: run 'git submodule update --init tcdocs'" >&2
@@ -107,6 +110,13 @@ while IFS= read -r -d '' origin; do
   relative=${relative%.SFM}
   stage "$origin" "machine-py__${relative//\//__}.usfm"
 done < <(find "$MACHINE_PY" -type f -name '*.SFM' -print0 | sort -z)
+
+# benchmark/corpus/aligned/<book>.usfm -> usfm-js__<book>.usfm
+# Whole books, so both are truncated: what is left is most of Acts 1 in the
+# ULT (323 alignment groups) and Acts 1–2 in the UGNT (twelve `\k-s` terms).
+while IFS= read -r -d '' origin; do
+  stage "$origin" "usfm-js__$(basename "$origin")"
+done < <(find "$ALIGNED" -type f -name '*.usfm' -print0 | sort -z)
 
 pruned=0
 if [[ $prune == true ]]; then

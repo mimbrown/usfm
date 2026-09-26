@@ -6,7 +6,9 @@
 //! * every tcdocs case marked `pass` (`tcdocs/tests`),
 //! * every usfm-grammar `bugfixes` case marked `pass`
 //!   (`tasks/conformance/fixtures/usfm-grammar`),
-//! * the benchmark corpus's `web/` — 86 files, the whole World English Bible,
+//! * the benchmark corpus's `web/` — 86 files, the whole World English Bible —
+//!   and its `aligned/`, Acts in unfoldingWord's aligned English and in the
+//!   Greek it is aligned to (ticket 10),
 //! * the machine.py books (`tasks/conformance/fixtures/machine-py`), which are
 //!   not a harness root and so are reached by no `discover_tests` walk. They
 //!   are here because one of them, `41MATTes.SFM`, was the one input in the
@@ -20,7 +22,7 @@
 //! What this test adds is the corpora. The gate's `--roundtrip` step runs the
 //! same property over every conformance case, `pass` and `fail` alike; here it
 //! is the `pass` cases — where the tree is a real document rather than a
-//! repair — and the 86 books of the benchmark corpus, which no other check
+//! repair — and the 88 books of the benchmark corpus, which no other check
 //! reaches. Last comes a fifth, smaller corpus:
 //! [`the_fuzz_findings_round_trip`], the minimised inputs ticket 27's fuzz
 //! target found, so a regression in any of them is a failing `cargo test`.
@@ -100,13 +102,15 @@ fn every_conformance_pass_case_round_trips() {
     report("conformance", count, failures);
 }
 
-/// The benchmark corpus's `web/` class: 86 whole books, the largest body of
-/// ordinary USFM in the repo.
+/// The benchmark corpus's `web/` class — 86 whole books, the largest body of
+/// ordinary USFM in the repo — and its `aligned/` class, unfoldingWord's Acts
+/// from usfm-js (ticket 10): the one whole book of real word-aligned USFM in
+/// the repo, and the Greek it is aligned to.
 #[test]
 fn the_benchmark_corpus_round_trips() {
-    let cases: Vec<(String, String)> = FileClass::Plain
-        .load()
+    let cases: Vec<(String, String)> = [FileClass::Plain, FileClass::Aligned]
         .into_iter()
+        .flat_map(FileClass::load)
         .map(|file| {
             let name = file
                 .path

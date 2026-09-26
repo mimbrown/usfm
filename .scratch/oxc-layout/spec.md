@@ -250,14 +250,17 @@ session's context. Three tiers.
 **Blocked on Michael** (the two open tickets; both small once answered):
 ticket 33 (delete `wip/`; the lexicon question) and ticket 10 (the usfm-js
 aligned fixtures; a licence call). With those done every milestone of this
-spec is closed.
+spec is closed. Ticket 10 was answered on 2026-09-26 ("vendor them") and is
+done: `tasks/benchmark/corpus/aligned/` is the benchmark's `aligned` class,
+so ticket 33 is the only one left in this tier.
 
 **Loose ends found on the way, deliberately left, now ticketed at
 `needs-triage`** so a loop does not take them until someone says they are
 wanted: 38 (`ReferenceIndex` does not see a `\periph` division's chapters),
 39 (the server parses once per request rather than per document version),
 40 (formatting as a minimal diff rather than one whole-document edit), 41
-(two writer/parser asymmetries: `\cp`'s raw-word number, the kept `\xo*`).
+(two writer/parser asymmetries: `\cp`'s raw-word number, the kept `\xo*`),
+43 (recovering usfm-js's unclosed "old format" milestones, found by ticket 10).
 Beside them, the hardening plan's own unchecked boxes
 (`docs/plans/hardening.md`): marker-at-end-of-line handling, `\fig`
 attribute naming, a malformed real-world corpus, and a benchmark gate in

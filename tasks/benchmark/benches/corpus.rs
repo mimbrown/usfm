@@ -30,7 +30,7 @@ use usfm::usx::to_usx_string;
 use usfm_benchmark::{CorpusFile, FileClass, total_bytes};
 
 /// Criterion settings chosen so a full `cargo bench -p usfm_benchmark`
-/// finishes in a few minutes on a 4-vCPU VM: the whole-corpus input is 12.8 MB
+/// finishes in a few minutes on a 4-vCPU VM: the whole-corpus input is 14.4 MB
 /// and one iteration of it is a large fraction of a second, so the default
 /// 100 samples over 5 s would take hours.
 fn configured() -> Criterion {
