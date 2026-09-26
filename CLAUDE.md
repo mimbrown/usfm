@@ -132,7 +132,10 @@ Conformance status (276 tests across two roots, 2026-09-19):
   root, `pass` and `fail` alike, about a second. `roundtrip-known.txt` is
   empty, has the baseline's semantics — an unlisted failure is a regression, a
   listed case that round-trips is a stale entry, both fail — and every entry
-  needs a reason naming the bug. Last in the gate is `scripts/miri.sh`
+  needs a reason naming the bug. Then
+  `scripts/third_party_notices.py --check --no-npm`: every crate the shipped
+  binaries link carries a licence file, since the `.vsix`'s
+  `ThirdPartyNotices.txt` (`npm run notices` in `vscode/`) quotes them. Last in the gate is `scripts/miri.sh`
   (ticket 05): `cargo +nightly miri test` over the `usfm_span`, `usfm_ast` and
   `usfm_diagnostics` libs, `usfm_usx`'s lib, `usfm_html`'s `escape` tests, the
   parser lib
