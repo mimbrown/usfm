@@ -2,12 +2,19 @@
 """Derive attribute-heavy and alignment-heavy USFM from the plain WEB corpus.
 
     python3 synthesize.py --seed 20260919 <web-dir> <out-dir>
+    python3 synthesize.py --seed 20260919 --class alignment-heavy <web-dir> <out-dir>
+
+The first form writes the committed class, `attributes-heavy`. The second
+writes the synthetic `alignment-heavy` Luke, which is no longer committed:
+ticket 10 replaced it as the benchmark's aligned input with real aligned text
+from usfm-js (`corpus/aligned/`). The generator stays, so the two can still be
+compared; its output for a class does not depend on which others are written.
 
 The benchmark needs files that exercise the two hot paths a plain scripture
 text never reaches: word-level attributes (`\\w word|lemma="..."\\w*`) and
 alignment milestones (`\\zaln-s |...\\*` ... `\\zaln-e\\*`). No public project
-file with either is available under a licence we can commit, so both are
-generated from the World English Bible with markup in the shape
+file with word attributes is available under a licence we can commit, so
+both were generated from the World English Bible with markup in the shape
 unfoldingWord's aligned texts use. The words, and so the byte volume the
 parser sees, are real; the lemmas, Strong's numbers and morphology are not.
 
@@ -29,7 +36,8 @@ import sys
 # `\q`-dense) and the longest New Testament book. Alignment markup expands
 # the source about twenty-sixfold, so that class is Luke alone - the New
 # Testament is where unfoldingWord's alignment shape comes from, and one
-# book is already 3.8 MB.
+# book is already 3.8 MB. Only `DEFAULT_CLASSES` are written without
+# `--class`, and only they are committed.
 BOOKS = {
     "attributes-heavy": ["01-GEN.usfm", "19-PSA.usfm", "43-LUK.usfm"],
     "alignment-heavy": ["43-LUK.usfm"],
@@ -187,15 +195,21 @@ CLASSES = {
     "alignment-heavy": alignment_wrapper,
 }
 
+DEFAULT_CLASSES = ["attributes-heavy"]
+
 
 def main(argv):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--seed", required=True, help="generator seed; the committed files use 20260919")
+    parser.add_argument(
+        "--class", dest="classes", action="append", choices=sorted(CLASSES),
+        help=f"a class to write, repeatable; default {', '.join(DEFAULT_CLASSES)}",
+    )
     parser.add_argument("web_dir", help="directory of plain WEB USFM files")
     parser.add_argument("out_dir", help="directory the synthetic classes are written to")
     options = parser.parse_args(argv[1:])
 
-    for class_name in sorted(CLASSES):
+    for class_name in sorted(options.classes or DEFAULT_CLASSES):
         target = os.path.join(options.out_dir, class_name)
         os.makedirs(target, exist_ok=True)
         for book_file in BOOKS[class_name]:

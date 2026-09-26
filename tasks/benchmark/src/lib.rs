@@ -14,8 +14,8 @@ pub const CORPUS_ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/corpus");
 /// A group of corpus files the benches report one throughput number for.
 ///
 /// The classes are the ones in `corpus/README.md`. They overlap: `NoteHeavy`
-/// is one file of `Plain`, and `WholeCorpus` is `Plain` plus the two synthetic
-/// classes with nothing counted twice.
+/// is one file of `Plain`, and `WholeCorpus` is `Plain`, `AttributesHeavy` and
+/// `Aligned` with nothing counted twice.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FileClass {
     /// `web/` — 86 files, the whole World English Bible.
@@ -23,13 +23,15 @@ pub enum FileClass {
     /// `synthetic/attributes-heavy/` — 3 books, every word carries `\w`
     /// attributes.
     AttributesHeavy,
-    /// `synthetic/alignment-heavy/` — Luke, every word inside
-    /// `\zaln-s`/`\zaln-e`.
-    AlignmentHeavy,
+    /// `aligned/` — unfoldingWord's Acts from usfm-js (ticket 10): the
+    /// English ULT, every word inside `\zaln-s`/`\zaln-e`, and the Greek UGNT
+    /// it is aligned to, every word a `\w` with attributes. Real text, where
+    /// the synthetic `alignment-heavy` class it replaced was generated.
+    Aligned,
     /// `web/71-WIS.usfm` — the densest book in the corpus at 3.42 footnotes
     /// per KB. Already part of `Plain`.
     NoteHeavy,
-    /// Everything: `Plain` + `AttributesHeavy` + `AlignmentHeavy`, 90 files.
+    /// Everything: `Plain` + `AttributesHeavy` + `Aligned`, 91 files.
     WholeCorpus,
 }
 
@@ -38,7 +40,7 @@ impl FileClass {
     pub const ALL: [FileClass; 5] = [
         FileClass::Plain,
         FileClass::AttributesHeavy,
-        FileClass::AlignmentHeavy,
+        FileClass::Aligned,
         FileClass::NoteHeavy,
         FileClass::WholeCorpus,
     ];
@@ -48,7 +50,7 @@ impl FileClass {
         match self {
             FileClass::Plain => "plain",
             FileClass::AttributesHeavy => "attributes-heavy",
-            FileClass::AlignmentHeavy => "alignment-heavy",
+            FileClass::Aligned => "aligned",
             FileClass::NoteHeavy => "note-heavy",
             FileClass::WholeCorpus => "whole-corpus",
         }
@@ -68,9 +70,7 @@ impl FileClass {
             FileClass::AttributesHeavy => {
                 usfm_files_in(&root.join("synthetic").join("attributes-heavy"))
             }
-            FileClass::AlignmentHeavy => {
-                usfm_files_in(&root.join("synthetic").join("alignment-heavy"))
-            }
+            FileClass::Aligned => usfm_files_in(&root.join("aligned")),
             FileClass::NoteHeavy => {
                 let path = root.join("web").join("71-WIS.usfm");
                 assert!(path.is_file(), "{} is missing", path.display());
@@ -79,7 +79,7 @@ impl FileClass {
             FileClass::WholeCorpus => {
                 let mut paths = FileClass::Plain.paths();
                 paths.extend(FileClass::AttributesHeavy.paths());
-                paths.extend(FileClass::AlignmentHeavy.paths());
+                paths.extend(FileClass::Aligned.paths());
                 paths
             }
         };
@@ -151,17 +151,17 @@ mod tests {
         }
         assert_eq!(FileClass::Plain.paths().len(), 86);
         assert_eq!(FileClass::AttributesHeavy.paths().len(), 3);
-        assert_eq!(FileClass::AlignmentHeavy.paths().len(), 1);
+        assert_eq!(FileClass::Aligned.paths().len(), 2);
         assert_eq!(FileClass::NoteHeavy.paths().len(), 1);
-        // 86 + 4, not double-counting note-heavy, which is one of the 86.
-        assert_eq!(FileClass::WholeCorpus.paths().len(), 90);
+        // 86 + 3 + 2, not double-counting note-heavy, which is one of the 86.
+        assert_eq!(FileClass::WholeCorpus.paths().len(), 91);
     }
 
     #[test]
     fn the_whole_corpus_loads() {
         let files = FileClass::WholeCorpus.load();
-        assert_eq!(files.len(), 90);
-        // ~12.8 MB; a loose bound that only catches an empty or truncated read.
-        assert!(total_bytes(&files) > 12_000_000);
+        assert_eq!(files.len(), 91);
+        // ~14.4 MB; a loose bound that only catches an empty or truncated read.
+        assert!(total_bytes(&files) > 14_000_000);
     }
 }
