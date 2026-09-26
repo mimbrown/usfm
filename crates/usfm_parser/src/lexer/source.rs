@@ -67,9 +67,18 @@ impl<'a> Source<'a> {
             source_text = "\0";
         }
 
+        // A UTF-8 byte-order mark is not content: Paratext and Windows
+        // editors write one at the head of a book, and read as text it would
+        // stand in front of the `\id`. Starting after it keeps every span a
+        // byte offset into the text as given.
+        let offset = if source_text.starts_with('\u{feff}') {
+            '\u{feff}'.len_utf8()
+        } else {
+            0
+        };
         Self {
             text: source_text,
-            offset: 0,
+            offset,
         }
     }
 

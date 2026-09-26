@@ -177,3 +177,22 @@ fn periph_title_span_is_the_source_it_was_read_from() {
     check("\\periph\\* n");
     check("\\id GEN\n\\periph \\nd Lord\\nd* of hosts|id=\"x\"\nbody\n");
 }
+
+/// A UTF-8 byte-order mark at the head of a book (Paratext and Windows
+/// editors write one) is not content: the book parses as it would without
+/// it, and every span starts after it.
+#[test]
+fn a_byte_order_mark_is_skipped() {
+    let plain = "\\id GEN\n\\c 1\n\\p \\v 1 In the beginning.\n";
+    let marked = format!("\u{feff}{plain}");
+    check(&marked);
+
+    let without = Parser::new(plain).parse(&DEFAULT_STYLESHEET);
+    let with = Parser::new(&marked).parse(&DEFAULT_STYLESHEET);
+    assert!(with.diagnostics.is_empty(), "{:?}", with.diagnostics);
+    assert!(eq_ignoring_spans(&with.document, &without.document));
+    let Block::Book(book) = &with.document.blocks[0] else {
+        panic!("expected the book, got {:?}", with.document.blocks[0]);
+    };
+    assert_eq!(book.span.start, 3);
+}
