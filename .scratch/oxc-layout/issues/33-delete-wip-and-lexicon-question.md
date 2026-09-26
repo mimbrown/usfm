@@ -1,6 +1,6 @@
 # 33. Delete `wip/` and decide the lexicon feature
 
-Status: claimed
+Status: resolved
 Milestone: M6
 Blocked by: 10
 
@@ -37,3 +37,22 @@ feature is not coming back for now, so `wip/usfm_language_server` and
 the root `Cargo.toml` `exclude` updated, and the hardening plan's Phase 5
 lexicon line marked as decided against. Unblocked; runs after ticket 10 so
 the two PRs do not race.
+
+## Answer
+
+Landed via PR #44 (2026-09-26). `git rm -r wip/`: the old language server
+and `data_layer` (9 files, 1390 lines) are gone, and the root `Cargo.toml`
+`exclude` is `["tasks/fuzz"]` alone; `Cargo.lock` is unchanged, since the
+crates were never in the workspace. Every mention outside `wip/` was
+rewritten to describe the present (CLAUDE.md's stream entry and structure
+tree, the server's manifest and module doc, `extension.ts`), or kept as
+dated history where the history is the point (ticket 01's checklist entry
+in `hardening.md`, the ADR's layout note, the spec's M6 record — which now
+says the deletion criterion is met and M6 is closed). The lexicon feature
+is decided against, recorded on `hardening.md`'s Phase 5 line and open
+question 5; reopening it takes a new ticket with a design. `NOTICE.md`
+needed nothing. Left in `vscode/`: the `usfm.dict` custom editor, which is
+client-only and still works, and a dead `lexicon` key in the
+`usfm.config.json` schema that only the deleted server read — removing it
+would flag existing configs (`additionalProperties: false`), so it stays
+until the schema is next revised. Gate exit 0.
