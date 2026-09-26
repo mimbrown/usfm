@@ -707,7 +707,10 @@ benchmark rerun is `docs/benchmarks.md`, "M6 close": within noise). Tickets
 10 and 33, the two that waited on Michael, are both answered and done
 (2026-09-26), so nothing is blocked on him. What is left — the loose ends found on the way (tickets 38–43, `needs-triage`), the
 hardening plan's unchecked boxes, and the work with no plan yet — is listed
-in the spec under "After M6: what is left".
+in the spec under "After M6: what is left". **M7, the USX reader**
+(ticket 42, specified 2026-09-26), is next: `roxmltree` under a `read` module
+in `usfm_usx`, gated by USX -> `Document` -> USX and USX -> USFM -> USX over
+both conformance roots; tickets 45–49.
 Tickets are in
 `.scratch/oxc-layout/issues/`, written one milestone ahead. Unattended
 sessions follow `docs/agents/loop.md`; `scripts/gate.sh` is the gate before every push.
