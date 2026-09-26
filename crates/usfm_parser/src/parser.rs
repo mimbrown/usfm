@@ -173,6 +173,10 @@ pub struct ParserImpl<'a> {
     /// Parsing the `\periph Title|attrs` line, where the attribute list ends
     /// at the line break rather than at a closing marker.
     in_periph_title: bool,
+    /// Parsing the attribute list of a start milestone that no `\*` closes,
+    /// which ends at the line break as a `\periph` title's does, but leaves
+    /// the line break where it is (ticket 43).
+    line_bounded_attributes: bool,
     /// The verse whose `VerseEnd` is still to come; see [`OpenVerse`].
     open_verse: Option<OpenVerse>,
     /// The chapter whose `ChapterEnd` is still to come.
@@ -396,6 +400,7 @@ impl<'a> ParserImpl<'a> {
             in_cell: false,
             para_text_type: TextType::Other,
             in_periph_title: false,
+            line_bounded_attributes: false,
             open_verse: None,
             open_chapter: None,
             pending_verse_end: None,
@@ -954,7 +959,7 @@ impl<'a> ParserImpl<'a> {
                         None => {
                             let name = name.to_string();
                             let span = self.bump_span();
-                            match self.take_unknown_milestone() {
+                            match self.take_unknown_milestone(&name, span) {
                                 Some(attributes) => {
                                     let style = self.register_milestone(&name, span);
                                     return BlockStart::Milestone(Milestone {
@@ -1768,7 +1773,7 @@ impl<'a> ParserImpl<'a> {
         }
         let Some(marker) = self.resolve_marker(name) else {
             let name = name.to_string();
-            if !closing && let Some(attributes) = self.take_unknown_milestone() {
+            if !closing && let Some(attributes) = self.take_unknown_milestone(&name, span) {
                 let style = self.register_milestone(&name, span);
                 context.add_child(Inline::Milestone(Milestone {
                     style: StyleId::new(style as u32),
@@ -2281,6 +2286,8 @@ impl<'a> ParserImpl<'a> {
         // marker's. The inline path has eaten it by now (`parse_marker`); the
         // block path calls straight in, so eat it here and the two agree
         // (ticket 29).
+        let checkpoint = self.lexer.checkpoint();
+        let diagnostics_len = self.diagnostics.len();
         self.eat_whitespace();
         let pipe_span = self.cur_span();
         let attributes = self
@@ -2289,6 +2296,25 @@ impl<'a> ParserImpl<'a> {
         self.eat_whitespace();
         if !self.eat(Kind::MilestoneEnd) {
             let name = self.marker_name(marker);
+            // A marker registered by an earlier unclosed `\zaln-s` is known
+            // by now, so the old format's later lines arrive here rather
+            // than at `take_unknown_milestone`: read them the same way.
+            if attributes.is_some() {
+                let parsed = self.lexer.checkpoint();
+                let parsed_end = self.prev_token_end;
+                self.lexer.rewind(checkpoint);
+                let rest = self.diagnostics.split_off(diagnostics_len);
+                if let Some(line_bounded) = self.take_unclosed_milestone(&name, span) {
+                    return Milestone {
+                        style: StyleId::new(marker as u32),
+                        attributes: line_bounded,
+                        span: Span::new(span.start, self.prev_token_end()),
+                    };
+                }
+                self.lexer.rewind(parsed);
+                self.prev_token_end = parsed_end;
+                self.diagnostics.extend(rest);
+            }
             self.emit(
                 Code::MilestoneNotClosed,
                 span,
@@ -2327,7 +2353,7 @@ impl<'a> ParserImpl<'a> {
     /// alignment, `\ts` from tStudio), and the syntax alone says what the
     /// marker is, so the parser can keep the node and all its attributes
     /// rather than dropping them.
-    fn take_unknown_milestone(&mut self) -> Option<Option<Attributes<'a>>> {
+    fn take_unknown_milestone(&mut self, name: &str, span: Span) -> Option<Option<Attributes<'a>>> {
         let checkpoint = self.lexer.checkpoint();
         let diagnostics_len = self.diagnostics.len();
         // As in `parse_milestone_node`: the space before the pipe belongs to
@@ -2340,12 +2366,57 @@ impl<'a> ParserImpl<'a> {
             .then(|| self.parse_attributes(pipe_span));
         self.eat_whitespace();
         if self.eat(Kind::MilestoneEnd) {
-            Some(attributes)
-        } else {
-            self.lexer.rewind(checkpoint);
-            self.diagnostics.truncate(diagnostics_len);
-            None
+            return Some(attributes);
         }
+        self.lexer.rewind(checkpoint);
+        self.diagnostics.truncate(diagnostics_len);
+        self.take_unclosed_milestone(name, span)
+    }
+
+    /// The pre-USFM-3 spelling of a start milestone that usfm-js's
+    /// "old format" writes (ticket 43): `\zaln-s |x-strong="G35880"` with the
+    /// attribute list running to the end of the line and no `\*` at all.
+    /// A `-s` marker followed by `|` whose list reaches a line break (or the
+    /// end of input) is read as closed there, keeps its attributes, and is
+    /// `milestone-not-closed` on the marker. The line break is left alone,
+    /// so the tree is the one the closed spelling gives.
+    ///
+    /// Without this the start was dropped while its `-e` was kept, and the
+    /// list became verse text, `|` and all: 19 140 `unexpected-pipe` Errors
+    /// over unfoldingWord's `large.usfm` as upstream wrote it. Anything else
+    /// — no `|`, a list that stops at a marker on the same line, a name
+    /// without `-s` — consumes nothing and returns `None`.
+    fn take_unclosed_milestone(&mut self, name: &str, span: Span) -> Option<Option<Attributes<'a>>> {
+        if !Style::new(name).is_start() {
+            return None;
+        }
+        let checkpoint = self.lexer.checkpoint();
+        let prev_token_end = self.prev_token_end;
+        let diagnostics_len = self.diagnostics.len();
+        self.eat_whitespace();
+        let pipe_span = self.cur_span();
+        if self.eat(Kind::Pipe) {
+            let attributes = self.parse_line_bounded_attributes(pipe_span);
+            if matches!(self.cur_kind(), Kind::Eof | Kind::Whitespace { has_newline: true }) {
+                self.emit(
+                    Code::MilestoneNotClosed,
+                    span,
+                    format!("milestone `\\{name}` is not closed by `\\*`; closed at the end of the line"),
+                );
+                return Some(Some(attributes));
+            }
+        }
+        self.lexer.rewind(checkpoint);
+        self.prev_token_end = prev_token_end;
+        self.diagnostics.truncate(diagnostics_len);
+        None
+    }
+
+    fn parse_line_bounded_attributes(&mut self, pipe: Span) -> Attributes<'a> {
+        self.line_bounded_attributes = true;
+        let attributes = self.parse_attributes(pipe);
+        self.line_bounded_attributes = false;
+        attributes
     }
 
     /// Register a milestone style the base stylesheet does not contain and
@@ -2486,6 +2557,11 @@ impl<'a> ParserImpl<'a> {
                 break;
             }
             if let Kind::Whitespace { has_newline: true } = self.cur_kind()
+                && self.line_bounded_attributes
+            {
+                break;
+            }
+            if let Kind::Whitespace { has_newline: true } = self.cur_kind()
                 && !newline_reported
             {
                 newline_reported = true;
@@ -2525,7 +2601,7 @@ impl<'a> ParserImpl<'a> {
                         self.cur_kind(),
                         Kind::Whitespace { .. } | Kind::Word | Kind::DoubleQuote | Kind::OptBreak
                     ) {
-                        if self.in_periph_title
+                        if (self.in_periph_title || self.line_bounded_attributes)
                             && matches!(self.cur_kind(), Kind::Whitespace { has_newline: true })
                         {
                             break;

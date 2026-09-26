@@ -1,0 +1,39 @@
+---
+source: crates/usfm_parser/tests/recovery.rs
+description: "\\id ACT\n\\c 1\n\\p\n\\v 1\n\\zaln-s |x-strong=\"G35880\" x-content=\"τὸν\"\n\\w The|x-occurrence=\"1\"\\w*\n\\zaln-e\\*\n\\zaln-s |x-strong=\"G43130\"\n\\w first\\w*\n\\zaln-e\\*\n\\k-s |rc://x//y \n\\w b|lemma=\"b\"\\w*\n\\k-e\\*\n\\qt-s |who=\"Paul\""
+---
+Book ACT "" @0..7
+ChapterStart 1@8..12
+Para p@13..213
+  VerseStart 1@16..20
+  Milestone zaln-s@21..67 x-strong="G35880" x-content="τὸν"
+  Text " "@67..68
+  Char w@68..94 x-occurrence="1"
+    Text "The"@71..74
+  Text " "@94..95
+  Milestone zaln-e@95..104
+  Text " "@104..105
+  Milestone zaln-s@105..131 x-strong="G43130"
+  Text " "@131..132
+  Char w@132..143
+    Text "first"@135..140
+  Text " "@143..144
+  Milestone zaln-e@144..153
+  Text " "@153..154
+  Milestone k-s@154..169 "rc://x//y"
+  Text " "@169..171
+  Char w@171..188 lemma="b"
+    Text "b"@174..175
+  Text " "@188..189
+  Milestone k-e@189..195
+  Text " "@195..196
+  Milestone qt-s@196..213 who="Paul"
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[milestone-not-closed] @21..28: milestone `\zaln-s` is not closed by `\*`; closed at the end of the line
+info[unknown-custom-milestone] @21..28: custom milestone `\zaln-s` is not in the stylesheet
+info[unknown-custom-milestone] @95..102: custom milestone `\zaln-e` is not in the stylesheet
+error[milestone-not-closed] @105..112: milestone `\zaln-s` is not closed by `\*`; closed at the end of the line
+error[milestone-not-closed] @154..158: milestone `\k-s` is not closed by `\*`; closed at the end of the line
+error[milestone-not-closed] @196..201: milestone `\qt-s` is not closed by `\*`; closed at the end of the line
