@@ -1,6 +1,6 @@
 # 10. Real word-aligned USFM from usfm-js (licence call)
 
-Status: ready-for-human
+Status: claimed
 Milestone: M2
 
 Assessed by ticket 03. https://github.com/unfoldingWord/usfm-js
@@ -20,3 +20,14 @@ out of band) be committed under `tasks/benchmark/corpus/aligned/` with a
 CC BY-SA 4.0 notice, replacing the synthetic `alignment-heavy` class? If yes,
 this becomes a ticket to vendor it and rerun the benchmarks; if no, the
 synthetic class stays and this ticket is `wontfix`.
+
+## Comments
+
+2026-09-26, Michael (via the orchestrator): **yes, vendor them.** Commit the
+usfm-js aligned files under `tasks/benchmark/corpus/aligned/` with the
+CC BY-SA 4.0 notice the ticket describes (the scripture is unfoldingWord's
+UGNT, CC BY-SA 4.0 upstream; usfm-js's own code is ISC), replacing the
+synthetic `alignment-heavy` class as the benchmark's aligned input. The
+synthetic generator and its other classes stay. Rerun the benchmarks so
+`docs/benchmarks.md` has the new class's numbers, and add the files as fuzz
+seeds and to the round-trip test's inputs like the other vendored corpora.

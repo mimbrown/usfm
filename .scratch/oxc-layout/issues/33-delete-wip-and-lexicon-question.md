@@ -1,8 +1,8 @@
 # 33. Delete `wip/` and decide the lexicon feature
 
-Status: ready-for-human
+Status: ready-for-agent
 Milestone: M6
-Blocked by: 32
+Blocked by: 10
 
 With the server rebuilt, `wip/usfm_language_server` has nothing left to
 give and can be deleted (`git rm`), with CLAUDE.md, NOTICE.md and the root
@@ -30,3 +30,10 @@ one-line `git rm -r wip/` plus the CLAUDE.md, NOTICE.md and root `Cargo.toml`
 `exclude` edits; on a "lexicon wanted" answer, `wip/usfm_language_server`
 still goes and `wip/data_layer` stays for the follow-up ticket that designs
 the feature.
+
+2026-09-26, Michael (via the orchestrator): **delete both.** The lexicon
+feature is not coming back for now, so `wip/usfm_language_server` and
+`wip/data_layer` both go (`git rm -r wip/`), with CLAUDE.md, NOTICE.md and
+the root `Cargo.toml` `exclude` updated, and the hardening plan's Phase 5
+lexicon line marked as decided against. Unblocked; runs after ticket 10 so
+the two PRs do not race.
