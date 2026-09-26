@@ -1,6 +1,6 @@
 # 42. A USX reader into `Document`, and the USX -> USFM -> USX round trip
 
-Status: needs-triage
+Status: resolved
 Milestone: after M6
 
 Nothing reads USX back into a `Document`. `usfm_usx` has an `XmlDocument`
@@ -20,3 +20,19 @@ conformance references. Needs a spec section and tickets of its own before
 an unattended loop could take it; write those first.
 
 Done when the spec has an M7 (or whatever it is called) with exit criteria.
+
+## Answer
+
+Specified 2026-09-26 (Michael, in the project thread: tests first, then
+"third-party crate or our own?"; answered and "Agreed, proceed"). The spec
+has an **M7. USX reader** section with exit criteria and the decisions a
+loop should not reopen, and M7 is ticketed as 45–49.
+
+- Tests: the conformance roots already pair every USFM input with its USX
+  (258 tcdocs `origin.xml`, 13 usfm-grammar), CC BY 4.0 and MIT and already
+  in `NOTICE.md`. Their USX was all generated from USFM, so real exports come
+  from sillsdev/machine.py (MIT): the public-domain WEB as DBL writes it, and
+  a malformed USX 2.6 test book (ticket 47).
+- XML: `roxmltree`, not our own parser and not `xml-rs` for the reader —
+  byte ranges for spans, no `unsafe`, MIT OR Apache-2.0 with both licence
+  files. The reasoning is in the spec.
