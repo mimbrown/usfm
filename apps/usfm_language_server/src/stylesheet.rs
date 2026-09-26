@@ -24,7 +24,6 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
 use std::sync::Arc;
 
 use usfm::StyleSheet;
@@ -114,20 +113,18 @@ impl Stylesheets {
     }
 }
 
-/// Read one `.sty` file and add its rules to a copy of the default sheet.
+/// Read one `.sty` file over a copy of the default sheet: an entry for a
+/// marker the default has amends it, a new marker adds a rule.
 fn load(path: &Path) -> Result<Arc<StyleSheet>, String> {
     let text = std::fs::read_to_string(path)
         .map_err(|e| format!("usfm: cannot read the stylesheet {}: {e}", path.display()))?;
-    let custom = StyleSheet::from_str(&text).map_err(|e| {
+    let mut extended = (**DEFAULT_STYLESHEET).clone();
+    extended.extend_from_str(&text).map_err(|e| {
         format!(
             "usfm: cannot parse the stylesheet {}: {e:?}",
             path.display()
         )
     })?;
-    let mut extended = (**DEFAULT_STYLESHEET).clone();
-    for rule in custom.rules {
-        extended.add_rule(rule);
-    }
     Ok(Arc::new(extended))
 }
 
@@ -201,6 +198,48 @@ mod tests {
         let (sheet, warning) = sheets.for_document(Some(&book(&directory)));
         assert_eq!(warning, None);
         assert!(sheet.get_rule_by_marker("zgrk").is_some());
+        let parse = usfm::parse_with(
+            "\\id MAT\n\\c 1\n\\p \\v 1 a \\zgrk logos\\zgrk* b\n",
+            &sheet,
+        );
+        assert!(parse.diagnostics.is_empty(), "{:?}", parse.diagnostics);
+    }
+
+    /// Most of a real project's `custom.sty` is overrides of Paratext's own
+    /// markers with no `\\StyleType` — a font, a colour, an indent. Read on its
+    /// own, such a sheet was rejected whole (`StyleTypeRequired`), so the
+    /// project's new markers were lost with it. This is the shape of one
+    /// (upgraded by Paratext 8), abridged.
+    #[test]
+    fn overrides_without_a_style_type_amend_the_default() {
+        let directory = scratch("overrides");
+        std::fs::write(
+            directory.join(PROJECT_STYLESHEET),
+            "# Custom style file created by the upgrade to Paratext 8.0.\n\
+             \n\\Marker toc1\n\\Regular\n\\Color 16711680\n\
+             \n\\Marker mt4\n\\OccursUnder id ip pb\n\\Rank 6\n\\TextProperties nonpublishable\n\
+             \n\\Marker vp\n\\Endmarker vp*\n\\Color 16711680\n\
+             \n\\Marker zgrk\n\\Name grk - Change to Greek font\n\\Endmarker zgrk*\n\
+             \\StyleType character\n\\OccursUnder c p q1 f fe\n\
+             \\TextProperties nonpublishable nonvernacular\n\
+             \n\\Marker em\n\\Italic -\n\\Bold\n\
+             \n\\Marker (\n\\Name open parenthesis\n\\StyleType Character\n\
+             \n\\Marker z-timeline-start \n\\TextProperties nonpublishable\n\\StyleType Character\n",
+        )
+        .expect("writing custom.sty");
+
+        let mut sheets = Stylesheets::default();
+        let (sheet, warning) = sheets.for_document(Some(&book(&directory)));
+        assert_eq!(warning, None);
+        // The new markers are there, and an override kept what it did not
+        // mention: `\\vp` is still a character style, `\\mt4` a paragraph
+        // with the project's `OccursUnder`.
+        assert!(sheet.get_rule_by_marker("zgrk").unwrap().is_character());
+        assert!(sheet.get_rule_by_marker("z-timeline-start").is_some());
+        assert!(sheet.get_rule_by_marker("vp").unwrap().is_character());
+        let mt4 = sheet.get_rule_by_marker("mt4").unwrap();
+        assert!(mt4.is_paragraph());
+        assert_eq!(mt4.occurs_under, ["id", "ip", "pb"]);
         let parse = usfm::parse_with(
             "\\id MAT\n\\c 1\n\\p \\v 1 a \\zgrk logos\\zgrk* b\n",
             &sheet,
