@@ -1,6 +1,6 @@
 # 33. Delete `wip/` and decide the lexicon feature
 
-Status: ready-for-agent
+Status: claimed
 Milestone: M6
 Blocked by: 10
 
