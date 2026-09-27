@@ -238,6 +238,16 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **What render needs (tickets 51–57, 2026-09-27).** Michael's older
+  publishing project, Shahkar-Urdu-Apps/render, was mapped against this
+  toolchain (`reports/render-gap-map.md` in the project files; the spec's
+  "After M7: what render needs"). Ticket 51 landed with the tickets:
+  `usfm parse` and `usfm format` take `--custom-stylesheet FILE`, a
+  project's `custom.sty` read *over* the `--stylesheet` sheet or the
+  built-in one (`StyleSheet::extend_from_str`, the language server's
+  semantics), where `--stylesheet` alone replaces it. 53–55 (a Paratext
+  project reader, the `\xt` reference parser, a glossary index) are
+  `ready-for-agent`; 52, 56 and 57 wait on Michael
 - **Markers delimited by a line break or the next `\` (hardening plan,
   Phase 2).** Nothing changed in the parser: fourteen such spellings already
   parsed with no diagnostic to the tree of their one-space spelling, and
