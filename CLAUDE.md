@@ -66,7 +66,9 @@ files between them cover every `Code`, and each one's coverage test reads
 `origin()` to know which third is its own (`is_semantic()` is
 `origin() == Origin::Semantic`). Only
 `usfm::parse` / `parse_with` / `parse_with_options` return both halves;
-`usfm_parser::Parser::parse` returns the parser's alone.
+`usfm_parser::Parser::parse` returns the parser's alone. For USX the same
+holds of `usfm::parse_usx` / `parse_usx_with` (ticket 48) and
+`usfm_usx::read_usx`.
 
 Conformance status (276 tests across two roots, 2026-09-19):
 - tcdocs (260 tests): 215 passed, 0 failed, 0 panicked, 1 skipped,
@@ -222,6 +224,23 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **`usfm::parse_usx` and `usfm parse --from usx` (ticket 48, M7).** The
+  facade's `parse_usx` / `parse_usx_with` (feature `usx`) are `read_usx` /
+  `read_usx_with` plus `usfm_semantic::analyze`, merged the way `parse_with`
+  merges (one private `with_semantic` serves both). The CLI's
+  `parse --from usfm|usx` (default `usfm`; a `.usx` extension never
+  switches it) applies to the `--diglot` files too, so
+  `usfm parse book.usx --from usx --format usfm` converts and
+  `--format usx` normalises; every other flag is unchanged. Several USX
+  files cannot be concatenated as text — each is its own XML document — so
+  `driver.rs` reads each on its own, prints its diagnostics under its own
+  path with positions in its own XML (a USFM run files them under `input`,
+  the joined source), applies `--strict` / `--deny-warnings` after every
+  file has reported, and `combine`s the documents block by block, moving a
+  style one file derived onto the combined sheet's entry for that marker.
+  The combined tree's `span` is `SPAN`. `usfm format` stays USFM-only: it
+  has no `--from`, which clap refuses (exit 2). The language server stays
+  USFM-only
 - **Real aligned USFM in the benchmark corpus (ticket 10).** Michael's answer
   was "vendor them": `tasks/benchmark/corpus/aligned/` holds unfoldingWord's
   Acts from usfm-js's test resources (commit `0ecae6f`, fetched 2026-09-26),
@@ -616,7 +635,7 @@ Recent progress:
   replacements, the punctuation sectioning, the diglot HTML and the prompt
   weave, the SILE output and the format dispatch, each a function over
   `Document`s with a unit test; `apps/usfm_cli` is the `usfm` binary —
-  `usfm parse <files> --format usx|html|json|usfm|sile|prompt`, `--stylesheet`,
+  `usfm parse <files> --from usfm|usx --format usx|html|json|usfm|sile|prompt`, `--stylesheet`,
   `--output`, `--replace`, `--diglot…`, `--watch`, `--strict`,
   `--deny-warnings`, `--diagnostics text|json` — on `clap`, tested by running
   it (`apps/usfm_cli/tests/cli.rs`). `usfm_parser` is a library with no
@@ -809,10 +828,13 @@ usfm-tools/
 │   └── usfm/              # Facade: re-exports the above behind features, and
 │                          #   `usfm::parse` / `parse_with` / `parse_with_options`,
 │                          #   whose diagnostics are the parser's plus
-│                          #   usfm_semantic's. `apps/` and `tasks/` depend on
-│                          #   this, not on the pieces
+│                          #   usfm_semantic's, and `parse_usx` /
+│                          #   `parse_usx_with`, the reader's plus the same.
+│                          #   `apps/` and `tasks/` depend on this, not on
+│                          #   the pieces
 ├── apps/
-│   ├── usfm_cli/          # The `usfm` binary: clap, watch mode, diagnostics
+│   ├── usfm_cli/          # The `usfm` binary: clap, watch mode, diagnostics;
+│   │                      #   `usfm parse --from usx` reads USX (ticket 48)
 │   └── usfm_language_server/ # The `usfm-language-server` binary (M6): LSP
 │                          #   over stdio on tower-lsp-server + tokio. Keeps
 │                          #   the open text, publishes `usfm::parse_with`'s

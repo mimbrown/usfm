@@ -5,8 +5,9 @@ edition = "2024"
 license = "MIT"
 
 # The facade of `docs/adr/0001-oxc-style-crate-layout.md`: one crate to depend
-# on. It re-exports the layers under short names and adds the two calls most
-# consumers want (`parse`, `parse_with`). The crates under `crates/` keep
+# on. It re-exports the layers under short names and adds the calls most
+# consumers want (`parse`, `parse_with`, and `parse_usx`, `parse_usx_with`
+# behind `usx`). The crates under `crates/` keep
 # depending on each other directly — the facade is for `apps/` and `tasks/`,
 # which is why nothing here depends on it in turn.
 [dependencies]
