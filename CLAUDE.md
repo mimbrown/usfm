@@ -59,8 +59,12 @@ rule is a `Code` variant with a test in `crates/usfm_parser/tests/recovery.rs`;
 every *semantic* rule — a check that reads the finished tree and repairs
 nothing, so `Code::is_semantic()` is true and `usfm_semantic::analyze` emits it
 — is a `Code` variant with a test in `crates/usfm_semantic/tests/checks.rs`
-(ticket 19). Between them the two files cover every `Code`, and each one's
-coverage test reads `is_semantic()` to know which half is its own. Only
+(ticket 19); and every rule only the USX reader has (`usx-…`, ticket 45) is
+one with a test in `crates/usfm_usx/tests/reader.rs`. `Code::origin()` —
+`Origin::{Parser, Semantic, Usx}` — says which file covers a code, the three
+files between them cover every `Code`, and each one's coverage test reads
+`origin()` to know which third is its own (`is_semantic()` is
+`origin() == Origin::Semantic`). Only
 `usfm::parse` / `parse_with` / `parse_with_options` return both halves;
 `usfm_parser::Parser::parse` returns the parser's alone.
 
@@ -103,8 +107,11 @@ Conformance status (276 tests across two roots, 2026-09-19):
   for a parser gap. The harness fails a patch that stops applying or that the
   parser no longer needs. `cargo run -p usfm_tests -- --show <name>` prints one
   test's diagnostics, output and patched expected USX.
-- `crates/usfm_parser/usfm-extra.sty` is appended to Paratext's `usfm.sty` by
-  `crates/usfm_parser/build.rs`: the markers that sheet predates (`\ipc`, `\ta`,
+- `crates/usfm_style/usfm-extra.sty` is appended to Paratext's `usfm.sty` by
+  `crates/usfm_style/build.rs` into `usfm_style::DEFAULT_STYLESHEET` (there
+  since ticket 45, which moved it out of `usfm_parser` so the USX reader can
+  resolve styles without depending on the parser; `usfm_parser` and the
+  facade re-export it under the old name): the markers that sheet predates (`\ipc`, `\ta`,
   `\wl`) and the one entry it gets wrong (`\xta` occurs under `\ex` too),
   each citing `tcdocs/grammar/usx.rnc`, plus `\s5`, unfoldingWord's chunk
   break, which no schema lists. `usfm.sty` itself is byte for byte tcdocs'
@@ -117,6 +124,7 @@ Conformance status (276 tests across two roots, 2026-09-19):
   (`recovery`, `snapshot`, `spans`, `whitespace`, `attributes`, `verse_ends`, `usx_text`,
   `usfm_html`'s `footnotes`, `usfm_json`'s `json` and `coverage`,
   `usfm_semantic`'s `checks`, `usfm_codegen`'s lib and `roundtrip`,
+  `usfm_usx`'s `reader`,
   `usfm_language_server`'s unit tests and its `lsp` conversation with the
   built binary, parser lib),
   gates lint with
@@ -132,7 +140,16 @@ Conformance status (276 tests across two roots, 2026-09-19):
   root, `pass` and `fail` alike, about a second. `roundtrip-known.txt` is
   empty, has the baseline's semantics — an unlisted failure is a regression, a
   listed case that round-trips is a stale entry, both fail — and every entry
-  needs a reason naming the bug. Then
+  needs a reason naming the bug. Then (ticket 45)
+  `cargo test -p usfm_tests --test usx_reader`, the USX reader over every
+  reference of both roots: each reads without a panic and a `pass` one with
+  no Error; for every case the harness compares, writing the read tree gives
+  the reference under the harness's own comparison, and the tree is
+  `usfm::parse` of the case's USFM up to four measured normalisations (the
+  default attribute's name, `<usx version>` as a `\usfm` paragraph, a note's
+  trailing whitespace, and whitespace on the usfm-grammar root); and every
+  read node's span is in its source. Ticket 46 turns the first two into
+  `usfm_tests` steps with known lists. Then
   `scripts/third_party_notices.py --check --no-npm`: every crate the shipped
   binaries link carries a licence file, since the `.vsix`'s
   `ThirdPartyNotices.txt` (`npm run notices` in `vscode/`) quotes them. Last in the gate is `scripts/miri.sh`
@@ -738,7 +755,8 @@ stylesheet, whoever built them.
 usfm-tools/
 ├── crates/
 │   ├── usfm_span/         # Span, SPAN and LineIndex (leaf crate, no dependencies)
-│   ├── usfm_style/        # The stylesheet: StyleSheet, StyleRule, StyleId
+│   ├── usfm_style/        # The stylesheet: StyleSheet, StyleRule, and the
+│   │                      #   generated DEFAULT_STYLESHEET (`usfm.sty`)
 │   ├── usfm_ast/          # AST nodes, Visit / VisitMut / Fold, Cursor, PlainText
 │   ├── usfm_diagnostics/  # Diagnostic, Code, Severity, ParseResult, rendering
 │   ├── usfm_parser/       # Lexer + parser. A library, no binary
@@ -747,7 +765,9 @@ usfm-tools/
 │   │                      #   Also ReferenceIndex, the chapter/verse index,
 │   │                      #   and `placement::check`, the `OccursUnder` rule
 │   │                      #   the checks and the server's completion share
-│   ├── usfm_usx/          # AST -> USX: the XML tree, its writer and reader
+│   ├── usfm_usx/          # AST <-> USX: the XML tree and its writer, and
+│   │                      #   `read_usx` / `read_usx_with` (ticket 45), USX
+│   │                      #   into a `Document` + diagnostics on `roxmltree`
 │   ├── usfm_html/         # AST -> HTML: ToHtml, SerializeHtml, Context
 │   ├── usfm_json/         # AST -> JSON: the tree as it is, one object per node
 │   ├── usfm_codegen/      # AST -> USFM: one canonical spelling per construct,

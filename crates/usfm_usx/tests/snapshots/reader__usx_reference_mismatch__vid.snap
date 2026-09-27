@@ -1,0 +1,12 @@
+---
+source: crates/usfm_usx/tests/reader.rs
+description: "<usx version=\"3.0\"><book code=\"GEN\" style=\"id\"/><chapter number=\"1\" style=\"c\" sid=\"GEN 1\"/><para style=\"q1\" vid=\"GEN 1:1\">text</para></usx>"
+---
+Book GEN "" @19..48
+Para usfm@5..18
+  Text "3.0"@14..17
+ChapterStart 1@48..91
+Para q1@91..133
+  Text "text"@122..126
+--- diagnostics
+warning[usx-reference-mismatch] @113..120: `vid="GEN 1:1"` names a verse, but none is open

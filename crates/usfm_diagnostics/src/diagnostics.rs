@@ -13,9 +13,12 @@
 //! Not every code is the parser's. A check that reads the finished tree and
 //! repairs nothing lives in `usfm_semantic` (M4), and its codes are the ones
 //! [`Code::is_semantic`] names; their tests are in
-//! `usfm_semantic/tests/checks.rs`. Every code has a test in one file or the
-//! other, and each file's coverage test uses `is_semantic` to know which are
-//! its own.
+//! `usfm_semantic/tests/checks.rs`. What only a reader of USX can find — XML
+//! that is not well-formed, an element USX does not have, an `eid` naming the
+//! wrong verse — is reported by `usfm_usx`'s reader (M7), with its tests in
+//! `usfm_usx/tests/reader.rs`. [`Code::origin`] names the pass for every
+//! code, every code has a test in exactly one of the three files, and each
+//! file's coverage test reads `origin` to know which are its own.
 //!
 //! # Which side a code is on
 //!
@@ -97,10 +100,19 @@
 //! | `missing-attribute-value` | E | keeps an empty value | parser: `name=` and `name=""` are the same pair in the tree |
 //! | `malformed-attribute-name` | E | keeps the name as written | **semantic** (20): the pair is in the tree, name and span |
 //! | `duplicate-attribute` | E | keeps every occurrence | **semantic** (20): as above |
+//! | `usx-not-well-formed` | E | reads nothing: the document is empty | **USX** (45): XML's own rule, which no USFM can break |
+//! | `usx-unknown-element` | W | drops the element, reads its content where it stands | **USX** (45): a USX element, not a marker |
+//! | `usx-unmatched` | E | drops the `<unmatched>` | **USX** (45): the AST has no node for it, so only a reader sees it |
+//! | `usx-verse-end-mismatch` | E | closes the open verse or chapter, or drops the end | **USX** (45): USFM has no verse ends to get wrong |
+//! | `usx-reference-mismatch` | W | nothing: `sid` and `vid` are derived | **USX** (45): as above |
 //! | `internal` | E | stops parsing | parser: it is the parser's own invariant |
 //!
-//! The executable form of the last column is [`Code::is_semantic`], which both
-//! crates' coverage tests read; the table is the reasoning behind it.
+//! The executable form of the last column is [`Code::origin`], which all
+//! three coverage tests read; the table is the reasoning behind it. The USX
+//! reader reports parser codes too, where a USX file is wrong the way its
+//! USFM would be (`unknown-marker` for a style the sheet lacks,
+//! `malformed-verse-number`, `content-outside-paragraph`); a code's origin is
+//! where it is tested, and those are tested with the parser.
 
 use std::fmt;
 use std::str::FromStr;
@@ -129,6 +141,21 @@ impl fmt::Display for Severity {
             Severity::Error => "error",
         })
     }
+}
+
+/// The pass that reports a [`Code`], and so the test file that covers it
+/// ([`Code::origin`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Origin {
+    /// `usfm_parser`, which repairs and reports the repair; tested in
+    /// `usfm_parser/tests/recovery.rs`.
+    Parser,
+    /// `usfm_semantic`, which reads the finished tree and repairs nothing;
+    /// tested in `usfm_semantic/tests/checks.rs`.
+    Semantic,
+    /// `usfm_usx`'s reader, for what only a reader of USX can find; tested in
+    /// `usfm_usx/tests/reader.rs`.
+    Usx,
 }
 
 /// Stable identifiers for every situation the parser recovers from.
@@ -528,6 +555,50 @@ pub enum Code {
     /// **Reported by:** `usfm_semantic` (ticket 20), at the second and each
     /// later occurrence of the name.
     DuplicateAttribute,
+    /// **Trigger:** a USX input that is not well-formed XML: an unclosed
+    /// element, a stray `&`, a second root, bytes that are not the declared
+    /// encoding.
+    /// **Recovery:** none. The document is empty; well-formedness is XML's
+    /// business, not something the USX vocabulary can repair (spec, M7).
+    /// **Severity:** Error.
+    /// **Reported by:** `usfm_usx`'s reader, at the position the XML parser
+    /// stopped.
+    UsxNotWellFormed,
+    /// **Trigger:** a USX element the reader does not know (`<list>`, which
+    /// usfm-grammar writes for USFM 3.2's `\list-s`), one it knows standing
+    /// where USX does not put it (a `<para>` inside a `<para>`, a `<chapter>`
+    /// in a note), or one without the `style` it is read by.
+    /// **Recovery:** the element is dropped and its content is read where it
+    /// stands, so the paragraphs of a `<list>` are kept; in a `<table>` or a
+    /// `<row>`, which hold nothing but rows and cells, it is dropped with its
+    /// content.
+    /// **Severity:** Warning.
+    /// **Reported by:** `usfm_usx`'s reader, on the element.
+    UsxUnknownElement,
+    /// **Trigger:** `<unmatched marker="…"/>`, Paratext's record of a closing
+    /// marker that closed nothing.
+    /// **Recovery:** dropped; the AST has no node for it. The same USFM is
+    /// `unmatched-closing-marker`, whose marker the parser drops too.
+    /// **Severity:** Error.
+    /// **Reported by:** `usfm_usx`'s reader, on the element.
+    UsxUnmatched,
+    /// **Trigger:** a `<verse eid>` or `<chapter eid>` that does not name the
+    /// verse or chapter that is open, or that comes when none is.
+    /// **Recovery:** with one open, the end closes it, and its number is the
+    /// open start's (the `eid` is derived data); with none open, it is
+    /// dropped.
+    /// **Severity:** Error.
+    /// **Reported by:** `usfm_usx`'s reader, on the element.
+    UsxVerseEndMismatch,
+    /// **Trigger:** a `sid` on a `<verse>` or `<chapter>`, or a `vid` on a
+    /// `<para>` or `<table>`, that does not name what its own `number`, the
+    /// book and the open chapter make — or, for a `vid`, the verse that is
+    /// open.
+    /// **Recovery:** none. `sid` and `vid` are derived data: the tree is read
+    /// from `number`, and the writer derives both again.
+    /// **Severity:** Warning.
+    /// **Reported by:** `usfm_usx`'s reader, on the attribute.
+    UsxReferenceMismatch,
     /// **Trigger:** the parser reached a state its own invariants say is
     /// impossible. Parsing stops at this point.
     /// **Recovery:** none; the document is whatever was parsed so far.
@@ -596,6 +667,11 @@ impl Code {
         Code::MalformedAttributeName,
         Code::DuplicateAttribute,
         Code::NumberHasLeadingZero,
+        Code::UsxNotWellFormed,
+        Code::UsxUnknownElement,
+        Code::UsxUnmatched,
+        Code::UsxVerseEndMismatch,
+        Code::UsxReferenceMismatch,
         Code::Internal,
     ];
 
@@ -660,6 +736,11 @@ impl Code {
             Code::MalformedAttributeName => "malformed-attribute-name",
             Code::DuplicateAttribute => "duplicate-attribute",
             Code::NumberHasLeadingZero => "number-has-leading-zero",
+            Code::UsxNotWellFormed => "usx-not-well-formed",
+            Code::UsxUnknownElement => "usx-unknown-element",
+            Code::UsxUnmatched => "usx-unmatched",
+            Code::UsxVerseEndMismatch => "usx-verse-end-mismatch",
+            Code::UsxReferenceMismatch => "usx-reference-mismatch",
             Code::Internal => "internal",
         }
     }
@@ -677,7 +758,9 @@ impl Code {
             | Code::DuplicateVerseNumber
             | Code::VerseOutOfOrder
             | Code::DuplicateChapterNumber
-            | Code::ChapterOutOfOrder => Severity::Warning,
+            | Code::ChapterOutOfOrder
+            | Code::UsxUnknownElement
+            | Code::UsxReferenceMismatch => Severity::Warning,
             Code::CharacterStyleImplicitlyClosed
             | Code::CharacterStyleNestedWithoutPlus
             | Code::MarkerNotListedHere
@@ -686,17 +769,66 @@ impl Code {
         }
     }
 
-    /// Whether this code is reported by the semantic pass (`usfm_semantic`)
-    /// rather than by the parser.
+    /// Which pass reports this code: the parser, the semantic pass
+    /// (`usfm_semantic`) or the USX reader (`usfm_usx::read`).
     ///
     /// The parser repairs and reports the repair; the semantic pass reads the
     /// finished tree and reports a judgement about it (M4 in
-    /// `.scratch/oxc-layout/spec.md`). Which side a code falls on is not
-    /// visible from the variant, so it is recorded here once and read by both
-    /// crates' coverage tests: `usfm_parser/tests/recovery.rs` skips the codes
-    /// it names, and `usfm_semantic/tests/checks.rs` requires a snapshot for
-    /// each of them. A code moving from the parser to the semantic pass is
-    /// therefore one line here plus a moved snapshot.
+    /// `.scratch/oxc-layout/spec.md`); the USX reader reports what only a
+    /// reader of USX can find (M7). Which pass a code belongs to is not
+    /// visible from the variant, so it is recorded here once and read by the
+    /// three coverage tests: `usfm_parser/tests/recovery.rs` covers
+    /// [`Origin::Parser`], `usfm_semantic/tests/checks.rs` [`Origin::Semantic`]
+    /// and `usfm_usx/tests/reader.rs` [`Origin::Usx`]. A code moving from one
+    /// pass to another is therefore one line here plus a moved snapshot.
+    ///
+    /// The USX reader also reports parser codes (`unknown-marker`,
+    /// `malformed-verse-number`, …) where a USX file and its USFM are wrong in
+    /// the same way; those stay [`Origin::Parser`], since that is where their
+    /// test is.
+    ///
+    /// ```
+    /// use usfm_diagnostics::{Code, Origin};
+    /// assert_eq!(Code::UnlistedBookCode.origin(), Origin::Semantic);
+    /// assert_eq!(Code::UnknownBookCode.origin(), Origin::Parser);
+    /// assert_eq!(Code::UsxUnmatched.origin(), Origin::Usx);
+    /// ```
+    pub fn origin(self) -> Origin {
+        match self {
+            Code::UnlistedBookCode
+            | Code::MarkerNotAllowedHere
+            | Code::MarkerNotListedHere
+            | Code::EmptyAttributeList
+            | Code::EmptyMilestoneAttributeList
+            | Code::NoDefaultAttribute
+            | Code::DefaultAttributeWithOthers
+            | Code::MalformedAttributeName
+            | Code::DuplicateAttribute
+            | Code::MissingId
+            | Code::IdNotFirst
+            | Code::EmptyBook
+            | Code::VerseTextBeforeChapter
+            | Code::VerseOutsideChapter
+            | Code::VerseInHeading
+            | Code::VerseInCharacterStyle
+            | Code::UnexpectedTableColumn
+            | Code::EmptyWord
+            | Code::DuplicateVerseNumber
+            | Code::VerseOutOfOrder
+            | Code::DuplicateChapterNumber
+            | Code::ChapterOutOfOrder => Origin::Semantic,
+            Code::UsxNotWellFormed
+            | Code::UsxUnknownElement
+            | Code::UsxUnmatched
+            | Code::UsxVerseEndMismatch
+            | Code::UsxReferenceMismatch => Origin::Usx,
+            _ => Origin::Parser,
+        }
+    }
+
+    /// Whether this code is reported by the semantic pass (`usfm_semantic`)
+    /// rather than by the parser or the USX reader: [`Code::origin`] is
+    /// [`Origin::Semantic`].
     ///
     /// ```
     /// use usfm_diagnostics::Code;
@@ -704,31 +836,7 @@ impl Code {
     /// assert!(!Code::UnknownBookCode.is_semantic());
     /// ```
     pub fn is_semantic(self) -> bool {
-        matches!(
-            self,
-            Code::UnlistedBookCode
-                | Code::MarkerNotAllowedHere
-                | Code::MarkerNotListedHere
-                | Code::EmptyAttributeList
-                | Code::EmptyMilestoneAttributeList
-                | Code::NoDefaultAttribute
-                | Code::DefaultAttributeWithOthers
-                | Code::MalformedAttributeName
-                | Code::DuplicateAttribute
-                | Code::MissingId
-                | Code::IdNotFirst
-                | Code::EmptyBook
-                | Code::VerseTextBeforeChapter
-                | Code::VerseOutsideChapter
-                | Code::VerseInHeading
-                | Code::VerseInCharacterStyle
-                | Code::UnexpectedTableColumn
-                | Code::EmptyWord
-                | Code::DuplicateVerseNumber
-                | Code::VerseOutOfOrder
-                | Code::DuplicateChapterNumber
-                | Code::ChapterOutOfOrder
-        )
+        self.origin() == Origin::Semantic
     }
 
     /// The inverse of [`Code::as_str`]: the code with that name, if there is
@@ -1060,7 +1168,12 @@ mod tests {
             Code::AttributeValueNotQuoted => Code::MissingAttributeValue,
             Code::MissingAttributeValue => Code::MalformedAttributeName,
             Code::MalformedAttributeName => Code::DuplicateAttribute,
-            Code::DuplicateAttribute => Code::Internal,
+            Code::DuplicateAttribute => Code::UsxNotWellFormed,
+            Code::UsxNotWellFormed => Code::UsxUnknownElement,
+            Code::UsxUnknownElement => Code::UsxUnmatched,
+            Code::UsxUnmatched => Code::UsxVerseEndMismatch,
+            Code::UsxVerseEndMismatch => Code::UsxReferenceMismatch,
+            Code::UsxReferenceMismatch => Code::Internal,
             Code::Internal => return None,
         })
     }

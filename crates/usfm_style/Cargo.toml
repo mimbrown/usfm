@@ -6,3 +6,8 @@ license = "MIT"
 
 [dependencies]
 bitflags = { workspace = true }
+
+# `build.rs` compiles `src/sheet.rs` to read `usfm.sty` into the default
+# sheet, and that file is built on `bitflags`.
+[build-dependencies]
+bitflags = { workspace = true }

@@ -1,0 +1,28 @@
+---
+source: crates/usfm_usx/tests/reader.rs
+description: "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<usx version=\"3.0\">\n  <book code=\"1JN\" style=\"id\">62-1JN-web.sfm World English Bible (WEB)</book>\n  <chapter number=\"1\" style=\"c\" sid=\"1JN 1\" />\n  <para style=\"p\">\n    <verse number=\"1\" style=\"v\" sid=\"1JN 1:1\" />\n    <char style=\"w\" strong=\"G3739\">That</char> <char style=\"w\" strong=\"G3739\">which</char>, <char style=\"w\" strong=\"G1510\">was</char> <verse eid=\"1JN 1:1\" /><verse number=\"2\" style=\"v\" sid=\"1JN 1:2\" />(<char style=\"w\" strong=\"G2532\">and</char>\n  </para>\n  <para style=\"p\" vid=\"1JN 1:2\">the life<verse eid=\"1JN 1:2\" /></para>\n  <chapter eid=\"1JN 1\" />\n</usx>\n"
+---
+Book 1JN "62-1JN-web.sfm World English Bible (WEB)" @61..136
+Para usfm@44..57
+  Text "3.0"@53..56
+ChapterStart 1@139..183
+Para p@186..505
+  VerseStart 1@207..251
+  Char w@256..298 strong="G3739"
+    Text "That"@287..291
+  Text " "@298..299
+  Char w@299..342 strong="G3739"
+    Text "which"@330..335
+  Text ", "@342..344
+  Char w@344..385 strong="G1510"
+    Text "was"@375..378
+  VerseEnd 1
+  Text " "
+  VerseStart 2@409..453
+  Text "("@453..454
+  Char w@454..495 strong="G2532"
+    Text "and"@485..488
+Para p@508..576
+  Text "the life"@538..546
+  VerseEnd 2
+ChapterEnd 1

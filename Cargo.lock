@@ -738,6 +738,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
 
 [[package]]
+name = "roxmltree"
+version = "0.21.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f1964b10c76125c36f8afe190065a4bf9a87bf324842c05701330bba9f1cacbb"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
 name = "rustix"
 version = "1.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1155,7 +1164,11 @@ dependencies = [
 name = "usfm_usx"
 version = "0.1.0"
 dependencies = [
+ "insta",
+ "roxmltree",
  "usfm_ast",
+ "usfm_diagnostics",
+ "usfm_span",
  "usfm_style",
  "xml-rs",
 ]

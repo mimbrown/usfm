@@ -59,12 +59,12 @@ derives from the following, which keep their own terms.
   directory's README has the details). They are under CC BY-SA 4.0 as
   adapted, and so are the fuzz seeds named `usfm-js__*` in
   `tasks/fuzz/corpus/`, which are copies of them truncated to 64 KiB.
-- **`crates/usfm_parser/usfm.sty`**: Paratext's default stylesheet for
+- **`crates/usfm_style/usfm.sty`**: Paratext's default stylesheet for
   combined study Bible projects (`usfm_sb.sty`, version 3.0.11), by United
   Bible Societies and SIL International, byte for byte the copy tcdocs carries
   at `grammar/usfm_sb.sty`, and so under CC BY 4.0 with the rest of tcdocs'
-  data (above). It is compiled into `usfm_parser` together with
-  `crates/usfm_parser/usfm-extra.sty`, this project's own additions and
+  data (above). It is compiled into `usfm_style`'s default stylesheet together
+  with `crates/usfm_style/usfm-extra.sty`, this project's own additions and
   corrections. Documentation: https://ubsicap.github.io/usfm/
 - **Lexer `Source` and `Span` design** (`crates/usfm_parser/src/lexer/source.rs`,
   `crates/usfm_span/src/span.rs`): adapted from oxc (https://github.com/oxc-project/oxc),

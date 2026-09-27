@@ -23,9 +23,6 @@ benchmarking = []
 # targets in `tasks/fuzz` both assert.
 testing = []
 
-[build-dependencies]
-usfm_style = { path = "../usfm_style" }
-
 [dev-dependencies]
 insta = "1"
 # Self dev-dependency (a cycle cargo allows) so the integration tests link the

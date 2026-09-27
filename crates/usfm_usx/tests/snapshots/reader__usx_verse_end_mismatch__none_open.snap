@@ -1,0 +1,13 @@
+---
+source: crates/usfm_usx/tests/reader.rs
+description: "<usx version=\"3.0\"><book code=\"GEN\" style=\"id\"/><chapter number=\"1\" style=\"c\" sid=\"GEN 1\"/><para style=\"p\">text<verse eid=\"GEN 1:1\"/></para><chapter eid=\"GEN 1\"/></usx>"
+---
+Book GEN "" @19..48
+Para usfm@5..18
+  Text "3.0"@14..17
+ChapterStart 1@48..91
+Para p@91..140
+  Text "text"@107..111
+ChapterEnd 1
+--- diagnostics
+error[usx-verse-end-mismatch] @123..130: `<verse eid="GEN 1:1">` ends no open verse; dropped

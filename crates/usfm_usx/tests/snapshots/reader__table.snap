@@ -1,0 +1,22 @@
+---
+source: crates/usfm_usx/tests/reader.rs
+description: "<usx version=\"3.0\"><book code=\"NUM\" style=\"id\"/><chapter number=\"2\" style=\"c\" sid=\"NUM 2\"/><table><row style=\"tr\"><verse number=\"3-9\" style=\"v\" sid=\"NUM 2:3-9\"/><cell style=\"th1\" align=\"start\">Tribe</cell><cell style=\"thr2\" align=\"end\">Number</cell></row><row style=\"tr\"><cell style=\"tcr1-2\" align=\"end\">Total: </cell><cell style=\"tcc3\" align=\"center\">186,400</cell><verse eid=\"NUM 2:3-9\"/></row></table><chapter eid=\"NUM 2\"/></usx>"
+---
+Book NUM "" @19..48
+Para usfm@5..18
+  Text "3.0"@14..17
+ChapterStart 2@48..91
+Table@91..404
+  Row@98..255
+    Cell header=true align=start column=1 colspan=1@161..205
+      VerseStart 3-9@114..161
+      Text "Tribe"@193..198
+    Cell header=true align=end column=2 colspan=1@205..249
+      Text "Number"@236..242
+  Row@255..396
+    Cell header=false align=end column=1 colspan=2@271..318
+      Text "Total:"@304..311
+    Cell header=false align=center column=3 colspan=1@318..366
+      Text "186,400"@352..359
+      VerseEnd 3-9
+ChapterEnd 2

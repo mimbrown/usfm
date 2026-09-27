@@ -3,7 +3,16 @@ use std::fs::{File, read_to_string};
 use std::io::{BufWriter, Write};
 use std::path::Path;
 use std::str::FromStr;
-use usfm_style::{StyleRule, StyleSheet, TextProperties};
+
+// The build script generates the default sheet *of this crate*, so it cannot
+// depend on this crate: it compiles the sheet's own source instead, the one
+// file that parses `.sty` text. Only the parsing half is used here, hence the
+// `dead_code` allowance (the rest is the library's API).
+#[allow(dead_code)]
+#[path = "src/sheet.rs"]
+mod sheet;
+
+use sheet::{StyleRule, StyleSheet, TextProperties};
 
 const REF_STYLE: &str = r#"        StyleRule {
             marker: "ref".into(),
@@ -29,6 +38,7 @@ fn main() -> std::io::Result<()> {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=usfm.sty");
     println!("cargo:rerun-if-changed=usfm-extra.sty");
+    println!("cargo:rerun-if-changed=src/sheet.rs");
 
     // `usfm.sty` is Paratext's file, unmodified (NOTICE.md); the markers it
     // predates and the entries it gets wrong are corrected by appending
@@ -45,9 +55,9 @@ fn main() -> std::io::Result<()> {
         marker: "flag".into(),
         name: None,
         description: None,
-        style_type: usfm_style::StyleType::Character,
+        style_type: sheet::StyleType::Character,
         text_properties: TextProperties::default(),
-        text_type: usfm_style::TextType::Other,
+        text_type: sheet::TextType::Other,
         nest: true,
         occurs_under: vec![],
     });
@@ -62,7 +72,7 @@ fn main() -> std::io::Result<()> {
     writeln!(writer, "use std::sync::{{Arc, LazyLock}};")?;
     writeln!(
         writer,
-        "use usfm_style::{{StyleSheet, StyleRule, StyleType, TextType, TextProperties}};"
+        "use crate::{{StyleSheet, StyleRule, StyleType, TextType, TextProperties}};"
     )?;
     writeln!(writer)?;
     // The stylesheet is handed out as an `Arc` so a `Document` can own it

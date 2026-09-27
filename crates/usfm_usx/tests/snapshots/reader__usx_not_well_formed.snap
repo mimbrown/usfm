@@ -1,0 +1,6 @@
+---
+source: crates/usfm_usx/tests/reader.rs
+description: "<usx version=\"3.0\"><para style=\"p\">text</usx>"
+---
+--- diagnostics
+error[usx-not-well-formed] @39..39: not well-formed XML: expected 'para' tag, not 'usx' at 1:40

@@ -5,14 +5,30 @@ edition = "2024"
 license = "MIT"
 
 # An output crate in `docs/adr/0001-oxc-style-crate-layout.md`: it owns the XML
-# tree and its writer, and turns a `Document` into USX. "No output crate
-# depends on another output crate", and no output crate depends on the parser
-# either — this one reads the AST and the stylesheet the document carries, so
-# `usfm_parser` is deliberately absent from the list below.
+# tree and its writer, and turns a `Document` into USX — and, since ticket 45,
+# USX into a `Document`. "No output crate depends on another output crate",
+# and no output crate depends on the parser either — this one reads the AST
+# and the stylesheet the document carries, and its reader resolves styles
+# against `usfm_style`'s default sheet, so `usfm_parser` is deliberately
+# absent from the list below.
 [dependencies]
 # The tree it walks, and `default_attribute_name` / `is_valid_attribute_name`.
 usfm_ast = { path = "../usfm_ast" }
-# `StyleSheet` and `StyleRule`, to resolve a node's `StyleId` to its marker.
+# `Diagnostic`, `Code` and `ParseResult`, which the reader reports in:
+# diagnostics sit below the outputs, so this points the allowed way.
+usfm_diagnostics = { path = "../usfm_diagnostics" }
+# `Span`, on every node the reader builds.
+usfm_span = { path = "../usfm_span" }
+# `StyleSheet` and `StyleRule`, to resolve a node's `StyleId` to its marker,
+# and `DEFAULT_STYLESHEET`, which the reader resolves a `style` against.
 usfm_style = { path = "../usfm_style" }
-# `OwnedName`, `OwnedAttribute` and the `EventReader` the reader is built on.
+# The reader's XML parser (ticket 45): a byte range on every node and
+# attribute, which is what a span needs. It only reads.
+roxmltree = { workspace = true }
+# `OwnedName`, `OwnedAttribute` and the `EventReader` `XmlDocument` is built on.
 xml-rs = { workspace = true }
+
+[dev-dependencies]
+# The reader's tests snapshot a tree and its diagnostics, as `recovery.rs` and
+# `checks.rs` do, and the coverage test finds a code's test by its snapshot.
+insta = "1"

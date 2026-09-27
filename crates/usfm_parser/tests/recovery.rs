@@ -7,16 +7,18 @@
 //!
 //! Snapshots live in `tests/snapshots/recovery__<code>.snap`.
 //!
-//! **Every [`Code`] has a test in this file or in
-//! `usfm_semantic/tests/checks.rs`**, and [`Code::is_semantic`] says which.
-//! A code the parser repairs and reports is tested here; a code the semantic
-//! pass reports about a tree that parsed exactly as written is tested there,
-//! through `usfm::parse`. [`recovery_table_is_covered`] skips the semantic
-//! codes for that reason, and the check test file requires them.
+//! **Every [`Code`] has a test in this file, in
+//! `usfm_semantic/tests/checks.rs` or in `usfm_usx/tests/reader.rs`**, and
+//! [`Code::origin`] says which. A code the parser repairs and reports is
+//! tested here; a code the semantic pass reports about a tree that parsed
+//! exactly as written is tested there, through `usfm::parse`; a code only the
+//! USX reader reports is tested with the reader. [`recovery_table_is_covered`]
+//! covers [`Origin::Parser`] for that reason, and the other two files require
+//! theirs.
 
 mod common;
 
-use usfm_parser::diagnostics::Code;
+use usfm_parser::diagnostics::{Code, Origin};
 
 /// Snapshot named `recovery__<code>`.
 fn check(code: Code, source: &str) {
@@ -1010,7 +1012,7 @@ fn newline_in_attributes() {
 }
 
 /// The markers Paratext's `usfm.sty` predates and the one entry it gets wrong,
-/// supplied by `usfm_parser/usfm-extra.sty`: `\ipc`, `\ta` and `\wl` are in
+/// supplied by `usfm_style/usfm-extra.sty`: `\ipc`, `\ta` and `\wl` are in
 /// `usx.rnc`'s paragraph and character enums, and `\xta` occurs under `\ex` as
 /// well as `\x` (`CrossReferenceChar` under `CrossReference.style.enum`, which
 /// usfm.sty already reflects on `\xo` and `\xt`). All of it parses silently.
@@ -1334,10 +1336,12 @@ fn recovery_snapshot(code: &Code) -> Option<std::path::PathBuf> {
 
 /// Every code in the recovery table has a snapshot produced by a test in
 /// this file. Codes that cannot be triggered from the default stylesheet
-/// are listed explicitly, and the codes the semantic pass owns
-/// ([`Code::is_semantic`]) are covered by `usfm_semantic/tests/checks.rs`
-/// instead — its `semantic_checks_are_covered` requires a
-/// `checks__<code>.snap` for each of them.
+/// are listed explicitly, and the codes another pass owns ([`Code::origin`])
+/// are covered where that pass is tested: the semantic pass's by
+/// `usfm_semantic/tests/checks.rs`, whose `semantic_checks_are_covered`
+/// requires a `checks__<code>.snap` for each of them, and the USX reader's by
+/// `usfm_usx/tests/reader.rs`, whose `usx_codes_are_covered` requires a
+/// `reader__<code>.snap`.
 #[test]
 fn recovery_table_is_covered() {
     let exempt = [
@@ -1348,7 +1352,7 @@ fn recovery_table_is_covered() {
     ];
     let missing: Vec<&str> = Code::ALL
         .iter()
-        .filter(|code| !exempt.contains(code) && !code.is_semantic())
+        .filter(|code| !exempt.contains(code) && code.origin() == Origin::Parser)
         .filter(|code| recovery_snapshot(code).is_none())
         .map(|code| code.as_str())
         .collect();
@@ -1359,15 +1363,15 @@ fn recovery_table_is_covered() {
 }
 
 /// The other half of the rule, which a moved check is easy to leave half done:
-/// a code the semantic pass owns must have no snapshot *here*. A `recovery__`
+/// a code another pass owns must have no snapshot *here*. A `recovery__`
 /// file left behind after a move would still be read by `cargo insta` as an
 /// unreferenced snapshot, and would say the parser reports something it does
 /// not (ticket 21).
 #[test]
-fn semantic_codes_have_no_recovery_snapshot() {
+fn codes_of_other_passes_have_no_recovery_snapshot() {
     let stale: Vec<String> = Code::ALL
         .iter()
-        .filter(|code| code.is_semantic())
+        .filter(|code| code.origin() != Origin::Parser)
         .filter_map(|code| {
             recovery_snapshot(code).map(|path| {
                 format!(
@@ -1380,6 +1384,6 @@ fn semantic_codes_have_no_recovery_snapshot() {
         .collect();
     assert!(
         stale.is_empty(),
-        "semantic codes with a recovery snapshot left behind: {stale:?}"
+        "codes of another pass with a recovery snapshot left behind: {stale:?}"
     );
 }

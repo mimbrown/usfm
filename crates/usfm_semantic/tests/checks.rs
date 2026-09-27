@@ -1,13 +1,16 @@
 //! One test per semantic check.
 //!
-//! The companion of `usfm_parser/tests/recovery.rs`: **every [`Code`] has a
-//! test in one file or the other**, and [`Code::is_semantic`] says which. A
-//! code this crate reports is tested here, with a snapshot in
-//! `tests/snapshots/checks__<code>.snap`; a code the parser reports is tested
-//! there, with a snapshot in `recovery__<code>.snap`. Each file's coverage
-//! test ([`semantic_checks_are_covered`] here, `recovery_table_is_covered`
-//! there) reads `is_semantic` so that moving a check between the passes is one
-//! line in `usfm_diagnostics` plus a moved snapshot file.
+//! The companion of `usfm_parser/tests/recovery.rs` and
+//! `usfm_usx/tests/reader.rs`: **every [`Code`] has a test in exactly one of
+//! the three files**, and [`Code::origin`] says which ([`Code::is_semantic`]
+//! is its test for this one). A code this crate reports is tested here, with
+//! a snapshot in `tests/snapshots/checks__<code>.snap`; a code the parser
+//! reports is tested in `recovery.rs`, with a snapshot in
+//! `recovery__<code>.snap`; a code only the USX reader reports, in
+//! `reader.rs`. Each file's coverage test ([`semantic_checks_are_covered`]
+//! here, `recovery_table_is_covered` and `usx_codes_are_covered` there) reads
+//! `origin` so that moving a check between the passes is one line in
+//! `usfm_diagnostics` plus a moved snapshot file.
 //!
 //! Each test feeds a minimal input through `usfm::parse` — the union of the
 //! parser's diagnostics and `usfm_semantic::analyze`'s, which is what a

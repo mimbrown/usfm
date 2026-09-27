@@ -1,0 +1,15 @@
+---
+source: crates/usfm_usx/tests/reader.rs
+description: "<usx version=\"3.0\"><book code=\"GEN\" style=\"id\"/><chapter number=\"1\" style=\"c\" sid=\"GEN 1\"/><para style=\"p\"><verse number=\"1\" style=\"v\" sid=\"GEN 1:1\"/>text<verse eid=\"GEN 1:2\"/></para><chapter eid=\"GEN 1\"/></usx>"
+---
+Book GEN "" @19..48
+Para usfm@5..18
+  Text "3.0"@14..17
+ChapterStart 1@48..91
+Para p@91..183
+  VerseStart 1@107..150
+  Text "text"@150..154
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[usx-verse-end-mismatch] @166..173: `eid="GEN 1:2"` ends verse `GEN 1:1`, which is the one open
