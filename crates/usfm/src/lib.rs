@@ -57,7 +57,7 @@ pub use usfm_usx as usx;
 // does not have to remember which layer each one lives in.
 pub use usfm_ast::Document;
 pub use usfm_diagnostics::{Code, Diagnostic, ParseResult, Severity};
-pub use usfm_semantic::ReferenceIndex;
+pub use usfm_semantic::{GlossaryIndex, ReferenceIndex};
 pub use usfm_span::Span;
 pub use usfm_style::StyleSheet;
 

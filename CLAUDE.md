@@ -257,8 +257,13 @@ Recent progress:
   project's own punctuation (`CitationFormat`, from
   `Settings::citation_format()`) and book names (`BookNameTable`, from
   `BookNames::table()`), any Unicode decimal digits, and `xt_citations`
-  runs it over every `\xt` of a document. 55 (a glossary index) is
-  `ready-for-agent`; 52, 56 and 57 wait on Michael
+  runs it over every `\xt` of a document. Ticket 55 added
+  `usfm_semantic::GlossaryIndex` (`usfm::GlossaryIndex`): every `\k` of
+  the documents it is built from (the glossary is usually its own book),
+  and for each `\w` of a document the entry its lemma or text names,
+  compared whitespace-collapsed and lower-cased. 52, 56 and 57 wait on
+  Michael: whether to keep unknown markers, how to represent interlinear
+  glosses, and a publishing layer
 - **Markers delimited by a line break or the next `\` (hardening plan,
   Phase 2).** Nothing changed in the parser: fourteen such spellings already
   parsed with no diagnostic to the tree of their one-space spelling, and
