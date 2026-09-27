@@ -488,3 +488,192 @@ fn write_and_check_together_is_a_usage_error() {
         stderr(&output)
     );
 }
+
+/// One of machine.py's vendored USX books (ticket 47), by path under
+/// `tasks/conformance/fixtures/machine-py/usx/`.
+fn machine_py_usx(name: &str) -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tasks/conformance/fixtures/machine-py/usx")
+        .join(name)
+}
+
+/// `parse --from usx --format usfm` converts (ticket 48): the bytes are
+/// `usfm_codegen`'s for the facade's `parse_usx` of the file, and a clean DBL
+/// book reports nothing.
+#[test]
+fn usx_converts_to_usfm() {
+    let path = machine_py_usx("WEB-DBL/2JN.usx");
+    let output = usfm([
+        "parse".as_ref(),
+        "--from".as_ref(),
+        "usx".as_ref(),
+        "--format".as_ref(),
+        "usfm".as_ref(),
+        path.as_os_str(),
+    ]);
+    assert!(output.status.success(), "{}", stderr(&output));
+    assert!(stderr(&output).is_empty(), "{}", stderr(&output));
+
+    let source = std::fs::read_to_string(&path).expect("reading the input");
+    let expected = usfm::codegen::to_usfm_string(&usfm::parse_usx(&source).document);
+    assert_eq!(stdout(&output), expected);
+    assert!(
+        stdout(&output).starts_with("\\id 2JN "),
+        "{}",
+        stdout(&output)
+    );
+}
+
+/// The other way and back: USFM written as USX by `parse`, then read with
+/// `--from usx` and written as USX again, is the same USX — `--format usx`
+/// normalises, and what the writer wrote is already normal.
+#[test]
+fn usfm_to_usx_reads_back_to_the_same_usx() {
+    for name in ["minimal", "footnote"] {
+        let written = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("{name}-back.usx"));
+        let output = usfm([
+            "parse".as_ref(),
+            "-o".as_ref(),
+            written.as_os_str(),
+            tcdocs(name).as_os_str(),
+        ]);
+        assert!(output.status.success(), "{name}: {}", stderr(&output));
+        let usx = std::fs::read_to_string(&written).expect("reading the output file");
+
+        let output = usfm([
+            "parse".as_ref(),
+            "--from".as_ref(),
+            "usx".as_ref(),
+            written.as_os_str(),
+        ]);
+        assert!(output.status.success(), "{name}: {}", stderr(&output));
+        assert!(stderr(&output).is_empty(), "{name}: {}", stderr(&output));
+        assert_eq!(stdout(&output), usx, "{name}");
+    }
+}
+
+/// A USX file's diagnostics are the reader's and the semantic pass's, filed
+/// under the file's own path with positions in the XML, in both renderings;
+/// and `--strict` refuses it like a USFM file. machine.py's `Tes/MAT.usx` is
+/// malformed on purpose: a verse outside a paragraph (an Error), and a
+/// repeated verse.
+#[test]
+fn usx_diagnostics_point_into_the_usx_file() {
+    let path = machine_py_usx("Tes/MAT.usx");
+    let args = |extra: &[&str]| {
+        let mut argv: Vec<&std::ffi::OsStr> =
+            vec!["parse".as_ref(), "--from".as_ref(), "usx".as_ref()];
+        argv.extend(extra.iter().map(std::ffi::OsStr::new));
+        argv.push(path.as_os_str());
+        usfm(argv)
+    };
+
+    let output = args(&[]);
+    assert!(output.status.success(), "{}", stderr(&output));
+    assert!(!stdout(&output).is_empty());
+    let text = stderr(&output);
+    assert!(
+        text.contains("MAT.usx:10:3: error[content-outside-paragraph]"),
+        "{text}"
+    );
+    assert!(text.contains("warning[duplicate-verse-number]"), "{text}");
+
+    let output = args(&["--diagnostics", "json"]);
+    let json = stderr(&output);
+    assert!(
+        json.lines()
+            .all(|line| line.starts_with('{') && line.ends_with('}')),
+        "{json}"
+    );
+    assert_eq!(json.lines().count(), text.lines().count(), "{json}");
+    assert!(
+        json.contains(r#""line":10,"col":3,"severity":"error","code":"content-outside-paragraph""#),
+        "{json}"
+    );
+
+    let output = args(&["--strict"]);
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+    assert!(stdout(&output).is_empty());
+    assert!(
+        stderr(&output).contains("(--strict)"),
+        "{}",
+        stderr(&output)
+    );
+}
+
+/// A `.usx` extension does not switch the reader: without `--from usx` the
+/// file is USFM, and XML is not a book.
+#[test]
+fn the_extension_does_not_choose_the_reader() {
+    let path = machine_py_usx("WEB-DBL/2JN.usx");
+    let output = usfm(["parse".as_ref(), path.as_os_str()]);
+    assert!(
+        stderr(&output).starts_with("input:1:1: error[missing-id]"),
+        "{}",
+        stderr(&output)
+    );
+}
+
+/// Several USX files are one document, as several USFM files are: two books
+/// written out are the two books written out one after the other. Each file
+/// is read on its own (two XML documents are not one), so a style one file
+/// had to derive must not be confused with another file's — `\zq` and `\zc`
+/// both land on the first index past the sheet in their own documents.
+#[test]
+fn several_usx_files_are_combined_in_order() {
+    let convert = |paths: &[&Path]| {
+        let mut argv: Vec<&std::ffi::OsStr> = vec![
+            "parse".as_ref(),
+            "--from".as_ref(),
+            "usx".as_ref(),
+            "-f".as_ref(),
+            "usfm".as_ref(),
+        ];
+        argv.extend(paths.iter().map(|path| path.as_os_str()));
+        let output = usfm(argv);
+        assert!(output.status.success(), "{}", stderr(&output));
+        (stdout(&output).to_string(), stderr(&output).to_string())
+    };
+
+    let two = machine_py_usx("WEB-DBL/2JN.usx");
+    let three = machine_py_usx("WEB-DBL/3JN.usx");
+    let (both, _) = convert(&[&two, &three]);
+    let (first, _) = convert(&[&two]);
+    let (second, _) = convert(&[&three]);
+    assert_eq!(both, first + &second);
+
+    let a = input(
+        "derived-a.usx",
+        r#"<usx version="3.0"><book code="GEN" style="id"/><para style="zq">a</para></usx>"#,
+    );
+    let b = input(
+        "derived-b.usx",
+        r#"<usx version="3.0"><book code="EXO" style="id"/><para style="p"><char style="zc">b</char></para></usx>"#,
+    );
+    let (both, diagnostics) = convert(&[&a, &b]);
+    assert_eq!(
+        both,
+        "\\id GEN\n\\usfm 3.0\n\\zq a\n\\id EXO\n\\usfm 3.0\n\\p \\zc b\\zc*\n"
+    );
+    assert!(diagnostics.contains("derived-a.usx:1:"), "{diagnostics}");
+    assert!(diagnostics.contains("derived-b.usx:1:"), "{diagnostics}");
+}
+
+/// `format` is USFM-only (ticket 48): it has no `--from`, so clap refuses
+/// the flag with the usage exit code rather than reading USX as USFM.
+#[test]
+fn format_has_no_from_flag() {
+    let path = input("format-from.usfm", "\\id GEN\n\\p \\v 1 a\n");
+    let output = usfm([
+        "format".as_ref(),
+        "--from".as_ref(),
+        "usx".as_ref(),
+        path.as_os_str(),
+    ]);
+    assert_eq!(output.status.code(), Some(2), "{}", stderr(&output));
+    assert!(
+        stderr(&output).contains("unexpected argument '--from'"),
+        "{}",
+        stderr(&output)
+    );
+}
