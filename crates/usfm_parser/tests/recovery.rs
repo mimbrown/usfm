@@ -846,6 +846,54 @@ fn figure_not_closed() {
     );
 }
 
+/// USFM 2's positional figure reads as USFM 3's: `CAP` is the caption and
+/// the other fields are `alt`, `src`, `size`, `loc`, `copy` and `ref`. It had
+/// kept `DESC` as the caption and only the last field, silently.
+#[test]
+fn usfm2_figure() {
+    check(
+        Code::Usfm2Figure,
+        "\\id GEN\n\\c 1\n\\p \\v 1 a \\fig A lamb|lamb.jpg|col|| (c) BFBS |The lamb|1.1\\fig* b",
+    );
+}
+
+/// `paratextTests/EmptyFigure`: six empty fields are an empty figure, with
+/// no caption and no attribute list at all.
+#[test]
+fn usfm2_figure_empty() {
+    check_variant(
+        Code::Usfm2Figure,
+        "empty",
+        "\\id GEN\n\\c 1\n\\p \\v 1 a\\fig |||||| \\fig* b",
+    );
+}
+
+/// Only the exact shape is USFM 2's: five `|` is not, and neither is a
+/// field holding a marker. Both read as a USFM 3 list whose later `|` are
+/// text.
+#[test]
+fn usfm2_figure_needs_six_plain_fields() {
+    for source in [
+        "\\id GEN\n\\c 1\n\\p \\v 1 \\fig D|f.jpg|col||c|Cap\\fig*",
+        "\\id GEN\n\\c 1\n\\p \\v 1 \\fig D|f.jpg|col||c|\\+bd Cap\\+bd*|1.1\\fig*",
+    ] {
+        let codes = common::codes(source);
+        assert!(!codes.contains(&Code::Usfm2Figure), "{source}: {codes:?}");
+        assert!(codes.contains(&Code::UnexpectedPipe), "{source}: {codes:?}");
+    }
+}
+
+/// A second `|` in one character style is text. It used to start a second
+/// list that replaced the first, dropping `lemma` without a word.
+#[test]
+fn unexpected_pipe_second_list() {
+    check_variant(
+        Code::UnexpectedPipe,
+        "second_list",
+        "\\id GEN\n\\c 1\n\\p \\v 1 \\w a|lemma=\"x\"|strong=\"H1\"\\w* b",
+    );
+}
+
 #[test]
 fn sidebar_not_closed() {
     check(
