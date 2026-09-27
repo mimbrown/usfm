@@ -1,0 +1,20 @@
+---
+source: crates/usfm_usx/tests/reader.rs
+description: "<usx version=\"3.0\"><book code=\"GEN\" style=\"id\"/><chapter number=\"1\" style=\"c\" sid=\"GEN 1\"/><para style=\"p\"><char style=\"w\" lemma=\"grace\" strong=\"H1234\">gracious</char> <ms style=\"ts-s\"/><ms style=\"qt-s\" who=\"Pilate\"/><figure style=\"fig\" file=\"a.png\" size=\"col\" ref=\"1:1\">caption</figure> <ref loc=\"GEN 2:1\">2:1</ref></para><chapter eid=\"GEN 1\"/></usx>"
+---
+Book GEN "" @19..48
+Para usfm@5..18
+  Text "3.0"@14..17
+ChapterStart 1@48..91
+Para p@91..323
+  Char w@107..167 lemma="grace" strong="H1234"
+    Text "gracious"@152..160
+  Text " "@167..168
+  Milestone ts-s@168..186
+  Milestone qt-s@186..217 who="Pilate"
+  Char fig@217..287 src="a.png" size="col" ref="1:1"
+    Text "caption"@271..278
+  Text " "@287..288
+  Char ref@288..316 loc="GEN 2:1"
+    Text "2:1"@307..310
+ChapterEnd 1

@@ -336,7 +336,10 @@ The breaking change. Do it in one branch so downstream code is updated once.
       spans two files: a code the semantic pass reports (`Code::is_semantic`)
       has its snapshot test in `crates/usfm_semantic/tests/checks.rs` instead,
       and each file's coverage test reads `is_semantic` to know which codes are
-      its own. Structural checks (missing `\id`, verse
+      its own. Since M7 (ticket 45) it spans three: a code only the USX reader
+      reports is tested in `crates/usfm_usx/tests/reader.rs`, and
+      `Code::origin()` (`Parser`, `Semantic`, `Usx`) is what the three
+      coverage tests read. Structural checks (missing `\id`, verse
       before `\c`, verse in heading, sidebars, `\fig` unclosed, empty `\w`,
       newline in attributes) are included because the tcdocs `fail` inputs need
       them to be classified.

@@ -1,0 +1,29 @@
+---
+source: crates/usfm_usx/tests/reader.rs
+description: "<usx version=\"3.0\"><book code=\"GEN\" style=\"id\"/><chapter number=\"1\" style=\"c\" sid=\"GEN 1\"/><para style=\"p\">a <char style=\"zz\">b</char> <char style=\"xx\">c</char> <char style=\"xx\">d</char><ms style=\"zaln-s\"/><ms style=\"zaln-s\"/><ms style=\"ts\"/><ms style=\"k-s\"/></para><chapter eid=\"GEN 1\"/></usx>"
+---
+Book GEN "" @19..48
+Para usfm@5..18
+  Text "3.0"@14..17
+ChapterStart 1@48..91
+Para p@91..266
+  Text "a "@107..109
+  Char zz@109..134
+    Text "b"@126..127
+  Text " "@134..135
+  Char xx@135..160
+    Text "c"@152..153
+  Text " "@160..161
+  Char xx@161..186
+    Text "d"@178..179
+  Milestone zaln-s@186..206
+  Milestone zaln-s@206..226
+  Milestone ts@226..242
+  Milestone k-s@242..259
+ChapterEnd 1
+--- diagnostics
+warning[unknown-custom-marker] @122..124: custom marker `\zz` is not in the stylesheet; kept
+error[unknown-marker] @148..150: unknown marker `\xx`; kept
+error[unknown-marker] @174..176: unknown marker `\xx`; kept
+info[unknown-custom-milestone] @197..203: custom milestone `\zaln-s` is not in the stylesheet
+warning[unknown-milestone] @237..239: milestone `\ts` is not in the stylesheet

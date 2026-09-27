@@ -265,6 +265,16 @@ impl TestCase {
         Self::parse_usx_text(&text)
     }
 
+    /// The expected USX as text, exactly what [`TestCase::read_expected_usx`]
+    /// parses: patched, its version restored, and through the textual
+    /// normalisation the comparison applies to the reference side. The USX
+    /// reader's tests read this, so that they read the reference the harness
+    /// compares with rather than a different one (ticket 45).
+    pub fn expected_usx_text(&self) -> Result<String, TestError> {
+        let text = self.restore_usx_version(self.patched_reference_text()?);
+        Ok(normalize_usx(&text))
+    }
+
     /// Read and parse the reference USX as the file has it, ignoring any
     /// patch.
     pub fn read_unpatched_usx(&self) -> Result<XmlNode, TestError> {

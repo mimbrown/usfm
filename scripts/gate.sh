@@ -22,6 +22,11 @@ cargo run --package usfm_tests -- --baseline tasks/conformance/tcdocs-baseline.t
 # conformance case of every root, `pass` and `fail` alike, gated against the
 # known-failure list the way the baseline is. About a second on the corpus.
 cargo run --package usfm_tests -- --roundtrip tasks/conformance/roundtrip-known.txt
+# Ticket 45: the USX reader over every reference of both roots — it reads,
+# writes back to the reference, and is the parse of the case's USFM up to what
+# USX cannot say. `--exclude usfm_tests` above skips this package's tests (its
+# generated ones are the harness, run just above), so this one runs by name.
+cargo test --package usfm_tests --test usx_reader
 # Every crate the shipped binaries link must carry a licence file, or the
 # extension's ThirdPartyNotices.txt (`npm run notices`) would name a licence
 # without its text. The npm half needs node_modules, so it is checked when the
