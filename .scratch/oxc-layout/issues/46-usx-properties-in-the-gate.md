@@ -1,6 +1,6 @@
 # 46. The two USX properties in the gate
 
-Status: ready-for-agent
+Status: resolved
 Milestone: M7
 Blocked by: 45
 
@@ -25,3 +25,26 @@ reader special case.
 
 Done when both steps are in the gate with empty known lists and CLAUDE.md's
 conformance paragraph describes them.
+
+## Answer
+
+Landed 2026-09-27 (PR below). `tasks/conformance/src/usx_properties.rs`
+defines both properties once — `compared_cases` (an input, a reference, and
+`run()` is `Passed`), `check_read`, `check_roundtrip` — comparing through the
+harness's own patching, `include_vid` rule, `normalize_for_comparison` and
+`compare_xml`. The runner gained `--usx-read`, `--usx-roundtrip` and their
+`--write-…-known` forms; the known-list code is shared by all three lists
+(`KnownList`, `gate_known`), with unchanged semantics. `--show` prints the
+reader's diagnostics and whether each property holds. Both steps are in
+`scripts/gate.sh` after `--roundtrip`, **228 / 228 each, both known lists
+empty**; nothing failed, so no crate outside the harness changed (a
+deliberately broken codegen step made 179 cases fail, so the step bites).
+`usx_reader.rs` lost the write-back test, which `--usx-read` now owns.
+
+Not covered, and said so in CLAUDE.md: the 43 references the harness never
+compares (`fail` cases whose parse reports an Error). Ungated, `--usx-read`
+fails 32 of them and `--usx-roundtrip` 33, on what the tree does not model —
+Paratext's `status="invalid"`, `<unmatched>`, a `sid` with no book, `vid` on
+`\zaln-s` paragraphs. One is worth a look if anyone wants it:
+`paratextTests/MissingColumnInTable` fails only the round trip, with an extra
+verse end inside a `<cell>`.

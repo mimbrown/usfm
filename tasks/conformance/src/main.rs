@@ -11,6 +11,10 @@ fn main() {
     let mut show: Option<String> = None;
     let mut roundtrip: Option<Option<String>> = None;
     let mut write_roundtrip_known: Option<String> = None;
+    let mut usx_read: Option<Option<String>> = None;
+    let mut write_usx_read_known: Option<String> = None;
+    let mut usx_roundtrip: Option<Option<String>> = None;
+    let mut write_usx_roundtrip_known: Option<String> = None;
 
     let mut i = 0;
     while i < args.len() {
@@ -51,22 +55,35 @@ fn main() {
             // failures are gated against it; without, any failure fails the
             // run. The next argument is that file only if it does not itself
             // look like a flag.
-            "--roundtrip" => {
+            // So do `--usx-read` and `--usx-roundtrip` (ticket 46).
+            flag @ ("--roundtrip" | "--usx-read" | "--usx-roundtrip") => {
                 let file = args
                     .get(i + 1)
                     .filter(|next| !next.starts_with('-'))
                     .cloned();
+                let slot = match flag {
+                    "--roundtrip" => &mut roundtrip,
+                    "--usx-read" => &mut usx_read,
+                    _ => &mut usx_roundtrip,
+                };
                 if file.is_some() {
                     i += 1;
                 }
-                roundtrip = Some(file);
+                *slot = Some(file);
             }
-            "--write-roundtrip-known" => {
+            flag @ ("--write-roundtrip-known"
+            | "--write-usx-read-known"
+            | "--write-usx-roundtrip-known") => {
                 let Some(path) = args.get(i + 1) else {
-                    eprintln!("{} needs a file path", args[i]);
+                    eprintln!("{} needs a file path", flag);
                     std::process::exit(2);
                 };
-                write_roundtrip_known = Some(path.clone());
+                let slot = match flag {
+                    "--write-roundtrip-known" => &mut write_roundtrip_known,
+                    "--write-usx-read-known" => &mut write_usx_read_known,
+                    _ => &mut write_usx_roundtrip_known,
+                };
+                *slot = Some(path.clone());
                 i += 1;
             }
             arg if arg.starts_with('-') => {
@@ -87,6 +104,22 @@ fn main() {
         run_roundtrip_suite(
             roundtrip.unwrap_or(None).as_deref(),
             write_roundtrip_known.as_deref(),
+        );
+        return;
+    }
+    if usx_read.is_some() || write_usx_read_known.is_some() {
+        run_usx_suite(
+            &USX_READ,
+            usx_read.unwrap_or(None).as_deref(),
+            write_usx_read_known.as_deref(),
+        );
+        return;
+    }
+    if usx_roundtrip.is_some() || write_usx_roundtrip_known.is_some() {
+        run_usx_suite(
+            &USX_ROUNDTRIP,
+            usx_roundtrip.unwrap_or(None).as_deref(),
+            write_usx_roundtrip_known.as_deref(),
         );
         return;
     }
@@ -145,6 +178,31 @@ fn show_test(name: &str) {
         TestResult::Passed => println!("\nRESULT: pass"),
         other => println!("\nRESULT: {:?}", other),
     }
+    show_usx_reader(&test);
+}
+
+/// The USX reader's view of the same case (ticket 46): what `read_usx`
+/// reports over the reference the harness compares with, and, for a case the
+/// gate's `--usx-read` and `--usx-roundtrip` steps cover, whether each holds.
+fn show_usx_reader(test: &TestCase) {
+    let Ok(text) = test.expected_usx_text() else {
+        return;
+    };
+    let read = usfm::usx::read_usx(&text);
+    println!("\nUSX READER DIAGNOSTICS ({}):", read.diagnostics.len());
+    for diagnostic in &read.diagnostics {
+        println!("  {}", diagnostic);
+    }
+    if usx_properties::compared_cases(std::slice::from_ref(test)).is_empty() {
+        println!("\nUSX PROPERTIES: not compared (the harness does not pass this case)");
+        return;
+    }
+    for suite in [&USX_READ, &USX_ROUNDTRIP] {
+        match (suite.check)(test) {
+            Ok(()) => println!("\n{}: holds", suite.title),
+            Err(reason) => println!("\n{}: FAILS\n{}", suite.title, reason),
+        }
+    }
 }
 
 fn print_help() {
@@ -171,8 +229,20 @@ Options:
                             case that round-trips is a stale entry.
     --write-roundtrip-known FILE
                             Write the current round-trip failures to FILE
+    --usx-read [FILE]       Read every compared case's reference USX with the
+                            USX reader, write it back, and compare it with the
+                            reference as the harness does. FILE gates the
+                            failures the way --roundtrip's does.
+    --write-usx-read-known FILE
+                            Write the current --usx-read failures to FILE
+    --usx-roundtrip [FILE]  The same, through USFM: read the reference, write
+                            USFM, parse it, write USX, compare. FILE as above.
+    --write-usx-roundtrip-known FILE
+                            Write the current --usx-roundtrip failures to FILE
     --show NAME             Print one test's diagnostics, output and expected
-                            USX after normalisation (e.g. --show basic/minimal)
+                            USX after normalisation, then the USX reader's
+                            diagnostics over its reference and whether the
+                            two USX properties hold (e.g. --show basic/minimal)
 
 Arguments:
     CATEGORY        Run tests for a specific category (e.g., basic, mandatory,
@@ -185,6 +255,8 @@ Examples:
     cargo run --package usfm_tests --categories          # List categories
     cargo run --package usfm_tests -- --baseline tasks/conformance/tcdocs-baseline.txt
     cargo run --package usfm_tests -- --roundtrip tasks/conformance/roundtrip-known.txt
+    cargo run --package usfm_tests -- --usx-read tasks/conformance/usx-read-known.txt
+    cargo run --package usfm_tests -- --usx-roundtrip tasks/conformance/usx-roundtrip-known.txt
 "#
     );
 }
@@ -331,12 +403,116 @@ fn run_roundtrip_suite(known: Option<&str>, write_known: Option<&str>) {
         println!("\n=== {} ===\n{}", failure.name, failure.reason);
     }
 
+    let failures: Vec<(&str, &str)> = failures
+        .iter()
+        .map(|f| (f.name.as_str(), f.reason.as_str()))
+        .collect();
+    gate_known(&ROUNDTRIP_KNOWN, known, write_known, &failures);
+}
+
+/// What a known-failure list is about: the header its file is written with,
+/// and the words its report uses. One per gated property, so the three lists
+/// (`--roundtrip`, `--usx-read`, `--usx-roundtrip`) are written and checked by
+/// the same code and cannot drift apart in semantics.
+struct KnownList {
+    /// The file's header, every line a `#` comment.
+    header: &'static str,
+    /// What a listed case fails to do, for the report ("round-trip").
+    property: &'static str,
+    /// What a listed case does once it is fixed ("now round-trip").
+    holds: &'static str,
+}
+
+const ROUNDTRIP_KNOWN: KnownList = KnownList {
+    header: "# Conformance cases that do not round-trip through usfm_codegen.\n\
+             # One `name # reason` per line; the reason must name the bug, because\n\
+             # every entry here is a ticket rather than a licence. The aim is an\n\
+             # empty file.\n\
+             # Regenerate with: cargo run --package usfm_tests -- --write-roundtrip-known tasks/conformance/roundtrip-known.txt\n",
+    property: "round-trip",
+    holds: "now round-trip",
+};
+
+/// A gated USX property (ticket 46): its title, the check, and its list.
+struct UsxSuite {
+    title: &'static str,
+    check: fn(&TestCase) -> Result<(), String>,
+    known: KnownList,
+}
+
+const USX_READ: UsxSuite = UsxSuite {
+    title: "USX read: reference -> read_usx -> USX",
+    check: usx_properties::check_read,
+    known: KnownList {
+        header: "# Compared conformance cases whose reference USX, read with usfm_usx::read_usx\n\
+                 # and written back with usfm_usx, is not the reference.\n\
+                 # One `name # reason` per line; the reason must name the bug, because\n\
+                 # every entry here is a ticket rather than a licence. The aim is an\n\
+                 # empty file.\n\
+                 # Regenerate with: cargo run --package usfm_tests -- --write-usx-read-known tasks/conformance/usx-read-known.txt\n",
+        property: "read back",
+        holds: "now read back",
+    },
+};
+
+const USX_ROUNDTRIP: UsxSuite = UsxSuite {
+    title: "USX round trip: reference -> read_usx -> USFM -> parse -> USX",
+    check: usx_properties::check_roundtrip,
+    known: KnownList {
+        header: "# Compared conformance cases whose reference USX, read with usfm_usx::read_usx,\n\
+                 # written as USFM with usfm_codegen, parsed and written as USX again, is not\n\
+                 # the reference.\n\
+                 # One `name # reason` per line; the reason must name the bug, because\n\
+                 # every entry here is a ticket rather than a licence. The aim is an\n\
+                 # empty file.\n\
+                 # Regenerate with: cargo run --package usfm_tests -- --write-usx-roundtrip-known tasks/conformance/usx-roundtrip-known.txt\n",
+        property: "round-trip through USFM",
+        holds: "now round-trip through USFM",
+    },
+};
+
+/// Run one of the USX properties (`usx_properties`) over every case the
+/// harness compares and gate the failures against `known`, exactly as
+/// [`run_roundtrip_suite`] gates the USFM round trip.
+fn run_usx_suite(suite: &UsxSuite, known: Option<&str>, write_known: Option<&str>) {
+    let tests = discover_tests();
+    require_tests(&tests);
+
+    println!("=== {} ===\n", suite.title);
+    let (count, failures) = usx_properties::run(&tests, suite.check);
+    println!(
+        "{} compared cases across {} roots: {} hold, {} failed",
+        count,
+        ROOTS.len(),
+        count - failures.len(),
+        failures.len()
+    );
+
+    for failure in &failures {
+        println!("\n=== {} ===\n{}", failure.name, failure.reason);
+    }
+
+    let failures: Vec<(&str, &str)> = failures
+        .iter()
+        .map(|f| (f.name.as_str(), f.reason.as_str()))
+        .collect();
+    gate_known(&suite.known, known, write_known, &failures);
+}
+
+/// Write the known list if asked, then check the failures against it (or,
+/// with no list, require there be none), exiting non-zero on any difference.
+fn gate_known(
+    list: &KnownList,
+    known: Option<&str>,
+    write_known: Option<&str>,
+    failures: &[(&str, &str)],
+) {
     if let Some(path) = write_known {
-        save_roundtrip_known(path, &failures);
+        save_known(list, path, failures);
     }
 
     let ok = match known {
-        Some(path) => check_roundtrip_known(path, &failures),
+        Some(path) => check_known(list, path, failures),
         None => failures.is_empty(),
     };
     if !ok {
@@ -351,28 +527,22 @@ fn summarize(reason: &str) -> &str {
     reason.lines().next().unwrap_or(reason).trim()
 }
 
-fn save_roundtrip_known(path: &str, failures: &[roundtrip::RoundTripFailure]) {
-    let mut out = String::from(
-        "# Conformance cases that do not round-trip through usfm_codegen.\n\
-         # One `name # reason` per line; the reason must name the bug, because\n\
-         # every entry here is a ticket rather than a licence. The aim is an\n\
-         # empty file.\n\
-         # Regenerate with: cargo run --package usfm_tests -- --write-roundtrip-known tasks/conformance/roundtrip-known.txt\n",
-    );
-    for failure in failures {
-        out.push_str(&format!("{} # {}\n", failure.name, summarize(&failure.reason)));
+fn save_known(list: &KnownList, path: &str, failures: &[(&str, &str)]) {
+    let mut out = String::from(list.header);
+    for (name, reason) in failures {
+        out.push_str(&format!("{} # {}\n", name, summarize(reason)));
     }
     if let Err(err) = std::fs::write(path, out) {
         eprintln!("Could not write {}: {}", path, err);
         std::process::exit(1);
     }
-    println!("\nWrote {} round-trip failures to {}", failures.len(), path);
+    println!("\nWrote {} failures to {}", failures.len(), path);
 }
 
-/// Compare this run's round-trip failures against the known file. Mirrors
+/// Compare this run's failures against a known file. Mirrors
 /// [`check_baseline`]: a name before the `#` is the case, the rest of the line
 /// is its reason and is not compared.
-fn check_roundtrip_known(path: &str, failures: &[roundtrip::RoundTripFailure]) -> bool {
+fn check_known(list: &KnownList, path: &str, failures: &[(&str, &str)]) -> bool {
     let contents = match std::fs::read_to_string(path) {
         Ok(contents) => contents,
         Err(err) => {
@@ -386,16 +556,16 @@ fn check_roundtrip_known(path: &str, failures: &[roundtrip::RoundTripFailure]) -
         .filter(|line| !line.is_empty() && !line.starts_with('#'))
         .map(|line| line.split('#').next().unwrap_or(line).trim())
         .collect();
-    let actual: std::collections::BTreeSet<&str> =
-        failures.iter().map(|f| f.name.as_str()).collect();
+    let actual: std::collections::BTreeSet<&str> = failures.iter().map(|(name, _)| *name).collect();
 
     let regressions: Vec<_> = actual.difference(&expected).collect();
     let fixed: Vec<_> = expected.difference(&actual).collect();
 
     if !regressions.is_empty() {
         println!(
-            "\nROUND-TRIP REGRESSIONS ({} cases fail that are not in {}):",
+            "\nREGRESSIONS ({} cases fail to {} that are not in {}):",
             regressions.len(),
+            list.property,
             path
         );
         for name in &regressions {
@@ -404,20 +574,17 @@ fn check_roundtrip_known(path: &str, failures: &[roundtrip::RoundTripFailure]) -
     }
     if !fixed.is_empty() {
         println!(
-            "\nSTALE ({} cases in {} now round-trip; remove them):",
+            "\nSTALE ({} cases in {} {}; remove them):",
             fixed.len(),
-            path
+            path,
+            list.holds
         );
         for name in &fixed {
             println!("  {}", name);
         }
     }
     if regressions.is_empty() && fixed.is_empty() {
-        println!(
-            "Round-trip failures match {} ({} known)",
-            path,
-            expected.len()
-        );
+        println!("Failures match {} ({} known)", path, expected.len());
         true
     } else {
         false

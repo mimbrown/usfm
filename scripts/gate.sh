@@ -22,9 +22,16 @@ cargo run --package usfm_tests -- --baseline tasks/conformance/tcdocs-baseline.t
 # conformance case of every root, `pass` and `fail` alike, gated against the
 # known-failure list the way the baseline is. About a second on the corpus.
 cargo run --package usfm_tests -- --roundtrip tasks/conformance/roundtrip-known.txt
+# Ticket 46: M7's two USX properties over every case the harness compares,
+# each compared with the reference the way the harness compares it and gated
+# against a known list with the round trip's semantics. `--usx-read`: read the
+# reference with `usfm_usx::read_usx` and write it back. `--usx-roundtrip`:
+# read it, write USFM with `usfm_codegen`, parse that, write USX.
+cargo run --package usfm_tests -- --usx-read tasks/conformance/usx-read-known.txt
+cargo run --package usfm_tests -- --usx-roundtrip tasks/conformance/usx-roundtrip-known.txt
 # Ticket 45: the USX reader over every reference of both roots — it reads,
-# writes back to the reference, and is the parse of the case's USFM up to what
-# USX cannot say. `--exclude usfm_tests` above skips this package's tests (its
+# is the parse of the case's USFM up to what USX cannot say, and keeps its
+# spans in its source (writing back to the reference is `--usx-read` above). `--exclude usfm_tests` above skips this package's tests (its
 # generated ones are the harness, run just above), so this one runs by name.
 cargo test --package usfm_tests --test usx_reader
 # Every crate the shipped binaries link must carry a licence file, or the

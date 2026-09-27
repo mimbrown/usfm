@@ -1,0 +1,7 @@
+# Compared conformance cases whose reference USX, read with usfm_usx::read_usx,
+# written as USFM with usfm_codegen, parsed and written as USX again, is not
+# the reference.
+# One `name # reason` per line; the reason must name the bug, because
+# every entry here is a ticket rather than a licence. The aim is an
+# empty file.
+# Regenerate with: cargo run --package usfm_tests -- --write-usx-roundtrip-known tasks/conformance/usx-roundtrip-known.txt

@@ -3,16 +3,18 @@
 //! `usfm_usx::read_usx` is tested case by case in
 //! `crates/usfm_usx/tests/reader.rs`; this file is where it meets the
 //! reference files, which only this crate knows how to find, patch and
-//! compare. Three properties, each over every reference it applies to:
+//! compare. Four properties, each over every reference it applies to; the
+//! second is asserted by the runner, and the other three here:
 //!
 //! 1. [`every_reference_reads`][]: every `origin.xml` of both roots reads
 //!    without a panic, as the file has it and as the harness reads it; the
 //!    second has no Error on a `pass` case.
-//! 2. [`writing_a_read_reference_gives_the_reference`][]: for every case the
-//!    harness compares and passes, the read tree written back with
-//!    `usfm_usx` is the reference under the harness's own comparison —
-//!    `normalize_for_comparison` and `compare_xml`, the patches applied.
-//! 3. [`a_read_reference_is_the_parse_of_its_usfm`][]: the same cases, the
+//! 2. That writing a read reference gives the reference, for every case the
+//!    harness compares, is the runner's `--usx-read` step (ticket 46), which
+//!    the gate runs against `tasks/conformance/usx-read-known.txt`; its
+//!    definition is `usfm_tests::usx_properties::check_read`. It was a test
+//!    here until then, and is not asserted twice.
+//! 3. [`a_read_reference_is_the_parse_of_its_usfm`][]: the cases of 2, the
 //!    read tree against `usfm::parse` of `origin.usfm` by
 //!    `eq_ignoring_spans`, after [`Normalise`] — the list of what a USX file
 //!    cannot say, measured over the corpus rather than guessed. Four entries,
@@ -40,17 +42,18 @@ use usfm::ast::{
 use usfm::diagnostics::Severity;
 use usfm::parser::span_check::{NodeSpan, Prefix, nodes};
 use usfm::style::StyleSheet;
-use usfm::usx::{DEFAULT_USX_VERSION, UsxOptions, read_usx, to_usx_node_with_options};
+use usfm::usx::{DEFAULT_USX_VERSION, read_usx};
 use usfm::{DEFAULT_STYLESHEET, parse_with_options};
-use usfm_tests::{TestCase, TestResult, ValidationStatus, compare_xml, discover_tests};
+use usfm_tests::{TestCase, ValidationStatus, discover_tests, usx_properties};
 
 /// The cases the harness compares today and passes: a reference exists and
-/// the parser's output matched it. Properties 2 and 3 are about exactly these.
+/// the parser's output matched it. Property 3 is about exactly these, and so
+/// is the runner's `--usx-read`, whose definition this is.
 fn compared_cases() -> Vec<TestCase> {
-    discover_tests()
+    let tests = discover_tests();
+    usx_properties::compared_cases(&tests)
         .into_iter()
-        .filter(|case| case.has_usfm() && case.has_expected_usx())
-        .filter(|case| matches!(case.run(), TestResult::Passed))
+        .cloned()
         .collect()
 }
 
@@ -67,8 +70,8 @@ fn references() -> Vec<TestCase> {
 }
 
 /// Fail with every case that broke `property`, not just the first. There is
-/// no known-failure list: the reader holds all four properties over every
-/// case they cover, and a case that stops holding one is a reader bug.
+/// no known-failure list: the reader holds the three properties here over
+/// every case they cover, and a case that stops holding one is a reader bug.
 fn assert_none(property: &str, failures: Vec<(String, String)>) {
     assert!(
         failures.is_empty(),
@@ -118,28 +121,6 @@ fn every_reference_reads() {
         }
     }
     assert_none("every reference reads", failures);
-}
-
-#[test]
-fn writing_a_read_reference_gives_the_reference() {
-    let cases = compared_cases();
-    assert!(cases.len() > 200, "only {} compared cases", cases.len());
-    let mut failures = Vec::new();
-    for case in &cases {
-        let text = case.expected_usx_text().unwrap();
-        let result = read_usx(&text);
-        let options = UsxOptions {
-            include_vid: case.expected_has_vid(),
-        };
-        let mut actual = to_usx_node_with_options(&result.document, options);
-        let mut expected = case.read_expected_usx().unwrap();
-        case.normalize_for_comparison(&mut actual);
-        case.normalize_for_comparison(&mut expected);
-        if let Err(mismatch) = compare_xml(&actual, &expected) {
-            failures.push((case.name.clone(), mismatch.to_string()));
-        }
-    }
-    assert_none("write(read(reference)) is the reference", failures);
 }
 
 #[test]
