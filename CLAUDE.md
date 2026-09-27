@@ -238,6 +238,11 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **Markers delimited by a line break or the next `\` (hardening plan,
+  Phase 2).** Nothing changed in the parser: fourteen such spellings already
+  parsed with no diagnostic to the tree of their one-space spelling, and
+  `whitespace.rs` now pins it, so the plan's box is ticked. Of its unchecked
+  boxes, a malformed real-world corpus and a benchmark gate in CI are left
 - **USFM 2's `\fig`, and a second `|` (hardening plan, Phase 2).**
   `\fig DESC|FILE|SIZE|LOC|COPY|CAP|REF\fig*` reads as Paratext converts it:
   `CAP` is the caption and the rest are `alt`, `src`, `size`, `loc`, `copy`

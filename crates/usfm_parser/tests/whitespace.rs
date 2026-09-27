@@ -206,3 +206,65 @@ fn leading_whitespace_after_a_dropped_marker_is_not_text_either() {
     // dropped markers stand between it and the text.
     assert_eq!(para("\\v 3\\* x"), r#"<v> "x""#);
 }
+
+/// A marker's name ends at the first character that cannot be in one, so the
+/// whitespace after a marker is a delimiter it may do without: a line break
+/// serves as well as a space, and a `\` starting the next marker ends the name
+/// with no whitespace at all. Each spelling here parses, with no diagnostic,
+/// to the same tree as the one-space spelling beside it. (The hardening plan's
+/// Phase 2 counted seven tcdocs aborts on `ExpectedKind(Whitespace)` for these
+/// shapes; recovery made them parse, and this pins that they parse *right*.)
+#[test]
+fn a_marker_is_delimited_by_a_line_break_or_the_next_backslash() {
+    let head = "\\id GEN\n\\c 1\n";
+    let cases = [
+        // Line break after a paragraph marker, a verse, a chapter.
+        ("\\p\n\\v 1\ntext", "\\p \\v 1 text"),
+        ("\\c 2\n\\p \\v 1 a", "\\c 2 \\p \\v 1 a"),
+        ("\\p \\v\n1 a", "\\p \\v 1 a"),
+        ("\\q1\na\n\\q2\nb", "\\q1 a\n\\q2 b"),
+        // A marker straight after a marker.
+        ("\\p\\v 1 text", "\\p \\v 1 text"),
+        ("\\q1\\v 1 a\n\\b\\q2 b", "\\q1 \\v 1 a\n\\b \\q2 b"),
+        ("\\p \\v 1\\add a\\add*", "\\p \\v 1 \\add a\\add*"),
+        ("\\p \\v 1 a \\add\\+nd b\\+nd*\\add* c", "\\p \\v 1 a \\add \\+nd b\\+nd*\\add* c"),
+        // A number straight before a marker.
+        ("\\c 2\\p \\v 1 a", "\\c 2\n\\p \\v 1 a"),
+        // Character styles and notes opened at a line end.
+        ("\\p \\v 1 a \\add\nb\\add* c", "\\p \\v 1 a \\add b\\add* c"),
+        ("\\p \\v 1 a \\f\n+ \\ft x\\f* c", "\\p \\v 1 a \\f + \\ft x\\f* c"),
+        ("\\p \\v 1 a \\f + \\ft\nx\\f* c", "\\p \\v 1 a \\f + \\ft x\\f* c"),
+        ("\\p \\v 1 a \\f + \\fr\\ft x\\f* c", "\\p \\v 1 a \\f + \\fr \\ft x\\f* c"),
+        // A milestone's `\*` on the next line.
+        ("\\p \\v 1 a \\qt-s\\*b \\qt-e\n\\*", "\\p \\v 1 a \\qt-s\\*b \\qt-e\\*"),
+    ];
+    for (written, spaced) in cases {
+        let written = format!("{head}{written}");
+        let spaced = format!("{head}{spaced}");
+        let left = Parser::new(&written).parse(&DEFAULT_STYLESHEET);
+        let right = Parser::new(&spaced).parse(&DEFAULT_STYLESHEET);
+        assert!(
+            left.diagnostics.is_empty(),
+            "{written:?}: {:?}",
+            left.diagnostics
+        );
+        assert!(
+            right.diagnostics.is_empty(),
+            "{spaced:?}: {:?}",
+            right.diagnostics
+        );
+        assert!(
+            usfm_parser::ast::eq_ignoring_spans(&left.document, &right.document),
+            "{written:?} and {spaced:?} parse to different trees"
+        );
+    }
+}
+
+/// `\id` with its book code on the next line is the same `\id`.
+#[test]
+fn a_book_code_on_the_line_after_id() {
+    let left = Parser::new("\\id\nGEN\n\\c 1\n\\p \\v 1 a").parse(&DEFAULT_STYLESHEET);
+    let right = Parser::new("\\id GEN\n\\c 1\n\\p \\v 1 a").parse(&DEFAULT_STYLESHEET);
+    assert!(left.diagnostics.is_empty(), "{:?}", left.diagnostics);
+    assert!(usfm_parser::ast::eq_ignoring_spans(&left.document, &right.document));
+}
