@@ -245,8 +245,14 @@ Recent progress:
   `usfm parse` and `usfm format` take `--custom-stylesheet FILE`, a
   project's `custom.sty` read *over* the `--stylesheet` sheet or the
   built-in one (`StyleSheet::extend_from_str`, the language server's
-  semantics), where `--stylesheet` alone replaces it. 53–55 (a Paratext
-  project reader, the `\xt` reference parser, a glossary index) are
+  semantics), where `--stylesheet` alone replaces it. Ticket 53 added
+  `crates/usfm_paratext` (`usfm::paratext`, feature `paratext`, default
+  on): `Project::open(dir)` reads `Settings.xml` and `BookNames.xml`,
+  finds each book's file by the project's naming rule (`41MATSSV.SFM`,
+  Paratext's file numbers in `canon`), reads it (UTF-8 only) and builds
+  the project's sheet — the default with its `custom.sty` over it. It
+  parses nothing: hand `read_book` and `style_sheet` to `parse_with`.
+  54 and 55 (the `\xt` reference parser, a glossary index) are
   `ready-for-agent`; 52, 56 and 57 wait on Michael
 - **Markers delimited by a line break or the next `\` (hardening plan,
   Phase 2).** Nothing changed in the parser: fourteen such spellings already
@@ -892,6 +898,8 @@ usfm-tools/
 │   │                      #   USX 2 reads to the parser's verse ends (47)
 │   ├── usfm_html/         # AST -> HTML: ToHtml, SerializeHtml, Context
 │   ├── usfm_json/         # AST -> JSON: the tree as it is, one object per node
+│   ├── usfm_paratext/     # A Paratext project folder: Settings.xml,
+│   │                      #   BookNames.xml, book files, its stylesheet
 │   ├── usfm_codegen/      # AST -> USFM: one canonical spelling per construct,
 │   │                      #   `to_usfm_string`. Round-trips the tcdocs corpus
 │   ├── usfm_pipeline/     # Document -> Document/text: replacements, sections,
@@ -978,7 +986,7 @@ To fetch or update docs: `python3 .claude/import_docs.py`
 ## Context
 
 - Custom lexer/parser (not tree-sitter)
-- A Cargo workspace: twelve `crates/`, two `apps/`, and the `tasks/` packages (`tasks/fuzz` has its own workspace)
+- A Cargo workspace: thirteen `crates/`, two `apps/`, and the `tasks/` packages (`tasks/fuzz` has its own workspace)
 - Test suite from usfm-bible/tcdocs (git submodule)
 - Tests validate USFM → USX (XML) conversion
 - USFM spec: https://ubsicap.github.io/usfm/

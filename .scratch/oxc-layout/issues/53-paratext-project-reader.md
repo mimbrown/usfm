@@ -1,6 +1,6 @@
 # 53. Read a Paratext project: settings, book names, book files, stylesheet
 
-Status: ready-for-agent
+Status: resolved
 Milestone: after M7 (render gaps)
 
 Found by mapping Shahkar-Urdu-Apps/render (gap 2). render reads a Paratext
@@ -24,3 +24,28 @@ abbreviation, short and long names. We read one file at a time.
 - The facade re-exports it as `usfm::paratext` behind a `paratext` feature.
 - Tests over a small fixture project written for the purpose (no real
   project data is committed).
+
+## Answer
+
+`crates/usfm_paratext`, re-exported as `usfm::paratext` behind the
+`paratext` feature (on by default). `Project::open`, `settings()` (every
+element as text by name, plus `naming()`, `name()`, `full_name()`,
+`style_sheet()`, `encoding()`, `books_present()`), `book_names()`,
+`books()`, `book_path()`, `read_book()` (UTF-8 only: a project whose
+`Encoding` is another code page is `Error::Encoding` rather than decoded
+wrongly; the BOM is removed) and `style_sheet()`. `canon` holds Paratext's
+123 codes and the file numbers (`41`, `A7`). Paratext 7's three
+`FileName…` elements are read when there is no `<Naming>`.
+
+One surprise: `3ES` is in Paratext's canon but is not a `BookCode` —
+USX's `book@code` neither lists it nor matches it (`[0-9][A-Z]{2}` is not
+one of its patterns) — so it can never be a project's present book here;
+`canon::book` returns `None` for it and a test pins that.
+
+Tested over `crates/usfm_paratext/tests/fixtures/SSVx`, a small project
+written for the purpose (no real project data), and in the facade, where
+the fixture's Matthew reports `unknown-custom-marker` against the default
+sheet and nothing against the project's.
+
+Follow-ups, not ticketed: a `usfm parse --project DIR BOOK…` command line;
+legacy encodings.
