@@ -1,0 +1,20 @@
+Accepted deviation. The second line is USFM 2's figure with every field
+empty, `\fig |||||| \fig*`, which the parser reads the way this reference
+does — an empty `<figure>` — and reports as `usfm2-figure` (a Warning, so the
+case is compared rather than decided on an error). What is left is the first
+line's `\fig  | src="figure.png"\fig*`: Paratext keeps the second of the two
+spaces after `\fig` as the caption, where whitespace rule 6 on `Text`
+(`usfm_ast`) makes all leading whitespace after a marker the marker's, as it
+does for `\w  word\w*` and every other marker.
+
+--- origin.xml
++++ origin.xml
+@@ -5,7 +5,7 @@
+   <chapter number="1" style="c" sid="GEN 1" />
+   <para style="p">
+     <verse number="1" style="v" sid="GEN 1:1" />Hi there.</para>
+-  <para style="p" vid="GEN 1:1">And<figure style="fig" file="figure.png"> </figure> and some more text</para>
++  <para style="p" vid="GEN 1:1">And<figure style="fig" file="figure.png" /> and some more text</para>
+   <para style="p" vid="GEN 1:1">And<figure style="fig" /> and some more text<verse eid="GEN 1:1" /></para>
+   <para style="b" />
+   <chapter eid="GEN 1" />

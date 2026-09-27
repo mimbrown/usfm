@@ -411,7 +411,20 @@ ordering or naming mismatches, 4 missing children.
       both trees structurally, since the reference files write `text </char></note>`,
       `text </char> </note>` and `text </char>\n</note>` interchangeably.
 - [ ] Marker-at-end-of-line and marker-followed-by-backslash handling.
-- [ ] Attribute naming: `\fig` mappings, default attribute names, ordering.
+- [x] Attribute naming: `\fig` mappings, default attribute names, ordering.
+      Default names (`\w` -> `lemma`, `\rb` -> `gloss`, `\xt`/`\jmp` ->
+      `link-href`, a milestone's `who`) and source order were done with word-level
+      attributes and D6. The `\fig` mapping, done 2026-09-27: USFM 2's positional
+      `\fig DESC|FILE|SIZE|LOC|COPY|CAP|REF\fig*` had kept `DESC` as the caption
+      and only the last field, dropping the rest without a word, because each `|`
+      started a list that replaced the one before. It now reads as Paratext
+      converts it — `CAP` the caption, then `alt`, `src`, `size`, `loc`, `copy`,
+      `ref`, empty fields left out — and reports `usfm2-figure` (Warning). Only
+      the exact shape is taken: plain text, six `|`, `\fig*`. (`usx.rnc`'s
+      `FigureTwo` maps `CAP` to a second `alt`, which cannot be right; the
+      reference USX of `paratextTests/EmptyFigure` is the evidence it is read at
+      all.) In any other character style a second `|` is now `unexpected-pipe`
+      and kept as text, where it had silently replaced the first list.
 - [x] Review the "unexpected passes" and either accept them as parser leniency or
       tighten. 2026-09-12: 12 → 5. Tightened with Error diagnostics: empty `|`,
       bare value on a marker with no default attribute, bare value beside named

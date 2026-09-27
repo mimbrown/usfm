@@ -70,9 +70,9 @@ files between them cover every `Code`, and each one's coverage test reads
 holds of `usfm::parse_usx` / `parse_usx_with` (ticket 48) and
 `usfm_usx::read_usx`.
 
-Conformance status (276 tests across two roots, 2026-09-19):
-- tcdocs (260 tests): 215 passed, 0 failed, 0 panicked, 1 skipped,
-  44 expected failures, 0 unexpected passes
+Conformance status (276 tests across two roots, 2026-09-27):
+- tcdocs (260 tests): 216 passed, 0 failed, 0 panicked, 1 skipped,
+  43 expected failures, 0 unexpected passes
 - `usfm-grammar/bugfixes` (16 tests, vendored under
   `tasks/conformance/fixtures/usfm-grammar/`, MIT): 16 passed, 0 failed
 - `tasks/conformance/fixtures/machine-py/` (sillsdev/machine.py, MIT) is *not* a harness
@@ -109,7 +109,7 @@ Conformance status (276 tests across two roots, 2026-09-19):
   collapsed on both sides and their `<usx version>` restored from the `\usfm`
   line, because that generator copies source whitespace verbatim and truncates
   the version to `major.minor`; tcdocs is compared exactly as before.
-- Fourteen reference files (nine tcdocs, five usfm-grammar) are read through a
+- Fifteen reference files (ten tcdocs, five usfm-grammar) are read through a
   patch in `tasks/conformance/tcdocs-patches/`
   (rules in its README; the directory covers both roots): a unified diff with
   the rationale above it, for a reference quirk or an accepted deviation, never
@@ -150,7 +150,7 @@ Conformance status (276 tests across two roots, 2026-09-19):
   empty, has the baseline's semantics — an unlisted failure is a regression, a
   listed case that round-trips is a stale entry, both fail — and every entry
   needs a reason naming the bug. After it come M7's two USX properties
-  (ticket 46), over the 228 cases the harness compares (an input and a
+  (ticket 46), over the 229 cases the harness compares (an input and a
   reference, and the parse matched it), each written as USX and compared
   with the reference exactly as the harness compares — patches applied, its
   whitespace rules — and each gated the same way against an empty list:
@@ -161,7 +161,7 @@ Conformance status (276 tests across two roots, 2026-09-19):
   the USX side, so `usfm_codegen`'s canonical spellings are invisible to
   them; both are defined in `tasks/conformance/src/usx_properties.rs`, and
   `--show <name>` prints the reader's diagnostics over the case's reference
-  and whether each holds. The 43 `fail` cases the harness never compares are
+  and whether each holds. The 42 `fail` cases the harness never compares are
   not covered: their references carry Paratext's `status="invalid"` /
   `"unknown"`, `<unmatched>` and a `sid` with no book code, which the tree does not
   model. Then (ticket 45) `cargo test -p usfm_tests --test usx_reader`, the
@@ -238,6 +238,19 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **USFM 2's `\fig`, and a second `|` (hardening plan, Phase 2).**
+  `\fig DESC|FILE|SIZE|LOC|COPY|CAP|REF\fig*` reads as Paratext converts it:
+  `CAP` is the caption and the rest are `alt`, `src`, `size`, `loc`, `copy`
+  and `ref`, an empty field left out, reported as `usfm2-figure` (Warning,
+  parser: the positional form is not in the tree). It had kept `DESC` as the
+  caption and only the last field, silently, because every `|` in a
+  character style started a list that *replaced* the one before. Only the
+  exact shape is taken (plain text, six `|`, `\fig*`: `take_usfm2_figure`);
+  anywhere else a second `|` is now `unexpected-pipe` and kept as text, so
+  `\w a|lemma="x"|strong="y"\w*` keeps `lemma` and reports it.
+  `paratextTests/EmptyFigure` is compared now (the empty USFM 2 figure is
+  what its reference has) and passes through a patch for its other figure,
+  `\fig  |…`, whose second space rule 6 gives to the marker
 - **Fuzz, Miri and a benchmark for the USX reader; M7 closed (ticket 49).**
   Two fuzz targets: `read_usx` (arbitrary bytes through `usfm::parse_usx`;
   no panic, `span_check::check_read`, well-formed USX out) and

@@ -1,0 +1,16 @@
+---
+source: crates/usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 a \\fig A lamb|lamb.jpg|col|| (c) BFBS |The lamb|1.1\\fig* b"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..79
+  VerseStart 1@16..20
+  Text "a "@21..23
+  Char fig@23..77 alt="A lamb" src="lamb.jpg" size="col" copy="(c) BFBS" ref="1.1"
+    Text "The lamb"@60..68
+  Text " b"@77..79
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+warning[usfm2-figure] @23..77: `\fig` uses USFM 2's `DESC|FILE|SIZE|LOC|COPY|CAP|REF`; read as USFM 3's caption and attributes

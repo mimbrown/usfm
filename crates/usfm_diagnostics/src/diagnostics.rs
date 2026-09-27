@@ -58,6 +58,7 @@
 //! | `character-style-implicitly-closed` | I | closes one style, opens a sibling | parser: it is the sibling-or-child decision |
 //! | `character-style-nested-without-plus` | I | nests the style | parser: it is the nesting decision, and the `+` is not in the tree |
 //! | `figure-not-closed` | E | closes the figure there | parser: it decides where the node ends |
+//! | `usfm2-figure` | W | reads the six fields as USFM 3's caption and attributes | parser: the positional form is not in the tree |
 //! | `empty-word` | E | nothing | **semantic** (21): a `\w` with attributes and no children is what the rule asks for |
 //! | `note-not-closed` | E | closes the note there | parser: it decides where the node ends |
 //! | `missing-note-caller` | E | assumes `+` | parser: it invents the caller |
@@ -279,6 +280,14 @@ pub enum Code {
     /// **Recovery:** the figure is closed at that point.
     /// **Severity:** Error.
     FigureNotClosed,
+    /// **Trigger:** `\fig` written in USFM 2's positional form,
+    /// `\fig DESC|FILE|SIZE|LOC|COPY|CAP|REF\fig*`: six `|` before `\fig*`.
+    /// **Recovery:** read as USFM 3, the way Paratext converts it: `CAP` is
+    /// the caption (the figure's text) and the other six fields are the
+    /// attributes `alt`, `src`, `size`, `loc`, `copy` and `ref`, in that
+    /// order; an empty field is left out.
+    /// **Severity:** Warning: valid USFM 2, which USFM 3 replaced.
+    Usfm2Figure,
     /// **Trigger:** `\w` with attributes but no text (`\w |lemma="x"\w*`).
     /// Other attributed styles such as `\jmp` may legitimately be empty.
     /// **Recovery:** none; the empty node is kept.
@@ -481,7 +490,9 @@ pub enum Code {
     /// **Recovery:** an implicit `\tc1` cell is opened to hold the content.
     /// **Severity:** Error.
     ExpectedTableCell,
-    /// **Trigger:** `|` outside a character style that can carry attributes.
+    /// **Trigger:** `|` outside a character style that can carry attributes,
+    /// or a second `|` in one (`\w a|lemma="x"|strong="y"\w*`), which had
+    /// replaced the first list.
     /// **Recovery:** kept as literal text.
     /// **Severity:** Error.
     UnexpectedPipe,
@@ -636,6 +647,7 @@ impl Code {
         Code::CharacterStyleImplicitlyClosed,
         Code::CharacterStyleNestedWithoutPlus,
         Code::FigureNotClosed,
+        Code::Usfm2Figure,
         Code::EmptyWord,
         Code::NoteNotClosed,
         Code::MissingNoteCaller,
@@ -706,6 +718,7 @@ impl Code {
             Code::CharacterStyleImplicitlyClosed => "character-style-implicitly-closed",
             Code::CharacterStyleNestedWithoutPlus => "character-style-nested-without-plus",
             Code::FigureNotClosed => "figure-not-closed",
+            Code::Usfm2Figure => "usfm2-figure",
             Code::EmptyWord => "empty-word",
             Code::NoteNotClosed => "note-not-closed",
             Code::MissingNoteCaller => "missing-note-caller",
@@ -765,6 +778,7 @@ impl Code {
             | Code::UnknownMilestone
             | Code::NestedMarkerNotNested
             | Code::CharacterStyleNotClosed
+            | Code::Usfm2Figure
             | Code::VerseInCharacterStyle
             | Code::EmptyMilestoneAttributeList
             | Code::UnlistedBookCode
@@ -1141,7 +1155,8 @@ mod tests {
             Code::CharacterStyleNotClosed => Code::CharacterStyleImplicitlyClosed,
             Code::CharacterStyleImplicitlyClosed => Code::CharacterStyleNestedWithoutPlus,
             Code::CharacterStyleNestedWithoutPlus => Code::FigureNotClosed,
-            Code::FigureNotClosed => Code::EmptyWord,
+            Code::FigureNotClosed => Code::Usfm2Figure,
+            Code::Usfm2Figure => Code::EmptyWord,
             Code::EmptyWord => Code::NoteNotClosed,
             Code::NoteNotClosed => Code::MissingNoteCaller,
             Code::MissingNoteCaller => Code::MissingVerseNumber,

@@ -174,17 +174,20 @@ fn empty_attribute_list() {
     );
 }
 
-/// A second `|` in one character style replaces the first list rather than
-/// extending it, so the tree holds one list and the check reports once —
-/// where the parser, which ran the check at every `|`, reported once per pipe.
-/// `tcdocs/tests/paratextTests/EmptyFigure` (`\fig |||||| \fig*`) is the only
-/// input in the suites that has more than one, and it is unchanged by the
-/// difference: what the pipes dropped was already nothing.
+/// The check reads the one list the tree holds. A second `|` in the same
+/// style no longer starts a list that replaces the first: it is the parser's
+/// `unexpected-pipe`, kept as text, so four pipes are one empty list and three
+/// pipes of text. (Six are USFM 2's figure, `usfm2-figure`, and no list.)
 #[test]
 fn empty_attribute_list_is_reported_once_per_list_not_per_pipe() {
     assert_eq!(
         common::codes("\\id GEN\n\\c 1\n\\p \\v 1 \\fig |||| \\fig*"),
-        vec![Code::EmptyAttributeList],
+        vec![
+            Code::EmptyAttributeList,
+            Code::UnexpectedPipe,
+            Code::UnexpectedPipe,
+            Code::UnexpectedPipe,
+        ],
     );
 }
 

@@ -1,0 +1,15 @@
+---
+source: crates/usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 \\w a|lemma=\"x\"|strong=\"H1\"\\w* b"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..52
+  VerseStart 1@16..20
+  Char w@21..50 lemma="x"
+    Text "a|strong=\"H1\""@24..47
+  Text " b"@50..52
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+error[unexpected-pipe] @35..36: a second `|` in one character style; kept as text
