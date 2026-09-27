@@ -410,7 +410,13 @@ ordering or naming mismatches, 4 missing children.
       no longer regex-strips note/cell ends from the expected side only; it trims
       both trees structurally, since the reference files write `text </char></note>`,
       `text </char> </note>` and `text </char>\n</note>` interchangeably.
-- [ ] Marker-at-end-of-line and marker-followed-by-backslash handling.
+- [x] Marker-at-end-of-line and marker-followed-by-backslash handling.
+      Done by Phase 1's recovery, and pinned 2026-09-27:
+      `whitespace.rs`'s `a_marker_is_delimited_by_a_line_break_or_the_next_backslash`
+      parses fourteen spellings (`\p\n\v 1`, `\p\v 1`, `\v 1\add`, `\c 2\p`,
+      `\add\nb`, `\f\n+`, `\fr\ft`, a `\*` on the next line, …) and requires
+      each to report nothing and give the tree of its one-space spelling;
+      `\id\nGEN` is the same `\id`.
 - [x] Attribute naming: `\fig` mappings, default attribute names, ordering.
       Default names (`\w` -> `lemma`, `\rb` -> `gloss`, `\xt`/`\jmp` ->
       `link-href`, a milestone's `who`) and source order were done with word-level
@@ -599,6 +605,9 @@ and `unlisted-book-code` is the first check to have moved.
       `parse`, `parse_usx`, `parse_html`, `parse_json` and `reference_index`,
       recorded in `docs/benchmarks.md`. What is left is the CI gate: the numbers are
       still compared by hand, interleaved against the previous commit.
+      Logged as ticket 50 (`needs-triage`, 2026-09-27): gate on instruction
+      counts rather than time, since wall clock on shared machines is noisier
+      than the regressions it would have to catch.
 - [x] **Property tests.** The round trip, now that `usfm_codegen` is the USFM
       writer: parse → USFM → parse gives the same tree ignoring spans, gains no
       diagnostic code, and writes out identically. Done 2026-09-20 by tickets
