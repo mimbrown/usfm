@@ -54,6 +54,12 @@ pub struct ParseArgs {
     #[arg(short = 's', long, value_name = "FILE")]
     pub stylesheet: Option<PathBuf>,
 
+    /// A project's `custom.sty`, read over the stylesheet above (or the
+    /// built-in one) the way Paratext reads it: an entry for a marker the
+    /// sheet has amends it, a new marker is added.
+    #[arg(long, value_name = "FILE")]
+    pub custom_stylesheet: Option<PathBuf>,
+
     /// Write to this file instead of standard output.
     #[arg(short, long, value_name = "FILE")]
     pub output: Option<PathBuf>,
@@ -135,6 +141,12 @@ pub struct FormatArgs {
     /// A Paratext stylesheet to parse against, in place of the built-in one.
     #[arg(short = 's', long, value_name = "FILE")]
     pub stylesheet: Option<PathBuf>,
+
+    /// A project's `custom.sty`, read over the stylesheet above (or the
+    /// built-in one) the way Paratext reads it: an entry for a marker the
+    /// sheet has amends it, a new marker is added.
+    #[arg(long, value_name = "FILE")]
+    pub custom_stylesheet: Option<PathBuf>,
 
     /// Rewrite each file in place instead of writing to standard output.
     #[arg(long)]
@@ -308,14 +320,7 @@ mod tests {
     #[test]
     fn format_takes_its_files_and_modes() {
         let Command::Format(args) = Cli::parse_from([
-            "usfm",
-            "format",
-            "--write",
-            "--force",
-            "-s",
-            "a.sty",
-            "one.usfm",
-            "two.usfm",
+            "usfm", "format", "--write", "--force", "-s", "a.sty", "one.usfm", "two.usfm",
         ])
         .command
         else {

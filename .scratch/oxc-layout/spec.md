@@ -497,3 +497,21 @@ milestone is open.
   reconstruct by walking. What ticket 23 does move is the *reporting* about
   verses (duplicate and out-of-order numbers, the bullet above): the check is
   semantic, the node is not.
+
+## After M7: what render needs
+
+Recorded 2026-09-27. Michael asked what his older publishing project,
+Shahkar-Urdu-Apps/render (Deno, Flutter, SvelteKit, SILE; Urdu and Gojri
+New Testaments), does that this toolchain cannot represent or would do
+hackily. The map is `reports/render-gap-map.md` in the project files. It
+became seven tickets, 51–57: the ones with an obvious shape are
+`ready-for-agent` and the rest wait on a decision.
+
+- **Ready, done in order:** 51 (`--custom-stylesheet`; resolved), 53 (a
+  Paratext project reader, `usfm_paratext`), 54 (the `\xt` reference parser
+  in the project's punctuation), 55 (a glossary index).
+- **Waiting on Michael:** 52 (keep an unknown marker as a derived style, and
+  which ones), 56 (interlinear and lexicon: aligned USFM or a side table;
+  needs real project files), 57 (a publishing layer — volumes, output
+  models, scoped and per-medium edits, render's SILE shape — which needs a
+  spec section before any ticket under it is ready).

@@ -457,7 +457,10 @@ fn check_passes_on_the_whole_benchmark_corpus() {
         .unwrap_or_else(|err| panic!("reading {}: {err}", corpus.display()))
         .flatten()
         .map(|entry| entry.path())
-        .filter(|path| path.extension().is_some_and(|extension| extension == "usfm"))
+        .filter(|path| {
+            path.extension()
+                .is_some_and(|extension| extension == "usfm")
+        })
         .collect();
     files.sort();
     assert_eq!(files.len(), 86, "the corpus is 86 books");
@@ -673,6 +676,82 @@ fn format_has_no_from_flag() {
     assert_eq!(output.status.code(), Some(2), "{}", stderr(&output));
     assert!(
         stderr(&output).contains("unexpected argument '--from'"),
+        "{}",
+        stderr(&output)
+    );
+}
+
+/// A project's `custom.sty`, with the font switch a real project defines
+/// (`\zgrk`, from Shahkar-Urdu-Apps/render) and an amendment to a marker the
+/// default sheet already has.
+const CUSTOM_STY: &str =
+    "\\Marker zgrk\n\\Endmarker zgrk*\n\\StyleType Character\n\n\\Marker p\n\\FirstLineIndent .5\n";
+
+const WITH_ZGRK: &str = "\\id MAT\n\\c 1\n\\p \\v 1 a \\zgrk logos\\zgrk* b\n";
+
+/// Without the custom sheet the marker is unknown and dropped; with it,
+/// `--custom-stylesheet` keeps the style *and* keeps every marker of the
+/// built-in sheet, because it extends that sheet rather than replacing it.
+#[test]
+fn custom_stylesheet_extends_the_built_in_one() {
+    let book = input("custom-sty.usfm", WITH_ZGRK);
+    let sty = input("custom-sty.sty", CUSTOM_STY);
+
+    let without = usfm(["parse".as_ref(), book.as_os_str()]);
+    assert!(without.status.success());
+    assert!(!stdout(&without).contains("zgrk"));
+    assert!(stderr(&without).contains("unknown-custom-marker"));
+
+    let with = usfm([
+        "parse".as_ref(),
+        book.as_os_str(),
+        "--custom-stylesheet".as_ref(),
+        sty.as_os_str(),
+    ]);
+    assert!(with.status.success(), "{}", stderr(&with));
+    assert!(
+        stdout(&with).contains(r#"<char style="zgrk">logos</char>"#),
+        "{}",
+        stdout(&with)
+    );
+    assert!(stdout(&with).contains(r#"<para style="p">"#));
+    assert_eq!(stderr(&with), "");
+}
+
+/// `format` reads the same flag: a formatted file keeps its custom marker.
+#[test]
+fn format_keeps_a_custom_marker_with_custom_stylesheet() {
+    let book = input("custom-sty-format.usfm", WITH_ZGRK);
+    let sty = input("custom-sty-format.sty", CUSTOM_STY);
+    let output = usfm([
+        "format".as_ref(),
+        book.as_os_str(),
+        "--custom-stylesheet".as_ref(),
+        sty.as_os_str(),
+    ]);
+    assert!(output.status.success(), "{}", stderr(&output));
+    assert!(
+        stdout(&output).contains("\\zgrk logos\\zgrk*"),
+        "{}",
+        stdout(&output)
+    );
+}
+
+/// A custom sheet that was named and cannot be read stops `format`, as an
+/// unreadable `--stylesheet` does: formatting against the wrong sheet would
+/// drop every marker it defines.
+#[test]
+fn format_refuses_a_missing_custom_stylesheet() {
+    let book = input("custom-sty-missing.usfm", WITH_ZGRK);
+    let output = usfm([
+        "format".as_ref(),
+        book.as_os_str(),
+        "--custom-stylesheet".as_ref(),
+        scratch("no-such.sty").as_os_str(),
+    ]);
+    assert!(!output.status.success());
+    assert!(
+        stderr(&output).contains("no-such.sty"),
         "{}",
         stderr(&output)
     );

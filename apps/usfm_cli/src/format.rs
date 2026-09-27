@@ -41,7 +41,7 @@ use usfm::diagnostics::Severity;
 use usfm::parser::DEFAULT_STYLESHEET;
 
 use crate::args::FormatArgs;
-use crate::driver::{print_diagnostics, read_source, read_stylesheet};
+use crate::driver::{extended_sheet, print_diagnostics, read_source, read_stylesheet};
 use crate::error::Error;
 
 /// Format every file `args` names.
@@ -53,6 +53,16 @@ pub fn run(args: &FormatArgs) -> Result<(), Error> {
             .map_err(|e| Error::Custom(format!("{}: {}", path.display(), io_message(&e))))?
             .unwrap_or_else(|| Arc::clone(&DEFAULT_STYLESHEET)),
         None => Arc::clone(&DEFAULT_STYLESHEET),
+    };
+    // Fatal for the same reason.
+    let style_sheet = match args.custom_stylesheet.as_deref() {
+        Some(path) => {
+            let custom = read_source(path)
+                .map_err(|e| Error::Custom(format!("{}: {}", path.display(), io_message(&e))))?;
+            extended_sheet(style_sheet, Some(&custom))
+                .map_err(|e| Error::Custom(format!("{}: {}", path.display(), io_message(&e))))?
+        }
+        None => style_sheet,
     };
 
     // Set once by anything that makes the run fail, and read once at the end:
