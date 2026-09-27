@@ -7,9 +7,10 @@ SIL International; `LICENSE` here is that repository's licence file, copied
 verbatim. Scripture excerpts inside the inputs belong to their respective
 publishers. See `NOTICE.md` at the repository root.
 
-Only `tests/testutils/data/usfm/` is vendored, and only the files we use.
-Upstream's `samples/data/` Paratext projects (`WEB-PT`, `VBL-PT`, `PEV-PT`) and
-its `WEB-DBL` bundle are left there: between them they use 28 markers, every
+Only `tests/testutils/data/usfm/` is vendored for the parser, and only the
+files we use; `usx/` below holds the USX (ticket 47). Upstream's
+`samples/data/` Paratext projects (`WEB-PT`, `VBL-PT`, `PEV-PT`) are left
+there: between them they use 28 markers, every
 one of which already appears in `Tes/41MATTes.SFM` or in the tcdocs and
 usfm-grammar corpora. These are hand-written Paratext-shaped projects, not
 conformance cases: they carry no expected USX and no `<validated>` verdict, so
@@ -38,6 +39,29 @@ a perfectly good code — for a different book). Upstream uses them to test a
 Paratext project loader, which knows the filename and can compare. A parser is
 handed one file's text and cannot see the disagreement at all, so neither has
 a test here; both are fuzz seeds.
+
+## `usx/`
+
+USX for the reader (`usfm_usx::read_usx`), from the same commit
+(`e2af2c868043c2b3594789d1110b05eda96de30e`, fetched 2026-09-27; the five
+files are byte for byte the same at `615cd599ab08633505b794f05244f966921e18e7`,
+where ticket 47 found them). Copied byte for byte, byte-order marks included:
+upstream's blob hashes are the ones `git hash-object` gives here. Like the
+USFM books, they carry no expected output: the expectation is the reader's own
+tree and diagnostics, recorded as the `machine_py_*` snapshots in
+`crates/usfm_usx/tests/reader.rs`; `tasks/conformance/tests/usx_reader.rs`
+round-trips the WEB books.
+
+| File | Upstream path | Role |
+| --- | --- | --- |
+| `WEB-DBL/1JN.usx`, `2JN.usx`, `3JN.usx` | `samples/data/WEB-DBL/release/USX_1/` | The World English Bible's 1–3 John as a Digital Bible Library release writes them: USX 3.0 with a byte-order mark, every word a `<char style="w" strong="…">`, a line break and an indent after each `<para>` and each paragraph's first `<verse/>`, `vid` on a paragraph that continues a verse, every verse and chapter closed with an `eid`. The bundle's `metadata.xml` states the text is PUBLIC DOMAIN (rights holder eBible.org); the files are upstream's, MIT. They read with nothing to report and round-trip USX -> USFM -> USX. |
+| `Tes/MAT.usx`, `Tes/MRK.usx` | `tests/testutils/data/usx/Tes/release/USX_1/` | A USX 2.6 test book, malformed on purpose: a `<verse>` outside any `<para>`, a `sid` and an `eid` on `2:1` alone, a repeated `\v 6` and a `\v 5` after it, USX 2's `<figure file=… size=… ref=…>`, and a `<para style="restore">`. `MRK` stops after its introduction, as `42MRKTes.SFM` does. |
+
+The rest of the DBL bundle (`metadata.xml`, `license.xml`, `styles.xml`,
+`eng_en.ldml`, `versification.vrs`) is left upstream: the reader takes USX and,
+optionally, a stylesheet, and none of the books uses a style the default sheet
+lacks. The `.usx` files are not fuzz seeds yet; that is ticket 49's, with the
+reader's fuzz target.
 
 ## Fuzz seeds
 

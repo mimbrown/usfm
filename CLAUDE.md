@@ -77,7 +77,14 @@ Conformance status (276 tests across two roots, 2026-09-19):
   root: those Paratext-shaped projects ship no reference USX, so their
   expectation is the parser's own tree and diagnostics, snapshotted by the
   `machine_py_*` tests in `crates/usfm_parser/tests/recovery.rs`. All seven books are
-  fuzz seeds.
+  fuzz seeds. Its `usx/` (ticket 47, same commit) is real USX no tool of ours
+  wrote, for the reader: the World English Bible's 1–3 John from a DBL
+  release (USX 3.0, every word a `<char style="w">`, pretty-printed inside
+  paragraphs; public-domain text) and `Tes/MAT.usx`, a USX 2.6 book malformed
+  on purpose, with `Tes/MRK.usx`. Their trees and diagnostics are the
+  `machine_py_*` snapshots in `crates/usfm_usx/tests/reader.rs`: the WEB books
+  report nothing and round-trip USX -> USFM -> USX (`usx_reader.rs`); the Tes
+  book reports its implicit `\p` and fifteen `usx-verse-end-missing`.
 - `tasks/benchmark/corpus/aligned/` (unfoldingWord's ULT and UGNT of Acts, from
   usfm-js's test resources, **CC BY-SA 4.0** — not MIT; its own `LICENSE` and
   README, and a `NOTICE.md` entry) is not a harness root either: it is the
@@ -161,8 +168,19 @@ Conformance status (276 tests across two roots, 2026-09-19):
   tree is `usfm::parse` of the case's USFM up to four measured
   normalisations (the default attribute's name, `<usx version>` as a
   `\usfm` paragraph, a note's trailing whitespace, and whitespace on the
-  usfm-grammar root); and every read node's span is in its source (writing
-  back to the reference moved to `--usx-read`, so it is asserted once). Then
+  usfm-grammar root); every read node's span is in its source (writing
+  back to the reference moved to `--usx-read`, so it is asserted once); every
+  reference with its `<verse eid>`s and `<chapter eid>`s stripped reads to the
+  tree the reference reads to (ticket 47: USX 2 has no `eid`, and the reader
+  builds the ends by the parser's rules, mirrored in `read.rs` rather than
+  shared because the parser places them while it builds; one `fail`
+  reference, `usfmjsTests/invalid`, is on a known list with its reason); and
+  the machine.py WEB books round-trip. Since the reader builds the ends a USX 2
+  file leaves out, `--usx-read` drops them before writing when the reference
+  has none, as the harness parses such a case without them
+  (`advanced/complex`). A file with some `eid`s and not others is the
+  malformed case: each end it lacks is built the same way and reported as
+  `usx-verse-end-missing` (Warning). Then
   `scripts/third_party_notices.py --check --no-npm`: every crate the shipped
   binaries link carries a licence file, since the `.vsix`'s
   `ThirdPartyNotices.txt` (`npm run notices` in `vscode/`) quotes them. Last in the gate is `scripts/miri.sh`
@@ -780,7 +798,8 @@ usfm-tools/
 │   │                      #   the checks and the server's completion share
 │   ├── usfm_usx/          # AST <-> USX: the XML tree and its writer, and
 │   │                      #   `read_usx` / `read_usx_with` (ticket 45), USX
-│   │                      #   into a `Document` + diagnostics on `roxmltree`
+│   │                      #   into a `Document` + diagnostics on `roxmltree`;
+│   │                      #   USX 2 reads to the parser's verse ends (47)
 │   ├── usfm_html/         # AST -> HTML: ToHtml, SerializeHtml, Context
 │   ├── usfm_json/         # AST -> JSON: the tree as it is, one object per node
 │   ├── usfm_codegen/      # AST -> USFM: one canonical spelling per construct,
