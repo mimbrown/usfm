@@ -140,16 +140,29 @@ Conformance status (276 tests across two roots, 2026-09-19):
   root, `pass` and `fail` alike, about a second. `roundtrip-known.txt` is
   empty, has the baseline's semantics — an unlisted failure is a regression, a
   listed case that round-trips is a stale entry, both fail — and every entry
-  needs a reason naming the bug. Then (ticket 45)
-  `cargo test -p usfm_tests --test usx_reader`, the USX reader over every
-  reference of both roots: each reads without a panic and a `pass` one with
-  no Error; for every case the harness compares, writing the read tree gives
-  the reference under the harness's own comparison, and the tree is
-  `usfm::parse` of the case's USFM up to four measured normalisations (the
-  default attribute's name, `<usx version>` as a `\usfm` paragraph, a note's
-  trailing whitespace, and whitespace on the usfm-grammar root); and every
-  read node's span is in its source. Ticket 46 turns the first two into
-  `usfm_tests` steps with known lists. Then
+  needs a reason naming the bug. After it come M7's two USX properties
+  (ticket 46), over the 228 cases the harness compares (an input and a
+  reference, and the parse matched it), each written as USX and compared
+  with the reference exactly as the harness compares — patches applied, its
+  whitespace rules — and each gated the same way against an empty list:
+  `--usx-read tasks/conformance/usx-read-known.txt` reads the reference with
+  `usfm_usx::read_usx` and writes it back, and
+  `--usx-roundtrip tasks/conformance/usx-roundtrip-known.txt` reads it,
+  writes USFM with `usfm_codegen`, parses that and writes USX. Both are on
+  the USX side, so `usfm_codegen`'s canonical spellings are invisible to
+  them; both are defined in `tasks/conformance/src/usx_properties.rs`, and
+  `--show <name>` prints the reader's diagnostics over the case's reference
+  and whether each holds. The 43 `fail` cases the harness never compares are
+  not covered: their references carry Paratext's `status="invalid"` /
+  `"unknown"`, `<unmatched>` and a `sid` with no book code, which the tree does not
+  model. Then (ticket 45) `cargo test -p usfm_tests --test usx_reader`, the
+  USX reader over every reference of both roots: each reads without a panic
+  and a `pass` one with no Error; for every case the harness compares, the
+  tree is `usfm::parse` of the case's USFM up to four measured
+  normalisations (the default attribute's name, `<usx version>` as a
+  `\usfm` paragraph, a note's trailing whitespace, and whitespace on the
+  usfm-grammar root); and every read node's span is in its source (writing
+  back to the reference moved to `--usx-read`, so it is asserted once). Then
   `scripts/third_party_notices.py --check --no-npm`: every crate the shipped
   binaries link carries a licence file, since the `.vsix`'s
   `ThirdPartyNotices.txt` (`npm run notices` in `vscode/`) quotes them. Last in the gate is `scripts/miri.sh`
@@ -791,7 +804,8 @@ usfm-tools/
 │   ├── conformance/       # tcdocs + usfm-grammar runner (the `usfm_tests` crate),
 │   │                      #   its fixtures, patches, baseline and the
 │   │                      #   round-trip property (`roundtrip.rs`) all three
-│   │                      #   round-trip checks share
+│   │                      #   round-trip checks share, and M7's two USX
+│   │                      #   properties (`usx_properties.rs`)
 │   ├── benchmark/         # criterion benches over a committed corpus
 │   └── fuzz/              # cargo-fuzz targets (own workspace, nightly)
 └── tcdocs/                # Git submodule: official USFM test suite
@@ -823,6 +837,13 @@ cargo run --package usfm_tests -- --write-baseline tasks/conformance/tcdocs-base
 # The round trip over every case of every root, gated the same way (ticket 27)
 cargo run --package usfm_tests -- --roundtrip tasks/conformance/roundtrip-known.txt
 cargo run --package usfm_tests -- --write-roundtrip-known tasks/conformance/roundtrip-known.txt
+
+# M7's USX properties over every compared case, gated the same way (ticket 46):
+# reference -> read_usx -> USX, and reference -> read_usx -> USFM -> parse -> USX
+cargo run --package usfm_tests -- --usx-read tasks/conformance/usx-read-known.txt
+cargo run --package usfm_tests -- --usx-roundtrip tasks/conformance/usx-roundtrip-known.txt
+cargo run --package usfm_tests -- --write-usx-read-known tasks/conformance/usx-read-known.txt
+cargo run --package usfm_tests -- --write-usx-roundtrip-known tasks/conformance/usx-roundtrip-known.txt
 
 # Run as cargo test (with output)
 cargo test --package usfm_tests -- --nocapture
