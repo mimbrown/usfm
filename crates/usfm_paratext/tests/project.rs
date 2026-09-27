@@ -71,3 +71,29 @@ fn a_folder_with_no_settings_is_an_error() {
         other => panic!("expected an Io error, got {other:?}"),
     }
 }
+
+/// The project's punctuation and names read a reference as the project
+/// writes it: Urdu digits, the Arabic comma, the Urdu book name.
+#[test]
+fn a_reference_in_the_projects_own_spelling() {
+    use usfm_semantic::citation::{Piece, parse_citations};
+
+    let project = Project::open(fixture()).unwrap();
+    let format = project.settings().citation_format();
+    let names = project.book_names().table();
+    let found: Vec<(String, usize, Option<usize>)> =
+        parse_citations("متی ۵:۳، ۷", &format, &names, None)
+            .into_iter()
+            .filter_map(|piece| match piece {
+                Piece::Citation(c) => Some((c.book.to_string(), c.start.chapter, c.start.verse)),
+                Piece::Text(_) => None,
+            })
+            .collect();
+    assert_eq!(
+        found,
+        [
+            ("MAT".to_string(), 5, Some(3)),
+            ("MAT".to_string(), 5, Some(7))
+        ]
+    );
+}

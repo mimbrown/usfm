@@ -3,6 +3,7 @@
 use std::collections::BTreeMap;
 
 use usfm_ast::BookCode;
+use usfm_semantic::citation::CitationFormat;
 
 use crate::canon;
 
@@ -90,6 +91,30 @@ impl Settings {
         self.get("Encoding")
             .map(str::trim)
             .filter(|s| !s.is_empty())
+    }
+
+    /// The punctuation the project writes references with, for
+    /// `usfm_semantic::citation`: Paratext's reference settings, each split on
+    /// `|` where a project lists several spellings, and the default for a
+    /// setting the file leaves out.
+    pub fn citation_format(&self) -> CitationFormat {
+        let default = CitationFormat::default();
+        let read = |key: &str, fallback: Vec<String>| match self.get(key) {
+            Some(value) if !value.trim().is_empty() => value
+                .split('|')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect(),
+            _ => fallback,
+        };
+        CitationFormat {
+            chapter_verse: read("ChapterVerseSeparator", default.chapter_verse),
+            range: read("RangeIndicator", default.range),
+            chapter_range: read("ChapterRangeSeparator", default.chapter_range),
+            sequence: read("SequenceIndicator", default.sequence),
+            chapter_number: read("ChapterNumberSeparator", default.chapter_number),
+            book_sequence: read("BookSequenceSeparator", default.book_sequence),
+        }
     }
 
     /// The books `BooksPresent` marks with a `1`, in canon order.
@@ -232,6 +257,19 @@ mod tests {
             .map(ToString::to_string)
             .collect();
         assert_eq!(books, ["GEN", "MAT", "INT"]);
+    }
+
+    #[test]
+    fn the_citation_format_reads_the_settings_and_defaults_the_rest() {
+        let settings = Settings::from_xml(
+            "<ScriptureText><SequenceIndicator>،</SequenceIndicator>\
+             <ChapterNumberSeparator>؛|;</ChapterNumberSeparator></ScriptureText>",
+        )
+        .unwrap();
+        let format = settings.citation_format();
+        assert_eq!(format.sequence, ["،"]);
+        assert_eq!(format.chapter_number, ["؛", ";"]);
+        assert_eq!(format.chapter_verse, [":"]);
     }
 
     #[test]

@@ -252,7 +252,12 @@ Recent progress:
   Paratext's file numbers in `canon`), reads it (UTF-8 only) and builds
   the project's sheet — the default with its `custom.sty` over it. It
   parses nothing: hand `read_book` and `style_sheet` to `parse_with`.
-  54 and 55 (the `\xt` reference parser, a glossary index) are
+  Ticket 54 added `usfm_semantic::citation`: `parse_citations` reads
+  references written as text (`Mt 5:3-10; Lk 6:20`, `متی ۵:۳، ۷`) in a
+  project's own punctuation (`CitationFormat`, from
+  `Settings::citation_format()`) and book names (`BookNameTable`, from
+  `BookNames::table()`), any Unicode decimal digits, and `xt_citations`
+  runs it over every `\xt` of a document. 55 (a glossary index) is
   `ready-for-agent`; 52, 56 and 57 wait on Michael
 - **Markers delimited by a line break or the next `\` (hardening plan,
   Phase 2).** Nothing changed in the parser: fourteen such spellings already
@@ -891,7 +896,8 @@ usfm-tools/
 │   │                      #   -> Vec<Diagnostic>. Reports, never repairs.
 │   │                      #   Also ReferenceIndex, the chapter/verse index,
 │   │                      #   and `placement::check`, the `OccursUnder` rule
-│   │                      #   the checks and the server's completion share
+│   │                      #   the checks and the server's completion share,
+│   │                      #   and `citation`, references written as text
 │   ├── usfm_usx/          # AST <-> USX: the XML tree and its writer, and
 │   │                      #   `read_usx` / `read_usx_with` (ticket 45), USX
 │   │                      #   into a `Document` + diagnostics on `roxmltree`;

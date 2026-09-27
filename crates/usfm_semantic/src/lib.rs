@@ -61,6 +61,7 @@
 //! when the parser reported it mid-parse.
 
 pub mod placement;
+pub mod citation;
 pub mod reference;
 
 pub use placement::Placement;

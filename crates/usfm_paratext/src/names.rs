@@ -2,6 +2,7 @@
 //! long="The Gospel of Matthew" />…</BookNames>`.
 
 use usfm_ast::BookCode;
+use usfm_semantic::citation::BookNameTable;
 
 /// The names a project gives one book. An empty attribute is `None`:
 /// Paratext writes every attribute, filled in or not.
@@ -54,6 +55,21 @@ impl BookNames {
 
     pub fn iter(&self) -> impl Iterator<Item = &BookName> {
         self.names.iter()
+    }
+
+    /// The names to recognise in a reference: every book's abbreviation,
+    /// short and long name, and the three-letter codes.
+    pub fn table(&self) -> BookNameTable {
+        let mut table = BookNameTable::new().with_codes();
+        for name in &self.names {
+            for text in [&name.abbreviation, &name.short, &name.long]
+                .into_iter()
+                .flatten()
+            {
+                table.add(text, name.code);
+            }
+        }
+        table
     }
 
     pub fn is_empty(&self) -> bool {
