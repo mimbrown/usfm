@@ -159,6 +159,7 @@ pub struct ParserImpl<'a> {
     va: usize,
     vp: usize,
     cp: usize,
+    usfm: usize,
     should_insert_end_milestones: bool,
     diagnostics: Vec<Diagnostic>,
     /// Stack of open character styles and notes, innermost last.
@@ -186,7 +187,11 @@ pub struct ParserImpl<'a> {
     /// container (`open.len()` at the time). The parent, at the depth below,
     /// places it before the child it is about to add, or hands it further
     /// out; depth 0 is a paragraph or table cell, handed to block level.
-    pending_verse_end: Option<(OpenVerse, usize)>,
+    ///
+    /// A stack, innermost last: an end handed out to block level can still be
+    /// waiting when a verse starts at the head of a character style in the
+    /// same paragraph and hands out a second (ticket 49).
+    pending_verse_end: Vec<(OpenVerse, usize)>,
     /// Depth inside sidebars, where verses are not tracked. (A `\periph`
     /// division tracks its own since ticket 44.)
     verses_suspended: usize,
@@ -302,6 +307,18 @@ fn collapse_ascii_whitespace(text: &str) -> String {
     out
 }
 
+/// Whether `children` hold a verse start, directly or inside a character
+/// style: the paragraph a verse started in holds its end whatever its style,
+/// and `\ip \w p \v 2 b\w*` starts verse 2 in the `\ip` (ticket 49, found by
+/// the `usx_roundtrip` fuzz target). A note cannot hold one (`verse-in-note`).
+fn holds_verse_start(children: &[Inline<'_>]) -> bool {
+    children.iter().any(|inline| match inline {
+        Inline::VerseStart(_) => true,
+        Inline::Char(char) => holds_verse_start(&char.children),
+        _ => false,
+    })
+}
+
 /// A synthesized verse end milestone.
 fn verse_end<'a>(number: NumberList) -> Inline<'a> {
     Inline::VerseEnd(VerseEnd { number, span: SPAN })
@@ -394,6 +411,7 @@ impl<'a> ParserImpl<'a> {
             va: index("va"),
             vp: index("vp"),
             cp: index("cp"),
+            usfm: index("usfm"),
             should_insert_end_milestones: true,
             diagnostics: Vec::new(),
             open: Vec::new(),
@@ -404,7 +422,7 @@ impl<'a> ParserImpl<'a> {
             line_bounded_attributes: false,
             open_verse: None,
             open_chapter: None,
-            pending_verse_end: None,
+            pending_verse_end: Vec::new(),
             verses_suspended: 0,
             prev_token_end: 0,
         }
@@ -541,6 +559,8 @@ impl<'a> ParserImpl<'a> {
                 pending = self.parse_sidebar(blocks, span);
             } else if marker == self.periph {
                 pending = self.parse_periph(blocks, span, &stop);
+            } else if marker == self.usfm {
+                self.parse_usfm_version(blocks, span);
             } else {
                 if marker == self.esbe {
                     // Inside a sidebar `stop` accepts it, so this one is stray.
@@ -587,7 +607,11 @@ impl<'a> ParserImpl<'a> {
         milestone: Milestone<'a>,
         head: BlockListHead,
     ) {
-        if let Some(Block::Para(para)) = blocks.last_mut() {
+        // The `\usfm` paragraph is read like `\id` and ends its own line
+        // (`parse_usfm_version`), so it is not one to take the milestone in.
+        if let Some(Block::Para(para)) = blocks.last_mut()
+            && para.style.index() != self.usfm
+        {
             para.span.end = milestone.span.end;
             para.add_child(Inline::Milestone(milestone));
             return;
@@ -601,8 +625,9 @@ impl<'a> ParserImpl<'a> {
             Some(Block::Table(_)) => Some("tr"),
             Some(Block::Sidebar(_)) => Some("esbe"),
             Some(Block::Periph(_)) => Some("periph"),
-            // A `Book`, a `ChapterStart`, a `ChapterEnd` and a block milestone
-            // each end their own line, so a milestone may follow one.
+            // A `Book`, a `ChapterStart`, a `ChapterEnd`, a block milestone
+            // and the `\usfm` paragraph each end their own line, so a
+            // milestone may follow one.
             Some(_) => None,
             None => match head {
                 BlockListHead::Free => None,
@@ -1098,6 +1123,41 @@ impl<'a> ParserImpl<'a> {
         }
     }
 
+    /// `\usfm 3.1`, the version the document declares — which USX carries as
+    /// `<usx version>`, so the paragraph holds the version and nothing else.
+    /// It is read the way `\id`'s description is: the text after the marker,
+    /// up to the next marker, trailing whitespace dropped. What follows is
+    /// the block loop's, so a milestone there stands between blocks (as it
+    /// does after `\id`, `place_block_milestone`) and inline content opens
+    /// an implicit `\p`. Read as an ordinary paragraph it took in both, and
+    /// the USX writer, which writes this paragraph as the version attribute
+    /// and nothing more, dropped them without a word; the `usx_roundtrip`
+    /// fuzz target found it (ticket 49).
+    fn parse_usfm_version(&mut self, blocks: &mut Vec<Block<'a>>, marker_span: Span) {
+        self.start_block();
+        let mut para = Para {
+            style: StyleId::new(self.usfm as u32),
+            children: vec![],
+            span: marker_span,
+        };
+        self.eat_whitespace();
+        if self.cur_kind().is_text() {
+            let text = self.parse_text();
+            let content = text
+                .content
+                .trim_end_matches(|c: char| c.is_ascii_whitespace())
+                .to_string();
+            if !content.is_empty() {
+                para.add_child(Inline::Text(Text::new(Cow::Owned(content), text.span)));
+            }
+        }
+        // Up to whatever comes next, as a paragraph's span runs to the marker
+        // that closes it.
+        para.span.end = self.cur_span().start;
+        self.place_pending_verse_end_before_block(blocks);
+        blocks.push(Block::Para(para));
+    }
+
     fn parse_chapter(&mut self, blocks: &mut Vec<Block<'a>>, marker_span: Span) {
         let number_span = self.cur_span();
         let Some(word) = self.eat_word() else {
@@ -1495,7 +1555,7 @@ impl<'a> ParserImpl<'a> {
             && self.para_text_type != TextType::VerseText
             && !open.started_in_current_block;
         if in_non_verse_text_para || context.children().is_empty() {
-            self.pending_verse_end = Some((open, self.open.len()));
+            self.pending_verse_end.push((open, self.open.len()));
             return;
         }
         // The whitespace before `\v` moves after the end: `text<eid/> <v/>`.
@@ -1522,12 +1582,9 @@ impl<'a> ParserImpl<'a> {
 
     /// The pending verse end, if it was left by a container at `depth`.
     fn take_pending_verse_end(&mut self, depth: usize) -> Option<OpenVerse> {
-        match self.pending_verse_end.take() {
-            Some((open, at)) if at == depth => Some(open),
-            other => {
-                self.pending_verse_end = other;
-                None
-            }
+        match self.pending_verse_end.last() {
+            Some((_, at)) if *at == depth => self.pending_verse_end.pop().map(|(open, _)| open),
+            _ => None,
         }
     }
 
@@ -1651,7 +1708,7 @@ impl<'a> ParserImpl<'a> {
         // A pending end is always placed by the time its block is pushed;
         // one still here would be a parser bug, and the last block is the
         // best place for it.
-        if let Some((open, _)) = self.pending_verse_end.take() {
+        for (open, _) in std::mem::take(&mut self.pending_verse_end) {
             self.end_verse_in_last_block(blocks, open.number);
         }
         if let Some(open) = self.open_verse.take() {
@@ -1668,10 +1725,7 @@ impl<'a> ParserImpl<'a> {
                 Block::Para(para) => {
                     // A paragraph the verse started in holds its end whatever
                     // its style; otherwise only verse text qualifies.
-                    let starts_a_verse = para
-                        .children
-                        .iter()
-                        .any(|inline| matches!(inline, Inline::VerseStart(_)));
+                    let starts_a_verse = holds_verse_start(&para.children);
                     if !para.children.is_empty()
                         && (starts_a_verse || self.rule(para.style.index()).is_verse_text())
                     {
@@ -2113,10 +2167,13 @@ impl<'a> ParserImpl<'a> {
     /// The scan stops at whatever would close the enclosing style first — a
     /// paragraph or cell marker, a closing marker of any open style, another
     /// `\name` (which would claim the closer) — or end of input, and leaves
-    /// the lexer where it was.
+    /// the lexer where it was. A `\+name` ahead claims the next `name*` for
+    /// itself, so the scan steps over the pair: that closer is not this
+    /// style's (ticket 49).
     fn char_is_closed_ahead(&mut self, name: &str) -> bool {
         let checkpoint = self.lexer.checkpoint();
         let prev_token_end = self.prev_token_end;
+        let mut plussed_open = 0usize;
         let closed = loop {
             self.bump_any();
             match self.cur_kind() {
@@ -2130,7 +2187,18 @@ impl<'a> ParserImpl<'a> {
                         break false;
                     }
                     if cur == name {
-                        break true;
+                        if plussed_open == 0 {
+                            break true;
+                        }
+                        plussed_open -= 1;
+                    }
+                }
+                Kind::Marker {
+                    closing: false,
+                    nested: true,
+                } => {
+                    if self.cur_marker_name() == name {
+                        plussed_open += 1;
                     }
                 }
                 Kind::Marker {

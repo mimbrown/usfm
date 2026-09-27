@@ -253,6 +253,15 @@ fn the_fuzz_findings_round_trip() {
         // and the `\` of the `\vp*` after it made one escape, and the number
         // came back as `\vp*`.
         ("published_verse_number_that_is_a_backslash", "\\v 1\\vp\\"),
+        // Found by `usx_roundtrip` (ticket 49), and `roundtrip` fails on it
+        // too. Unclosed in a note, as the writer leaves them, `\xta \xt`
+        // came back with `\xt` nested in `\xta`: the nesting scan counted
+        // the `\+xt*` ahead, which closes the `\+xt` before it, as `\xt`'s
+        // own closer.
+        (
+            "closer_of_a_plussed_style_ahead",
+            "\\fe\\xta\\xt\\ft\\xt.\\xt*",
+        ),
     ]
     .into_iter()
     .map(|(name, source)| (name.to_string(), source.to_string()))

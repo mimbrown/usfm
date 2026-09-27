@@ -16,10 +16,17 @@
 # Miri interprets the program on one host thread, so the test harness's threads
 # buy nothing and the wall time is the sum of the suites. Local wall time on the
 # 4-vCPU Xeon @ 2.80GHz the agent loop runs on, with the Miri build already
-# done: **about 4 min 5 s** (per-suite times in the comments below). The
-# budget for the CI step is 5 minutes, so a suite added here has to earn it.
+# done: **about 5 min** (300 s wall on 2026-09-27; per-suite times in the
+# comments below), with the reader's 31 s in it. That is the whole of the CI
+# step's 5-minute budget, and not only because of the reader: `usx_text`
+# takes 46 s where this script said ~15 s, and as long at the M6 close commit
+# too, so the VM or the nightly toolchain moved rather than the code. Without
+# the reader the total is about 4 min 30 s today. A suite added
+# here has to earn it; the next one should come with a cut elsewhere.
 #
 # Not run in full, on purpose:
+# * `usfm_usx --test reader` (ticket 49) — eight of its 25 tests; the block
+#   below says which and why.
 # * `usfm_codegen` (ticket 25) — four of its 19 lib tests, the ones that drive
 #   the two byte scans (`write_text`, `write_attribute_value`). Those two are
 #   the crate's only byte handling: everything else it writes is a marker name
@@ -53,7 +60,7 @@
 # * `usfm_pipeline` — its lib suite is the text replacements, which spend all
 #   their time inside the `regex` crate; that is not this repo's code, and it
 #   cost 66 s of the parser's 86 s while it lived there (ticket 15 moved it).
-# * 75 of the 85 `recovery` tests — the 10 kept are the ones whose input drives
+# * 93 of the 103 `recovery` tests — the 10 kept are the ones whose input drives
 #   the lexer somewhere unusual (a lone `\`, an unterminated quote, an escaped
 #   one, a marker name with `-` or `_`, a newline inside an attribute list, EOF
 #   inside a character style, a malformed number through `string_parser`).
@@ -94,6 +101,35 @@ run -p usfm_ast --lib
 # it stops on, plus the reader round trip (ticket 13).                  ~3 s
 run -p usfm_usx --lib
 
+# The USX reader (ticket 45, Miri since ticket 49): `roxmltree` has no
+# `unsafe` (`#![forbid(unsafe_code)]`), but the reader slices the source with
+# the byte ranges it hands back — every span, every borrowed attribute value
+# and text run — and collapses whitespace over `&str`s. insta reads its
+# snapshots from disk, which Miri's isolation forbids.                  ~31 s
+# Eight of the suite's 25 tests: the ones whose input reaches the reader's
+# byte handling somewhere unusual — XML that is not well formed, a byte-order
+# mark and a declaration read past, DBL's pretty-printing inside mixed
+# content, a note's indentation, the whitespace rules, every attribute shape
+# the writer writes and their spans, and the writer's own output read back.
+# The other 16 are one USX vocabulary rule each over a few lines of ordinary
+# XML, or a machine.py Tes book, and add 110 s between them (the suite minus
+# 1JN is 140 s; about 11 s of any run is the default stylesheet built once
+# under Miri), which the CI step's budget does not have. Skipped even from a
+# full run: the machine.py WEB test, which reads 1JN (115 KB) and had not
+# finished after 15 minutes.
+(
+  export MIRIFLAGS="${MIRIFLAGS:-} -Zmiri-disable-isolation"
+  run -p usfm_usx --test reader -- --exact \
+    usx_not_well_formed \
+    a_byte_order_mark_and_a_declaration_are_read_past \
+    dbl_pretty_printing_is_formatting \
+    a_notes_indentation_is_not_a_space \
+    text_is_read_by_the_ast_whitespace_rules \
+    attributes_are_read_in_the_canonical_form \
+    every_attribute_the_writer_writes_is_read \
+    what_the_writer_writes_reads_back
+)
+
 # `write_escaped` / `write_escaped_attribute`: the same byte-table scan over a
 # `&str`, slicing at the indices it stops on (ticket 14).               ~1 s
 # Only the `escape` tests: the rest of `usfm_html`'s lib suite parses whole
@@ -119,13 +155,13 @@ run -p usfm_parser --lib
 # invariants checked mechanically.
 run -p usfm_parser --test whitespace   # ~17 s
 run -p usfm_parser --test attributes   # ~13 s
-run -p usfm_parser --test usx_text     # ~15 s
+run -p usfm_parser --test usx_text     # ~46 s
 run -p usfm_parser --test verse_ends   # ~18 s
-run -p usfm_parser --test spans        # ~57 s
+run -p usfm_parser --test spans        # ~59 s
 
 # Malformed input, where the lexer's cursor ends up in the least ordinary
 # places. insta reads its snapshots from disk, which Miri's isolation
-# forbids.                                                            ~73 s
+# forbids.                                                            ~57 s
 (
   export MIRIFLAGS="${MIRIFLAGS:-} -Zmiri-disable-isolation"
   run -p usfm_parser --test recovery -- --exact \

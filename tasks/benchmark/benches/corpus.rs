@@ -26,7 +26,7 @@ use usfm::parser::parser::Parser;
 use usfm::parser::{DEFAULT_STYLESHEET, UniquePromise};
 use usfm::semantic::ReferenceIndex;
 use usfm::style::StyleSheet;
-use usfm::usx::to_usx_string;
+use usfm::usx::{read_usx, to_usx_string};
 use usfm_benchmark::{CorpusFile, FileClass, total_bytes};
 
 /// Criterion settings chosen so a full `cargo bench -p usfm_benchmark`
@@ -140,6 +140,34 @@ fn bench_parse_json(c: &mut Criterion) {
     });
 }
 
+/// `usfm_usx::read_usx` alone, over each file written as USX once at setup
+/// (ticket 49): the reader without the semantic pass, as `parse` is the
+/// parser without it. Throughput is counted over the bytes of **USX** read,
+/// its own input, so the MiB/s is the reader's rate and not directly the
+/// `parse` row's; `docs/benchmarks.md` sets the two side by side per book as
+/// well. The USX is `to_usx_string` of the parse, which is what the gate's
+/// `--usx-read` step reads back.
+fn bench_read_usx(c: &mut Criterion) {
+    let sheet = style_sheet();
+    let mut group = c.benchmark_group("read_usx");
+    for (class, files) in corpus() {
+        let usx: Vec<String> = files
+            .iter()
+            .map(|file| to_usx_string(&Parser::new(&file.text).parse(&sheet).document))
+            .collect();
+        let bytes: u64 = usx.iter().map(|text| text.len() as u64).sum();
+        group.throughput(Throughput::Bytes(bytes));
+        group.bench_with_input(BenchmarkId::from_parameter(class.name()), &usx, |b, usx| {
+            b.iter(|| {
+                for text in usx {
+                    black_box(read_usx(black_box(text)));
+                }
+            })
+        });
+    }
+    group.finish();
+}
+
 /// A group over trees built once, outside the timed loop, so the number is the
 /// cost of walking a built tree. Throughput is still counted over the bytes of
 /// source the trees came from, which keeps the unit the same as the groups
@@ -216,6 +244,6 @@ criterion_group! {
     name = benches;
     config = configured();
     targets = bench_lex, bench_parse, bench_parse_semantic, bench_parse_usx, bench_parse_html,
-        bench_parse_json, bench_codegen, bench_reference_index, bench_analyze
+        bench_parse_json, bench_read_usx, bench_codegen, bench_reference_index, bench_analyze
 }
 criterion_main!(benches);

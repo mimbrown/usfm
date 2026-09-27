@@ -167,10 +167,14 @@ Conformance status (276 tests across two roots, 2026-09-19):
   model. Then (ticket 45) `cargo test -p usfm_tests --test usx_reader`, the
   USX reader over every reference of both roots: each reads without a panic
   and a `pass` one with no Error; for every case the harness compares, the
-  tree is `usfm::parse` of the case's USFM up to four measured
-  normalisations (the default attribute's name, `<usx version>` as a
-  `\usfm` paragraph, a note's trailing whitespace, and whitespace on the
-  usfm-grammar root); every read node's span is in its source (writing
+  tree is `usfm::parse` of the case's USFM up to `usfm_usx::testing::normalise`
+  — what USX cannot say, behind `usfm_usx`'s `testing` feature since ticket
+  49 so the fuzz target compares through the same list: the default
+  attribute's name, one `<usx version>` as the `\usfm` paragraph after
+  `\id`, a note's trailing whitespace, an attribute the writer cannot carry
+  and the empty `|`, a character XML forbids as U+FFFD — and whitespace on
+  the usfm-grammar root; every read node's span is in its source
+  (`usfm_parser::span_check::read_violations`, shared with `read_usx`) (writing
   back to the reference moved to `--usx-read`, so it is asserted once); every
   reference with its `<verse eid>`s and `<chapter eid>`s stripped reads to the
   tree the reference reads to (ticket 47: USX 2 has no `eid`, and the reader
@@ -187,16 +191,20 @@ Conformance status (276 tests across two roots, 2026-09-19):
   binaries link carries a licence file, since the `.vsix`'s
   `ThirdPartyNotices.txt` (`npm run notices` in `vscode/`) quotes them. Last in the gate is `scripts/miri.sh`
   (ticket 05): `cargo +nightly miri test` over the `usfm_span`, `usfm_ast` and
-  `usfm_diagnostics` libs, `usfm_usx`'s lib, `usfm_html`'s `escape` tests, the
-  parser lib
+  `usfm_diagnostics` libs, `usfm_usx`'s lib and (8 of 25, since ticket 49)
+  `reader` tests, `usfm_html`'s `escape` tests, the parser lib
   and the `whitespace`, `attributes`, `usx_text`, `verse_ends`, `spans` and
-  (10 of 85) `recovery` suites, about 3 min 50 s. It needs a nightly toolchain
+  (10 of 103) `recovery` suites, about 5 min (2026-09-27; about 4 min 30 s
+  without the reader, the rest of the growth being drift on this VM since the
+  last measurement — the whole of the script's own 5-minute budget, see its
+  header). It needs a nightly toolchain
   with `miri` and `rust-src`, which CI installs in its own step and
   `scripts/session-start.sh` installs on a fresh VM; `rust-toolchain.toml`
   stays pinned at 1.98.0 for everything else.
 - Fuzzing is on demand, not in the gate or CI (ticket 06): `cargo +nightly fuzz
   run --fuzz-dir tasks/fuzz parse_lossy -- -max_total_time=600 -max_len=65536`,
-  and the same for `parse_utf8`, `parse_html` and `roundtrip`. The first two
+  and the same for `parse_utf8`, `parse_html`, `roundtrip`, `read_usx` and
+  `usx_roundtrip`. The first two
   assert no panic,
   the span invariants (`usfm_parser::span_check`, shared with `crates/usfm_parser/tests/spans.rs`
   behind the `testing` feature) and that the USX output is well-formed XML;
@@ -205,7 +213,13 @@ Conformance status (276 tests across two roots, 2026-09-19):
   than by an HTML parser; `roundtrip` (ticket 27) parses, writes USFM and parses
   again, asserting the same three things the gate's `--roundtrip` step does —
   the tree is equal ignoring spans, the second parse gains no diagnostic code,
-  and the output is a fixed point. `tasks/fuzz` is
+  and the output is a fixed point. `read_usx` (ticket 49) reads arbitrary
+  bytes as USX through `usfm::parse_usx`: no panic, the span invariants as
+  they read for XML, well-formed USX out; `usx_roundtrip` parses arbitrary
+  USFM, writes USX, reads it back to the parse up to
+  `usfm_usx::testing::normalise`, then holds `roundtrip`'s three assertions
+  over the read tree. Seeds for `read_usx` are every reference USX of both
+  roots and the vendored machine.py USX. `tasks/fuzz` is
   outside the workspace, so run its clippy separately; see `tasks/fuzz/README.md`.
 
 **Traversal API (Phase 3, complete 2026-09-12)** lives in `usfm_ast`:
@@ -224,6 +238,32 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **Fuzz, Miri and a benchmark for the USX reader; M7 closed (ticket 49).**
+  Two fuzz targets: `read_usx` (arbitrary bytes through `usfm::parse_usx`;
+  no panic, `span_check::check_read`, well-formed USX out) and
+  `usx_roundtrip` (parse, write USX, read back to the parse up to
+  `usfm_usx::testing::normalise`, then `roundtrip`'s three assertions over
+  the read tree, comparing codes with the *read's* diagnostics). Seeds are
+  every reference USX of both roots and machine.py's USX, NIV excluded; both
+  ran ten minutes clean. The discovery rounds before that found seven bugs,
+  each a test before its fix (the table is in `tasks/fuzz/README.md`):
+  `<para style="esbe">` now reports `unmatched-sidebar-end`; a verse that
+  starts inside a character style of a non-verse-text paragraph ends in that
+  paragraph; the pending verse end is a **stack**, so a second waiting end
+  no longer overwrites the first (both mirrored in parser and reader); the
+  reader takes `\thc0`/`\tc3-2` cell styles as the parser does; the USX writer
+  escapes attribute values itself (`xml-rs` wrote a tab raw, which a reader
+  reads as a space); the nesting look-ahead counts a `\+name*` as the closer
+  of a `\+name`, not of an unplussed `\name`; and **`\usfm` is read like
+  `\id`** — its version and nothing else — where it had run on like any
+  paragraph and swallowed a milestone or a verse that the USX writer then
+  dropped. `normalise` moved out of the conformance test into
+  `usfm_usx::testing` (feature `testing`, forwarded by the facade's) so the
+  test and the fuzz target compare through one list. `scripts/miri.sh` runs
+  the `reader` suite; `tasks/benchmark` has a `read_usx` group (84.1 MiB/s of
+  USX over the whole corpus, about 1.2× the parser's time for the same
+  books); the M7 boundary rerun against `8f8f568` is within noise
+  (`docs/benchmarks.md`, "M7 close")
 - **`usfm::parse_usx` and `usfm parse --from usx` (ticket 48, M7).** The
   facade's `parse_usx` / `parse_usx_with` (feature `usx`) are `read_usx` /
   `read_usx_with` plus `usfm_semantic::analyze`, merged the way `parse_with`
@@ -761,9 +801,9 @@ it leaves for callers:
 Priority areas, next: the route is `.scratch/oxc-layout/spec.md` (decision in
 `docs/adr/0001-oxc-style-crate-layout.md`): oxc's crate organisation, not its arena.
 Milestones in order: M1 workspace builds clean, M2 benchmarks + Miri + fuzz, M3
-crate split, M4 `usfm_semantic`, M5 `usfm_codegen`, M6 language server. M1–M5
-closed (exit criteria recorded in the spec; M5 on 2026-09-20, tickets 25–27
-and 34–36). Ticket 37 paid back the M5 parse regression, and **M6's agent
+crate split, M4 `usfm_semantic`, M5 `usfm_codegen`, M6 language server, M7
+the USX reader. All seven are closed, each with its exit criteria recorded in
+the spec (M5 on 2026-09-20, tickets 25–27 and 34–36). Ticket 37 paid back the M5 parse regression, and **M6's agent
 tickets are done**: the language server is rebuilt in
 `apps/usfm_language_server` with diagnostics (ticket 30), formatting and
 hover (31) and symbols, completion and code actions (32), and **M6 is
@@ -772,12 +812,15 @@ lexicon crate, and the lexicon feature was decided against. M6's other exit
 criteria were checked and recorded in the spec on 2026-09-20 (the boundary
 benchmark rerun is `docs/benchmarks.md`, "M6 close": within noise). Tickets
 10 and 33, the two that waited on Michael, are both answered and done
-(2026-09-26), so nothing is blocked on him. What is left — the loose ends found on the way (tickets 38–43, `needs-triage`), the
-hardening plan's unchecked boxes, and the work with no plan yet — is listed
-in the spec under "After M6: what is left". **M7, the USX reader**
-(ticket 42, specified 2026-09-26), is next: `roxmltree` under a `read` module
-in `usfm_usx`, gated by USX -> `Document` -> USX and USX -> USFM -> USX over
-both conformance roots; tickets 45–49.
+(2026-09-26), so nothing is blocked on him. **M7, the USX reader** (ticket 42, specified 2026-09-26; tickets 45–49), is
+**closed** (2026-09-27): `usfm_usx::read_usx` on `roxmltree`, `usfm::parse_usx`
+and `usfm parse --from usx`, gated by USX -> `Document` -> USX and USX ->
+USFM -> USX over both conformance roots, fuzzed, under Miri and benchmarked;
+the exit criteria are recorded in the spec. **No milestone is open.** What
+is left — tickets 39 and 40 (`needs-triage`: the server's per-request parse,
+formatting as a minimal diff), the hardening plan's unchecked boxes, and the
+output formats with no plan yet — is listed in the spec under "After M6:
+what is left"; the next milestone is written from there.
 Tickets are in
 `.scratch/oxc-layout/issues/`, written one milestone ahead. Unattended
 sessions follow `docs/agents/loop.md`; `scripts/gate.sh` is the gate before every push.

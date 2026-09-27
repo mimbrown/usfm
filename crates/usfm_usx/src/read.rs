@@ -295,6 +295,18 @@ fn trim_paragraph_end<'a>(container: &mut impl InlineContainer<'a>) {
     }
 }
 
+/// Whether `children` hold a verse start, directly or inside a character
+/// style: the paragraph a verse started in holds its end whatever its style,
+/// and `\ip \w p \v 2 b\w*` starts verse 2 in the `\ip` (ticket 49, found by
+/// the `usx_roundtrip` fuzz target). A note cannot hold one (`verse-in-note`).
+fn holds_verse_start(children: &[Inline<'_>]) -> bool {
+    children.iter().any(|inline| match inline {
+        Inline::VerseStart(_) => true,
+        Inline::Char(char) => holds_verse_start(&char.children),
+        _ => false,
+    })
+}
+
 /// A verse end the tree synthesizes: an end is where the tree says a verse
 /// stops, so it carries no span of its own.
 fn verse_end<'a>(number: NumberList) -> Inline<'a> {
@@ -364,7 +376,11 @@ struct Reader<'a> {
     /// started, because that container was empty (or is a paragraph that is
     /// not verse text), with that container's depth: the parser's
     /// `pending_verse_end`.
-    pending_verse_end: Option<(OpenVerse, usize)>,
+    ///
+    /// A stack, innermost last: an end handed out to block level can still be
+    /// waiting when a verse starts at the head of a character style in the
+    /// same paragraph and hands out a second (ticket 49).
+    pending_verse_end: Vec<(OpenVerse, usize)>,
     /// Character styles and notes open around what is being read: 0 is a
     /// paragraph or a cell.
     depth: usize,
@@ -387,7 +403,7 @@ impl<'a> Reader<'a> {
             chapter: None,
             verse: None,
             uses_eids: false,
-            pending_verse_end: None,
+            pending_verse_end: Vec::new(),
             depth: 0,
             in_cell: false,
             para_is_verse_text: true,
@@ -694,7 +710,7 @@ impl<'a> Reader<'a> {
             && !self.para_is_verse_text
             && !open.started_in_current_block;
         if in_non_verse_text_para || container.children().is_empty() {
-            self.pending_verse_end = Some((open, self.depth));
+            self.pending_verse_end.push((open, self.depth));
             return;
         }
         push_verse_end(
@@ -708,12 +724,9 @@ impl<'a> Reader<'a> {
 
     /// The pending verse end, if it was left by a container at `depth`.
     fn take_pending_verse_end(&mut self, depth: usize) -> Option<OpenVerse> {
-        match self.pending_verse_end.take() {
-            Some((open, at)) if at == depth => Some(open),
-            other => {
-                self.pending_verse_end = other;
-                None
-            }
+        match self.pending_verse_end.last() {
+            Some((_, at)) if *at == depth => self.pending_verse_end.pop().map(|(open, _)| open),
+            _ => None,
         }
     }
 
@@ -739,7 +752,7 @@ impl<'a> Reader<'a> {
         if !self.tracking() {
             return;
         }
-        if let Some((open, _)) = self.pending_verse_end.take() {
+        for (open, _) in std::mem::take(&mut self.pending_verse_end) {
             self.end_verse_in_last_block(blocks, open.number);
         }
         if let Some(open) = self.verse.take() {
@@ -772,10 +785,7 @@ impl<'a> Reader<'a> {
                 Block::Para(para) => {
                     // A paragraph the verse started in holds its end whatever
                     // its style; otherwise only verse text qualifies.
-                    let starts_a_verse = para
-                        .children
-                        .iter()
-                        .any(|inline| matches!(inline, Inline::VerseStart(_)));
+                    let starts_a_verse = holds_verse_start(&para.children);
                     if !para.children.is_empty()
                         && (starts_a_verse
                             || self
@@ -882,6 +892,16 @@ impl<'a> Reader<'a> {
                 "para" => match self.element_style(child, StyleType::Paragraph) {
                     Some(style) => {
                         self.close_implicit(list);
+                        if self.style_sheet.get_rule(style.index()).marker == "esbe" {
+                            // A sidebar ends at `</sidebar>`: this is an
+                            // `\esbe` with no open `\esb`, kept as the empty
+                            // paragraph the parser keeps (ticket 49).
+                            self.report(
+                                Code::UnmatchedSidebarEnd,
+                                span_of(child.range()),
+                                "`\\esbe` with no open `\\esb`",
+                            );
+                        }
                         let para = self.para(child, style);
                         self.place_pending_verse_end_before_block(&mut list.blocks);
                         list.push(Block::Para(para));
@@ -1586,10 +1606,11 @@ fn parse_cell_style(style: &str) -> Option<(bool, Alignment, u8, u8)> {
         Some(last) => last.parse().ok()?,
         None => column,
     };
-    if column == 0 || last < column {
-        return None;
-    }
-    Some((header, alignment, column, last - column + 1))
+    // The parser's reading of the same marker (`TableCellInfo`): column 0 is
+    // kept for `unexpected-table-column` to report, and a span that ends
+    // before it starts is one column (ticket 49).
+    let colspan = if last < column { 1 } else { last - column + 1 };
+    Some((header, alignment, column, colspan))
 }
 
 #[cfg(test)]
@@ -1614,9 +1635,21 @@ mod tests {
             parse_cell_style("thc1-3"),
             Some((true, Alignment::Center, 1, 3))
         );
-        for style in ["tc", "tx1", "tc0", "tc3-2", "tc1-", "p", "tc1a"] {
+        for style in ["tc", "tx1", "tc1-", "p", "tc1a"] {
             assert_eq!(parse_cell_style(style), None, "{style}");
         }
+        // As the parser reads the marker (ticket 49, found by the
+        // `usx_roundtrip` fuzz target on `\thc0`): column 0 is a column
+        // (`unexpected-table-column` is `usfm_semantic`'s to report), and a
+        // span that ends before it starts is one column.
+        assert_eq!(
+            parse_cell_style("thc0"),
+            Some((true, Alignment::Center, 0, 1))
+        );
+        assert_eq!(
+            parse_cell_style("tc3-2"),
+            Some((false, Alignment::Start, 3, 1))
+        );
     }
 
     #[test]

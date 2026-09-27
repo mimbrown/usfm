@@ -1,0 +1,21 @@
+---
+source: crates/usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\c 1\n\\p \\v 1 \\bk a \\nd b \\em \\+nd c\\+nd*\\em*\\bk*"
+---
+Book GEN "" @0..7
+ChapterStart 1@8..12
+Para p@13..56
+  VerseStart 1@16..20
+  Char bk@21..27
+    Text "a "@25..27
+  Char nd@27..33
+    Text "b "@31..33
+  Char em@33..52
+    Char nd@37..48
+      Text "c"@42..43
+  VerseEnd 1
+ChapterEnd 1
+--- diagnostics
+info[character-style-implicitly-closed] @21..24: `\bk` was implicitly closed by `\nd`
+info[character-style-implicitly-closed] @27..30: `\nd` was implicitly closed by `\em`
+error[unmatched-closing-marker] @52..56: closing marker `\bk*` has no matching `\bk`

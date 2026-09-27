@@ -8,7 +8,8 @@
 # parser or a writer. The `roundtrip` target (ticket 27) is the one to run
 # after a parser change: the round-trip step below is the same property over a
 # fixed corpus, and the fuzzer is what finds the inputs it does not hold on.
-# See `tasks/fuzz/README.md`.
+# After a change to the USX reader or writer, run `read_usx` and
+# `usx_roundtrip` (ticket 49) the same way. See `tasks/fuzz/README.md`.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

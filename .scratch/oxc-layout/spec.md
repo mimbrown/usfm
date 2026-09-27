@@ -255,7 +255,8 @@ the lexicon question) and ticket 10 (the usfm-js aligned fixtures; a licence
 call). Both were answered on 2026-09-26 and both are done: ticket 10
 ("vendor them") made `tasks/benchmark/corpus/aligned/` the benchmark's
 `aligned` class, and ticket 33 ("delete both") deleted `wip/` and decided the
-lexicon feature against. Every milestone of this spec is closed.
+lexicon feature against. Every milestone of this spec is closed (M7, added
+after this was written, closed too on 2026-09-27).
 
 **Loose ends found on the way, deliberately left, now ticketed at
 `needs-triage`** so a loop does not take them until someone says they are
@@ -267,7 +268,7 @@ wanted: 38 (`ReferenceIndex` does not see a `\periph` division's chapters),
 Michael picked 38, 41 and 43 on 2026-09-26 and all three are resolved;
 38 found ticket 44 (no verse or chapter ends inside a `\periph` division),
 which Michael picked next and is resolved too. 39 and 40 wait as they were.
-Ticket 42 became M7 (below) on 2026-09-26.
+Ticket 42 became M7 (below) on 2026-09-26, and M7 closed on 2026-09-27.
 Beside them, the hardening plan's own unchecked boxes
 (`docs/plans/hardening.md`): marker-at-end-of-line handling, `\fig`
 attribute naming, a malformed real-world corpus, and a benchmark gate in
@@ -367,6 +368,78 @@ Decisions, settled by ticket 42 so a loop need not reopen them:
   mirrors it is ticket 47's call; the test is the exit criterion's (strip the
   `eid`s from every reference, read, compare).
 - **Out of scope**: USJ (the JSON form of USX) and writing USX 2.
+
+Closed 2026-09-27 (tickets 45–49; `40f8ff7` #53, `86a46b1` #54, `f75def3`
+#55, `73a1198` #56, and this PR for 49). Checked on the branch of this PR,
+on top of `73a1198`:
+- Every reference of both roots reads with no Error, and writes back to the
+  reference under the harness's comparison: `usx_reader.rs`'s
+  `every_reference_reads` over all 271 references, and the gate's
+  `--usx-read tasks/conformance/usx-read-known.txt`, 228 / 228 compared
+  cases, known list empty. Yes.
+- USX -> USFM -> USX over the same set: `--usx-roundtrip
+  tasks/conformance/usx-roundtrip-known.txt`, 228 / 228, known list empty.
+  Yes.
+- A USX 2 file reads to the ends the parser would build:
+  `a_reference_reads_the_same_without_its_eids` strips every `eid` from every
+  reference (at least 260 had one) and compares the two reads. Yes, with one
+  listed exception, `usfmjsTests/invalid`, a `fail` case the harness never
+  compares: its reference ends `\v 11` before a verse the reader drops as
+  `malformed-verse-number`, as the parser drops `\v No`, so without the
+  `eid` verse 11 runs to where the parser ends it. The list fails when an
+  entry starts holding. `a_usx_2_file_is_the_parse_of_its_usfm` asserts the
+  same against the parser directly, and ticket 49 added two cases to it.
+- Real USX no tool of ours wrote reads with pinned diagnostics: machine.py's
+  WEB books (`machine_py_web_books_read_with_nothing_to_report`, and
+  `usx_reader.rs`'s `the_web_books_round_trip`) and its malformed Tes
+  project (`machine_py_tes_mat`, `machine_py_tes_mrk`, insta snapshots) in
+  `crates/usfm_usx/tests/reader.rs`. Yes.
+- `usfm::parse_usx` / `parse_usx_with` on the facade and
+  `usfm parse --from usx` in the CLI, tested by running the binary
+  (`book.usx --from usx --format usfm` equals `usfm_codegen` of
+  `parse_usx`). Yes (ticket 48).
+- Fuzz targets ten minutes clean each: `read_usx` 442 912 runs in 601 s and
+  `usx_roundtrip` 24 233 runs in 601 s, from the pruned seeds (every
+  reference of both roots and machine.py's USX, NIV excluded as for the
+  USFM seeds), no crash; `roundtrip` rerun beside them, 69 158 runs, clean.
+  Two fork-mode discovery rounds came first and found seven bugs — in the
+  reader, the parser, and the USX writer's attribute escaping — plus one in
+  the span checker; each a test before its fix (`tasks/fuzz/README.md`,
+  "The USX reader's targets"). Yes.
+- The reader's tests under Miri: `scripts/miri.sh` runs 8 of `usfm_usx`'s
+  25 `reader` tests, the ones whose input reaches the reader's byte handling
+  somewhere unusual (malformed XML, a BOM, DBL pretty-printing, every
+  attribute shape), in 31 s; the whole suite is 140 s without the WEB 1JN
+  test, which had not finished under Miri after 15 minutes. The script says
+  which and why. Yes, with that cut. The script's total is now about 5 min,
+  the whole of its budget: 31 s of it the reader, the rest drift since it was
+  last measured (`usx_text` takes as long at the M6 close commit).
+- A benchmark group with its number recorded: `read_usx` in
+  `tasks/benchmark`, 84.1 MiB/s of USX over the whole corpus, about 1.2× the
+  parser's time for the same books (`docs/benchmarks.md`, "`read_usx`
+  (ticket 49)"). Yes.
+- The invariant held on every ticket: tcdocs 215 / 0 / 44 (1 skipped) and
+  usfm-grammar 16 / 0, baseline empty, `--roundtrip` 275 / 275 with its known
+  list empty, gate green.
+- Benchmarks at the boundary (`docs/benchmarks.md`, "M7 close", against
+  `8f8f568`, the M6 close): no steady row slower than 1.4%; `reference_index`
+  −4.7% is inside its ~15% noise (31–37% round spreads) and `codegen` +4.3%
+  is faster. No ticket.
+Also in M7: normalisation — what USX cannot say — is one function,
+`usfm_usx::testing::normalise`, behind a `testing` feature, which the
+conformance test and the fuzz target share (ticket 49). The fuzz fixes moved
+three things outside the reader: the `\usfm` line is read like `\id`, its
+version and nothing else, and a block milestone may follow it
+(`Block::Milestone`'s rule gains it); the parser's pending verse end is a
+stack, not one slot, and "the paragraph a verse started in" looks inside
+character styles (both mirrored in the reader); and the USX writer escapes
+attribute values itself, because `xml-rs` leaves a tab raw. Found on the way
+and left: the repo is not `rustfmt`-clean and the gate does not check it;
+`xml-rs` still backs `XmlDocument` and the harness (the decision above
+leaves retiring it for when someone wants it). Frontier after this: tickets
+39 and 40 at `needs-triage`, the hardening plan's unchecked boxes, and the
+output formats with no plan — "After M6" above is still the list, and no
+milestone is open.
 
 
 ## Open, to settle when reached

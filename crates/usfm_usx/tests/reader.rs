@@ -250,6 +250,18 @@ fn content_outside_a_paragraph_opens_an_implicit_p() {
     snapshot("content_outside_paragraph", source);
 }
 
+/// A sidebar ends at `</sidebar>`, so a `<para style="esbe">` is an `\esbe`
+/// with no open `\esb`: kept as the empty paragraph the parser keeps, and
+/// reported with the parser's code (ticket 49, `tasks/fuzz`'s
+/// `usx_roundtrip` on `paratextTests/UnmatchedSidebarEnd`, where the USFM of
+/// the read tree reported what the read had not).
+#[test]
+fn a_sidebar_end_paragraph_is_an_unmatched_sidebar_end() {
+    let source = r#"<usx version="3.0"><book code="GEN" style="id"/><para style="p">text</para><para style="esbe"/></usx>"#;
+    assert_eq!(common::codes(source), vec![Code::UnmatchedSidebarEnd]);
+    snapshot("unmatched_sidebar_end", source);
+}
+
 #[test]
 fn an_unknown_book_code_drops_the_book() {
     let source = r#"<usx version="3.0"><book code="genesis" style="id"/></usx>"#;

@@ -227,10 +227,12 @@ pub enum Block<'a> {
     ///
     /// * a [`Book`] (`\id GEN`),
     /// * a [`ChapterStart`] or a [`ChapterEnd`] (`\c 1`),
+    /// * the `\usfm` [`Para`] (`\usfm 3.1`), which holds the version and
+    ///   nothing else and is read like `\id` (ticket 49),
     /// * another `Block::Milestone`,
     /// * or nothing at all, at the head of a [`Document`]'s own block list.
     ///
-    /// Everywhere else — after a [`Para`], a [`Table`], a [`Sidebar`] or a
+    /// Everywhere else — after any other [`Para`], a [`Table`], a [`Sidebar`] or a
     /// [`Periph`], and at the head of a `Sidebar`'s or a `Periph`'s block
     /// list, whose opening line (`\esb`, `\periph Title`) runs on — the
     /// milestone belongs to an implicit `\p` and is an

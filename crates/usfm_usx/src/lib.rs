@@ -27,6 +27,11 @@
 //!   `roxmltree`, which gives every node the byte range its span needs.
 
 pub mod read;
+// What USX cannot say, as one definition: the conformance harness's reader
+// test and the fuzz target `usx_roundtrip` compare trees through it (ticket
+// 49). Behind a feature, so the default build is unchanged.
+#[cfg(feature = "testing")]
+pub mod testing;
 pub mod usx;
 pub mod xml_document;
 

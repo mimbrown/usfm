@@ -1,0 +1,15 @@
+---
+source: crates/usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\usfm 3.1 \\v 1 x\n\\c 1"
+---
+Book GEN "" @0..7
+Para usfm@8..18
+  Text "3.1"@14..18
+Para p@18..25
+  VerseStart 1@18..22
+  Text "x"@23..25
+  VerseEnd 1
+ChapterStart 1@25..29
+ChapterEnd 1
+--- diagnostics
+error[content-outside-paragraph] @18..20: content outside a paragraph; an implicit `\p` was opened

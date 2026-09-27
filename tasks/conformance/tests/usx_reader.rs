@@ -16,15 +16,18 @@
 //!    here until then, and is not asserted twice.
 //! 3. [`a_read_reference_is_the_parse_of_its_usfm`][]: the cases of 2, the
 //!    read tree against `usfm::parse` of `origin.usfm` by
-//!    `eq_ignoring_spans`, after [`Normalise`] — the list of what a USX file
-//!    cannot say, measured over the corpus rather than guessed. Four entries,
-//!    each naming a case that shows it. Two the spec expected are not on it,
-//!    because the tree never carried them or no compared case has them:
-//!    whether a `\+` was written is not in the tree to begin with, and no
-//!    compared case writes an empty `|` list (`\ts-s |\*`, which the reader
-//!    reads as no list, `crates/usfm_usx/tests/reader.rs`).
+//!    `eq_ignoring_spans`, after `usfm_usx::testing::normalise` — the list
+//!    of what a USX file cannot say, measured over the corpus rather than
+//!    guessed, with each entry naming a case that shows it — and, on the
+//!    usfm-grammar root only, [`CollapseWhitespace`], the fourth entry, which
+//!    is the harness's rule for that root rather than something USX cannot
+//!    say. The list lives in `usfm_usx` behind `testing` since ticket 49, so
+//!    `tasks/fuzz`'s `usx_roundtrip` target compares through the same one;
+//!    that target added two entries (unwritable attributes, the empty `|`),
+//!    which no compared case needs.
 //! 4. [`every_read_node_has_a_span_in_its_source`][]: `span_check`'s
-//!    invariants, as they read for XML, over every reference.
+//!    invariants, as they read for XML (`span_check::read_violations`), over
+//!    every reference.
 //! 5. [`a_reference_reads_the_same_without_its_eids`][]: USX 2 (ticket 47).
 //!    Every reference with each `<verse eid>` and `<chapter eid>` stripped
 //!    reads to the tree the reference itself reads to, by
@@ -48,21 +51,16 @@
 
 use std::borrow::Cow;
 use std::panic::{self, AssertUnwindSafe};
-use std::sync::{Arc, LazyLock};
+use std::sync::LazyLock;
 
 use regex::Regex;
 
 use usfm::ast::visit_mut::VisitMut;
-use usfm::ast::{
-    Attributes, Block, Char, Document, Inline, Milestone, Note, Para, Periph, SPAN, StyleId,
-    TableCell, Text, default_attribute_name, eq_ignoring_spans, is_valid_attribute_name,
-};
+use usfm::ast::{Char, Inline, Note, Para, TableCell, Text, eq_ignoring_spans};
 use usfm::diagnostics::Severity;
-use usfm::parser::span_check::{NodeSpan, Prefix, nodes};
-use usfm::style::StyleSheet;
-use usfm::usx::{
-    DEFAULT_USX_VERSION, UsxOptions, read_usx, to_usx_node_with_options, to_usx_string,
-};
+use usfm::parser::span_check::read_violations;
+use usfm::usx::testing::normalise;
+use usfm::usx::{UsxOptions, read_usx, to_usx_node_with_options, to_usx_string};
 use usfm::{DEFAULT_STYLESHEET, parse_with_options};
 use usfm_tests::{
     TestCase, ValidationStatus, collapse_whitespace_tree, compare_xml, discover_tests,
@@ -159,8 +157,8 @@ fn a_read_reference_is_the_parse_of_its_usfm() {
         let mut parsed = parse_with_options(&usfm, &DEFAULT_STYLESHEET, true).document;
         let text = case.expected_usx_text().unwrap();
         let mut read = read_usx(&text).document;
-        Normalise::apply(&mut parsed);
-        Normalise::apply(&mut read);
+        normalise(&mut parsed);
+        normalise(&mut read);
         if case.name.starts_with("usfm-grammar/") {
             CollapseWhitespace.visit_document(&mut parsed);
             CollapseWhitespace.visit_document(&mut read);
@@ -180,63 +178,40 @@ fn a_read_reference_is_the_parse_of_its_usfm() {
 }
 
 /// The span invariants `usfm_parser::span_check` states for a parse, as
-/// they read for a tree read from XML: every span in bounds, not inverted and
-/// on a character boundary; every node but a `Text` starting at the element
-/// it was read from (`<`) or at the attribute that stands for its marker
-/// (`version=` for the `\usfm` paragraph, `category=`, `alt=`), or, for an
-/// implicit `\p`, at or before its content; every attribute's at its name. The one invariant a read tree
-/// cannot hold is the marker the span starts with: USX has elements, not
-/// `\p`, and an attribute list has no `|` (its `pipe` is `SPAN`).
+/// they read for a tree read from XML: `span_check::read_violations`, which
+/// `tasks/fuzz`'s `read_usx` target asserts over arbitrary bytes too.
 #[test]
 fn every_read_node_has_a_span_in_its_source() {
     let mut failures = Vec::new();
     for case in &references() {
         let text = case.expected_usx_text().unwrap();
         let result = read_usx(&text);
-        for NodeSpan {
-            label,
-            span,
-            prefix,
-        } in nodes(&result.document)
-        {
-            let fail = |why: String| (case.name.clone(), format!("{label} {span:?}: {why}"));
-            if span.start > span.end || span.end as usize > text.len() {
-                failures.push(fail("out of bounds or inverted".into()));
-                continue;
-            }
-            if span == SPAN {
-                continue;
-            }
-            let (start, end) = (span.start as usize, span.end as usize);
-            if !text.is_char_boundary(start) || !text.is_char_boundary(end) {
-                failures.push(fail("splits a character".into()));
-                continue;
-            }
-            let slice = &text[start..end];
-            // What a node was read from: an element, or the attribute that
-            // stands for a marker (`version=`, `category=`, `alt=`).
-            let element_or_attribute = slice.starts_with('<')
-                || slice
-                    .split_once('=')
-                    .is_some_and(|(name, _)| is_valid_attribute_name(name));
-            let holds = match prefix {
-                Prefix::Anything => true,
-                Prefix::Exact(_) => false,
-                // A marker (`\\p`, `//`): the element or attribute it became.
-                Prefix::Marker(marker) if !is_valid_attribute_name(&marker) => element_or_attribute,
-                // An attribute of a list: its name.
-                Prefix::Marker(_) => is_valid_attribute_name(slice),
-                Prefix::MarkerOrImplicit { content_start, .. } => {
-                    element_or_attribute
-                        || content_start.is_some_and(|content| span.start <= content)
-                }
-            };
-            if !holds {
-                failures.push(fail(format!("starts {:?}", &slice[..slice.len().min(20)])));
-            }
+        for violation in read_violations(&text, &result.document) {
+            failures.push((case.name.clone(), violation));
         }
     }
     assert_none("every read node has a span in its source", failures);
+}
+
+/// An attribute name USFM does not allow but XML does (`x�-morph`, U+FFFD
+/// being an XML name character) is kept, as the parser keeps it, for the
+/// semantic pass to report as `malformed-attribute-name`, and its span is its
+/// name all the same. `span_check` had taken "an attribute's span" to mean
+/// "a valid name" (ticket 49, `tasks/fuzz`'s `read_usx`).
+#[test]
+fn a_malformed_attribute_name_keeps_its_span() {
+    let usx = "<usx version=\"3.0\"><book code=\"GEN\" style=\"id\"/><para style=\"p\">\
+               <char style=\"w\" x\u{fffd}-morph=\"a\">word</char></para></usx>";
+    let result = usfm::parse_usx(usx);
+    assert!(
+        result
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == usfm::Code::MalformedAttributeName),
+        "{:?}",
+        result.diagnostics
+    );
+    assert_eq!(read_violations(usx, &result.document), Vec::<String>::new());
 }
 
 /// Every `<verse eid>` and `<chapter eid>` in `usx`, removed: the USX 2 form
@@ -323,6 +298,25 @@ fn a_reference_reads_the_same_without_its_eids() {
 fn a_usx_2_file_is_the_parse_of_its_usfm() {
     let usx = r#"<usx version="2.6"><book code="GEN" style="id"/><chapter number="1" style="c"/><para style="p"><verse number="1" style="v"/>one <verse number="2" style="v"/>two</para><para style="s">Heading</para><para style="p"><char style="add"><verse number="3" style="v"/>three</char></para><sidebar style="esb"><para style="p"><verse number="9" style="v"/>aside</para></sidebar><para style="q1">still three</para><table><row style="tr"><cell style="tc1"><verse number="4" style="v"/>four</cell><cell style="tc2"><verse number="5" style="v"/>five</cell></row></table><chapter number="2" style="c"/><para style="p"><verse number="1" style="v"/>last</para></usx>"#;
     let usfm = "\\id GEN\n\\usfm 2.6\n\\c 1\n\\p \\v 1 one \\v 2 two\n\\s Heading\n\\p \\add \\v 3 three\\add*\n\\esb\n\\p \\v 9 aside\n\\esbe\n\\q1 still three\n\\tr \\tc1 \\v 4 four\\tc2 \\v 5 five\n\\c 2\n\\p \\v 1 last\n";
+    assert_usx_2_reads_as(usx, usfm);
+    // A verse that starts inside a character style of a paragraph that is not
+    // verse text ends in that paragraph, which starts it (ticket 49: the
+    // parser and the reader both looked only at the paragraph's own children,
+    // and ended it in the paragraph before, ahead of its own start).
+    assert_usx_2_reads_as(
+        r#"<usx version="2.6"><book code="GEN" style="id"/><chapter number="1" style="c"/><para style="p"><verse number="1" style="v"/>a</para><para style="ip"><char style="w">p <verse number="2" style="v"/>b</char></para></usx>"#,
+        "\\id GEN\n\\usfm 2.6\n\\c 1\n\\p \\v 1 a\n\\ip \\w p \\v 2 b\\w*\n",
+    );
+    // Two ends waiting at once — verse 8's for block level, verse 9's for the
+    // head of the `\w` — and the second no longer replaces the first
+    // (ticket 49, in the parser and the reader alike).
+    assert_usx_2_reads_as(
+        r#"<usx version="2.6"><book code="GEN" style="id"/><chapter number="1" style="c"/><para style="p"><verse number="8" style="v"/>a</para><para style="p"><verse number="9" style="v"/><char style="w"><verse number="10" style="v"/>b</char></para></usx>"#,
+        "\\id GEN\n\\usfm 2.6\n\\c 1\n\\p \\v 8 a\n\\p \\v 9 \\w \\v 10 b\\w*\n",
+    );
+}
+
+fn assert_usx_2_reads_as(usx: &str, usfm: &str) {
     let read = read_usx(usx);
     assert!(read.diagnostics.is_empty(), "{:?}", read.diagnostics);
     let parsed = usfm::parse(usfm).document;
@@ -400,102 +394,6 @@ fn the_web_books_round_trip() {
     assert_none("the WEB books", failures);
 }
 
-/// What USX cannot say, applied to both trees before they are compared:
-/// each rewrite puts a construct into the one form USX has for it, which is
-/// the form the reader builds. Measured over the corpus (ticket 45); each
-/// entry names the case that showed it.
-struct Normalise {
-    style_sheet: Arc<StyleSheet>,
-}
-
-impl Normalise {
-    fn apply(document: &mut Document<'_>) {
-        let mut normalise = Normalise {
-            style_sheet: Arc::clone(document.style_sheet()),
-        };
-        normalise.visit_document(document);
-        declare_version(document);
-    }
-
-    fn marker(&self, style: StyleId) -> &str {
-        &self.style_sheet.get_rule(style.index()).marker
-    }
-
-    /// 1. **The default attribute has its name.** `\w a|b\w*` and
-    ///    `\w a|lemma="b"\w*` are one `<char lemma="b">`; the reader cannot
-    ///    tell them apart and names every attribute
-    ///    (`specExamples/cross-ref`: `\ref 1|GEN 2:1\ref*` is `loc`;
-    ///    `usfm-grammar/bugfixes/attrib-for-tl`: `\tl …|es\tl*` is `lang`).
-    fn name_default_attribute(&self, attributes: Option<&mut Attributes<'_>>, marker: &str) {
-        let Some(attributes) = attributes else {
-            return;
-        };
-        for pair in &mut attributes.pairs {
-            if pair.name.is_empty()
-                && let Some(name) = default_attribute_name(marker)
-            {
-                pair.name = Cow::Borrowed(name);
-            }
-        }
-    }
-}
-
-impl VisitMut for Normalise {
-    /// 3. **A note's trailing whitespace is not compared**, for the reason
-    ///    the harness gives in `normalize_tree`: Paratext writes `\ft text \f*`
-    ///    as `text </char></note>` in one reference and `text </char> </note>`
-    ///    in another (`usfmjsTests/isa_inline_quotes`), and the reader reads
-    ///    each as written. A cell's end is the same rule, which the reader
-    ///    already applies (rule 5), so only a note needs it here.
-    fn visit_note(&mut self, note: &mut Note<'_>) {
-        for child in &mut note.children {
-            self.visit_inline(child);
-        }
-        trim_trailing_text(&mut note.children);
-    }
-
-    fn visit_char(&mut self, char: &mut Char<'_>) {
-        let marker = self.marker(char.style).to_string();
-        self.name_default_attribute(char.attributes.as_mut(), &marker);
-        for child in &mut char.children {
-            self.visit_inline(child);
-        }
-    }
-
-    fn visit_milestone(&mut self, milestone: &mut Milestone<'_>) {
-        let marker = self.marker(milestone.style).to_string();
-        self.name_default_attribute(milestone.attributes.as_mut(), &marker);
-    }
-
-    fn visit_periph(&mut self, periph: &mut Periph<'_>) {
-        self.name_default_attribute(periph.attributes.as_mut(), "periph");
-        for block in &mut periph.blocks {
-            self.visit_block(block);
-        }
-    }
-}
-
-/// Trim ASCII whitespace from the end of the last text in `children`,
-/// descending into a trailing character style and dropping what becomes
-/// empty: the harness's `trim_trailing_text`, over the tree.
-fn trim_trailing_text(children: &mut Vec<Inline<'_>>) {
-    while let Some(last) = children.last_mut() {
-        match last {
-            Inline::Text(text) => {
-                let trimmed = text.trim_end_matches(|c: char| c.is_ascii_whitespace());
-                if trimmed.is_empty() {
-                    children.pop();
-                    continue;
-                }
-                text.content = Cow::Owned(trimmed.to_string());
-            }
-            Inline::Char(char) => trim_trailing_text(&mut char.children),
-            _ => {}
-        }
-        return;
-    }
-}
-
 /// 4. **Whitespace is not compared on the usfm-grammar root**, as the harness
 ///    does not compare it there (`collapse_whitespace_tree`): that generator
 ///    copies its source's line breaks into the USX and indents its elements
@@ -537,24 +435,4 @@ impl VisitMut for CollapseWhitespace {
     fn visit_table_cell(&mut self, cell: &mut TableCell<'_>) {
         self.children(&mut cell.children);
     }
-}
-
-/// 2. **A version is declared.** `<usx version>` is always there, and the
-///    reader reads it as the `\usfm` paragraph; a USFM file without one is
-///    written with [`DEFAULT_USX_VERSION`], so it reads as if it had declared
-///    that, right after its `\id` (`advanced/complex`, and most of tcdocs).
-fn declare_version(document: &mut Document<'_>) {
-    if document.usfm_version().is_some() {
-        return;
-    }
-    let Some(&usfm) = document.style_sheet().get_marker_index("usfm") else {
-        return;
-    };
-    let para = Block::Para(Para {
-        style: StyleId::new(usfm as u32),
-        children: vec![Inline::Text(Text::synthesized(DEFAULT_USX_VERSION))],
-        span: SPAN,
-    });
-    let at = usize::from(matches!(document.blocks.first(), Some(Block::Book(_))));
-    document.blocks.insert(at, para);
 }

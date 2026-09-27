@@ -171,6 +171,44 @@ lit: v1 "Glory:" /1 " " v2 "the earth" /2
     );
 }
 
+/// "A paragraph the verse started in holds its end whatever its style" — and
+/// a verse starts in a paragraph when its `\v` is anywhere in it, a character
+/// style included. Only the paragraph's own children were looked at, so a
+/// verse that started inside `\w` in an `\ip` had its end put in the verse-text
+/// paragraph before it, ahead of its own start. The `usx_roundtrip` fuzz
+/// target found it (ticket 49), as `\v 4\ip\w p\v 4`: the USX said verse 4
+/// ended before it began, and reading it back ended a different verse.
+#[test]
+fn a_verse_that_starts_inside_a_character_style_ends_in_that_paragraph() {
+    check(
+        "\\id GEN\n\\c 1\n\\p \\v 1 a\n\\ip \\w p \\v 2 b\\w*",
+        r#"
+id Gen
+c1
+p: v1 "a"
+ip: (w "p" /1 " " v2 "b") /2
+/c1"#,
+    );
+}
+
+/// Two ends can be waiting at once: verse 8's, handed out to block level by
+/// `\v 9` at the head of a paragraph, and verse 9's, handed out of the `\w`
+/// that `\v 10` opens — so the second must not replace the first. It did, and
+/// verse 8 was never ended (ticket 49, the `usx_roundtrip` fuzz target, as
+/// `\v 8\p\v 0\w\v 1`).
+#[test]
+fn an_end_waiting_for_block_level_is_kept_when_a_second_one_waits() {
+    check(
+        "\\id GEN\n\\c 1\n\\p \\v 8 a\n\\p \\v 9 \\w \\v 10 b\\w*",
+        r#"
+id Gen
+c1
+p: v8 "a" /8
+p: v9 /9 (w v10 "b") /10
+/c1"#,
+    );
+}
+
 #[test]
 fn a_verse_starting_a_character_style_ends_the_previous_verse_before_the_style() {
     check(

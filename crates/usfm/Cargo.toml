@@ -40,6 +40,7 @@ pipeline = ["dep:usfm_pipeline", "usx", "html", "json", "codegen"]
 
 # Forwarded to `usfm_parser`, off by default like the features they forward to.
 # `tasks/benchmark` needs `UniquePromise` to build a `Lexer` for the `lex`
-# group; `tasks/fuzz` needs `span_check`.
+# group; `tasks/fuzz` needs `span_check`, and `usfm_usx::testing` when `usx` is
+# on (ticket 49), which the `?` leaves off when it is not.
 benchmarking = ["usfm_parser/benchmarking"]
-testing = ["usfm_parser/testing"]
+testing = ["usfm_parser/testing", "usfm_usx?/testing"]

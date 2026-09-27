@@ -1,0 +1,907 @@
+<usx version="3.0">
+  <book code="PRO" style="id">World English Bible (WEB)</book>
+  <para style="ide">UTF-8</para>
+  <para style="h">Proverbs</para>
+  <para style="toc1">The Proverbs</para>
+  <para style="toc2">Proverbs</para>
+  <para style="toc3">Proverbs</para>
+  <para style="mt1">The Proverbs</para>
+  <chapter number="1" style="c" sid="PRO 1" />
+  <para style="p">
+    <verse number="1" style="v" sid="PRO 1:1" />The proverbs of Solomon, the son of David, king of Israel:<verse eid="PRO 1:1" /></para>
+  <para style="q1">
+    <verse number="2" style="v" sid="PRO 1:2" />to know wisdom and instruction;</para>
+  <para style="q2" vid="PRO 1:2">to discern the words of understanding;<verse eid="PRO 1:2" /></para>
+  <para style="q1">
+    <verse number="3" style="v" sid="PRO 1:3" />to receive instruction in wise dealing,</para>
+  <para style="q2" vid="PRO 1:3">in righteousness, justice, and equity;<verse eid="PRO 1:3" /></para>
+  <para style="q1">
+    <verse number="4" style="v" sid="PRO 1:4" />to give prudence to the simple,</para>
+  <para style="q2" vid="PRO 1:4">knowledge and discretion to the young man:<verse eid="PRO 1:4" /></para>
+  <para style="q1">
+    <verse number="5" style="v" sid="PRO 1:5" />that the wise man may hear, and increase in learning;</para>
+  <para style="q2" vid="PRO 1:5">that the man of understanding may attain to sound counsel:<verse eid="PRO 1:5" /></para>
+  <para style="q1">
+    <verse number="6" style="v" sid="PRO 1:6" />to understand a proverb and parables,</para>
+  <para style="q2" vid="PRO 1:6">the words and riddles of the wise.<verse eid="PRO 1:6" /></para>
+  <para style="b" />
+  <para style="q1">
+    <verse number="7" style="v" sid="PRO 1:7" />The fear of Yahweh<note caller="+" style="f"><char style="fr">1:7 </char><char style="ft">“Yahweh” is God’s proper Name, sometimes rendered “LORD” (all caps) in other translations.</char></note> is the beginning of knowledge;</para>
+  <para style="q2" vid="PRO 1:7">but the foolish despise wisdom and instruction.<verse eid="PRO 1:7" /></para>
+  <para style="q1">
+    <verse number="8" style="v" sid="PRO 1:8" />My son, listen to your father’s instruction,</para>
+  <para style="q2" vid="PRO 1:8">and don’t forsake your mother’s teaching:<verse eid="PRO 1:8" /></para>
+  <para style="q1">
+    <verse number="9" style="v" sid="PRO 1:9" />for they will be a garland to grace your head,</para>
+  <para style="q2" vid="PRO 1:9">and chains around your neck.<verse eid="PRO 1:9" /></para>
+  <para style="q1">
+    <verse number="10" style="v" sid="PRO 1:10" />My son, if sinners entice you,</para>
+  <para style="q2" vid="PRO 1:10">don’t consent.<verse eid="PRO 1:10" /></para>
+  <para style="q1">
+    <verse number="11" style="v" sid="PRO 1:11" />If they say, “Come with us.</para>
+  <para style="q2" vid="PRO 1:11">Let’s lie in wait for blood.</para>
+  <para style="q2" vid="PRO 1:11">Let’s lurk secretly for the innocent without cause.<verse eid="PRO 1:11" /></para>
+  <para style="q1">
+    <verse number="12" style="v" sid="PRO 1:12" />Let’s swallow them up alive like Sheol,<note caller="+" style="f"><char style="fr">1:12 </char><char style="ft">Sheol is the place of the dead.</char></note></para>
+  <para style="q2" vid="PRO 1:12">and whole, like those who go down into the pit.<verse eid="PRO 1:12" /></para>
+  <para style="q1">
+    <verse number="13" style="v" sid="PRO 1:13" />We’ll find all valuable wealth.</para>
+  <para style="q2" vid="PRO 1:13">We’ll fill our houses with plunder.<verse eid="PRO 1:13" /></para>
+  <para style="q1">
+    <verse number="14" style="v" sid="PRO 1:14" />You shall cast your lot among us.</para>
+  <para style="q2" vid="PRO 1:14">We’ll all have one purse.”<verse eid="PRO 1:14" /></para>
+  <para style="q1">
+    <verse number="15" style="v" sid="PRO 1:15" />My son, don’t walk on the path with them.</para>
+  <para style="q2" vid="PRO 1:15">Keep your foot from their path,<verse eid="PRO 1:15" /></para>
+  <para style="q1">
+    <verse number="16" style="v" sid="PRO 1:16" />for their feet run to evil.</para>
+  <para style="q2" vid="PRO 1:16">They hurry to shed blood.<verse eid="PRO 1:16" /></para>
+  <para style="q1">
+    <verse number="17" style="v" sid="PRO 1:17" />For the net is spread in vain in the sight of any bird;<verse eid="PRO 1:17" /></para>
+  <para style="q1">
+    <verse number="18" style="v" sid="PRO 1:18" />but these lay in wait for their own blood.</para>
+  <para style="q2" vid="PRO 1:18">They lurk secretly for their own lives.<verse eid="PRO 1:18" /></para>
+  <para style="q1">
+    <verse number="19" style="v" sid="PRO 1:19" />So are the ways of everyone who is greedy for gain.</para>
+  <para style="q2" vid="PRO 1:19">It takes away the life of its owners.<verse eid="PRO 1:19" /></para>
+  <para style="b" />
+  <para style="q1">
+    <verse number="20" style="v" sid="PRO 1:20" />Wisdom calls aloud in the street.</para>
+  <para style="q2" vid="PRO 1:20">She utters her voice in the public squares.<verse eid="PRO 1:20" /></para>
+  <para style="q1">
+    <verse number="21" style="v" sid="PRO 1:21" />She calls at the head of noisy places.</para>
+  <para style="q2" vid="PRO 1:21">At the entrance of the city gates, she utters her words:<verse eid="PRO 1:21" /></para>
+  <para style="q1">
+    <verse number="22" style="v" sid="PRO 1:22" />“How long, you simple ones, will you love simplicity?</para>
+  <para style="q2" vid="PRO 1:22">How long will mockers delight themselves in mockery,</para>
+  <para style="q2" vid="PRO 1:22">and fools hate knowledge?<verse eid="PRO 1:22" /></para>
+  <para style="q1">
+    <verse number="23" style="v" sid="PRO 1:23" />Turn at my reproof.</para>
+  <para style="q2" vid="PRO 1:23">Behold,<note caller="+" style="f"><char style="fr">1:23 </char><char style="ft">“Behold”, from “הִנֵּה”, means look at, take notice, observe, see, or gaze at. It is often used as an interjection.</char></note> I will pour out my spirit on you.</para>
+  <para style="q2" vid="PRO 1:23">I will make known my words to you.<verse eid="PRO 1:23" /></para>
+  <para style="q1">
+    <verse number="24" style="v" sid="PRO 1:24" />Because I have called, and you have refused;</para>
+  <para style="q2" vid="PRO 1:24">I have stretched out my hand, and no one has paid attention;<verse eid="PRO 1:24" /></para>
+  <para style="q1">
+    <verse number="25" style="v" sid="PRO 1:25" />but you have ignored all my counsel,</para>
+  <para style="q2" vid="PRO 1:25">and wanted none of my reproof;<verse eid="PRO 1:25" /></para>
+  <para style="q1">
+    <verse number="26" style="v" sid="PRO 1:26" />I also will laugh at your disaster.</para>
+  <para style="q2" vid="PRO 1:26">I will mock when calamity overtakes you,<verse eid="PRO 1:26" /></para>
+  <para style="q1">
+    <verse number="27" style="v" sid="PRO 1:27" />when calamity overtakes you like a storm,</para>
+  <para style="q2" vid="PRO 1:27">when your disaster comes on like a whirlwind,</para>
+  <para style="q2" vid="PRO 1:27">when distress and anguish come on you.<verse eid="PRO 1:27" /></para>
+  <para style="q1">
+    <verse number="28" style="v" sid="PRO 1:28" />Then they will call on me, but I will not answer.</para>
+  <para style="q2" vid="PRO 1:28">They will seek me diligently, but they will not find me,<verse eid="PRO 1:28" /></para>
+  <para style="q1">
+    <verse number="29" style="v" sid="PRO 1:29" />because they hated knowledge,</para>
+  <para style="q2" vid="PRO 1:29">and didn’t choose the fear of Yahweh.<verse eid="PRO 1:29" /></para>
+  <para style="q1">
+    <verse number="30" style="v" sid="PRO 1:30" />They wanted none of my counsel.</para>
+  <para style="q2" vid="PRO 1:30">They despised all my reproof.<verse eid="PRO 1:30" /></para>
+  <para style="q1">
+    <verse number="31" style="v" sid="PRO 1:31" />Therefore they will eat of the fruit of their own way,</para>
+  <para style="q2" vid="PRO 1:31">and be filled with their own schemes.<verse eid="PRO 1:31" /></para>
+  <para style="q1">
+    <verse number="32" style="v" sid="PRO 1:32" />For the backsliding of the simple will kill them.</para>
+  <para style="q2" vid="PRO 1:32">The careless ease of fools will destroy them.<verse eid="PRO 1:32" /></para>
+  <para style="q1">
+    <verse number="33" style="v" sid="PRO 1:33" />But whoever listens to me will dwell securely,</para>
+  <para style="q2" vid="PRO 1:33">and will be at ease, without fear of harm.”<verse eid="PRO 1:33" /></para>
+  <chapter eid="PRO 1" />
+  <chapter number="2" style="c" sid="PRO 2" />
+  <para style="q1">
+    <verse number="1" style="v" sid="PRO 2:1" />My son, if you will receive my words,</para>
+  <para style="q2" vid="PRO 2:1">and store up my commandments within you,<verse eid="PRO 2:1" /></para>
+  <para style="q1">
+    <verse number="2" style="v" sid="PRO 2:2" />so as to turn your ear to wisdom,</para>
+  <para style="q2" vid="PRO 2:2">and apply your heart to understanding;<verse eid="PRO 2:2" /></para>
+  <para style="q1">
+    <verse number="3" style="v" sid="PRO 2:3" />yes, if you call out for discernment,</para>
+  <para style="q2" vid="PRO 2:3">and lift up your voice for understanding;<verse eid="PRO 2:3" /></para>
+  <para style="q1">
+    <verse number="4" style="v" sid="PRO 2:4" />if you seek her as silver,</para>
+  <para style="q2" vid="PRO 2:4">and search for her as for hidden treasures:<verse eid="PRO 2:4" /></para>
+  <para style="q1">
+    <verse number="5" style="v" sid="PRO 2:5" />then you will understand the fear of Yahweh,</para>
+  <para style="q2" vid="PRO 2:5">and find the knowledge of God.<note caller="+" style="f"><char style="fr">2:5 </char><char style="ft">The Hebrew word rendered “God” is “אֱלֹהִ֑ים” (Elohim).</char></note><verse eid="PRO 2:5" /></para>
+  <para style="q1">
+    <verse number="6" style="v" sid="PRO 2:6" />For Yahweh gives wisdom.</para>
+  <para style="q2" vid="PRO 2:6">Out of his mouth comes knowledge and understanding.<verse eid="PRO 2:6" /></para>
+  <para style="q1">
+    <verse number="7" style="v" sid="PRO 2:7" />He lays up sound wisdom for the upright.</para>
+  <para style="q2" vid="PRO 2:7">He is a shield to those who walk in integrity,<verse eid="PRO 2:7" /></para>
+  <para style="q1">
+    <verse number="8" style="v" sid="PRO 2:8" />that he may guard the paths of justice,</para>
+  <para style="q2" vid="PRO 2:8">and preserve the way of his saints.<verse eid="PRO 2:8" /></para>
+  <para style="q1">
+    <verse number="9" style="v" sid="PRO 2:9" />Then you will understand righteousness and justice,</para>
+  <para style="q2" vid="PRO 2:9">equity and every good path.<verse eid="PRO 2:9" /></para>
+  <para style="q1">
+    <verse number="10" style="v" sid="PRO 2:10" />For wisdom will enter into your heart.</para>
+  <para style="q2" vid="PRO 2:10">Knowledge will be pleasant to your soul.<verse eid="PRO 2:10" /></para>
+  <para style="q1">
+    <verse number="11" style="v" sid="PRO 2:11" />Discretion will watch over you.</para>
+  <para style="q2" vid="PRO 2:11">Understanding will keep you,<verse eid="PRO 2:11" /></para>
+  <para style="q1">
+    <verse number="12" style="v" sid="PRO 2:12" />to deliver you from the way of evil,</para>
+  <para style="q2" vid="PRO 2:12">from the men who speak perverse things,<verse eid="PRO 2:12" /></para>
+  <para style="q1">
+    <verse number="13" style="v" sid="PRO 2:13" />who forsake the paths of uprightness,</para>
+  <para style="q2" vid="PRO 2:13">to walk in the ways of darkness,<verse eid="PRO 2:13" /></para>
+  <para style="q1">
+    <verse number="14" style="v" sid="PRO 2:14" />who rejoice to do evil,</para>
+  <para style="q2" vid="PRO 2:14">and delight in the perverseness of evil,<verse eid="PRO 2:14" /></para>
+  <para style="q1">
+    <verse number="15" style="v" sid="PRO 2:15" />who are crooked in their ways,</para>
+  <para style="q2" vid="PRO 2:15">and wayward in their paths,<verse eid="PRO 2:15" /></para>
+  <para style="q1">
+    <verse number="16" style="v" sid="PRO 2:16" />to deliver you from the strange woman,</para>
+  <para style="q2" vid="PRO 2:16">even from the foreigner who flatters with her words,<verse eid="PRO 2:16" /></para>
+  <para style="q1">
+    <verse number="17" style="v" sid="PRO 2:17" />who forsakes the friend of her youth,</para>
+  <para style="q2" vid="PRO 2:17">and forgets the covenant of her God;<verse eid="PRO 2:17" /></para>
+  <para style="q1">
+    <verse number="18" style="v" sid="PRO 2:18" />for her house leads down to death,</para>
+  <para style="q2" vid="PRO 2:18">her paths to the departed spirits.<verse eid="PRO 2:18" /></para>
+  <para style="q1">
+    <verse number="19" style="v" sid="PRO 2:19" />None who go to her return again,</para>
+  <para style="q2" vid="PRO 2:19">neither do they attain to the paths of life.<verse eid="PRO 2:19" /></para>
+  <para style="q1">
+    <verse number="20" style="v" sid="PRO 2:20" />So you may walk in the way of good men,</para>
+  <para style="q2" vid="PRO 2:20">and keep the paths of the righteous.<verse eid="PRO 2:20" /></para>
+  <para style="q1">
+    <verse number="21" style="v" sid="PRO 2:21" />For the upright will dwell in the land.</para>
+  <para style="q2" vid="PRO 2:21">The perfect will remain in it.<verse eid="PRO 2:21" /></para>
+  <para style="q1">
+    <verse number="22" style="v" sid="PRO 2:22" />But the wicked will be cut off from the land.</para>
+  <para style="q2" vid="PRO 2:22">The treacherous will be rooted out of it.<verse eid="PRO 2:22" /></para>
+  <chapter eid="PRO 2" />
+  <chapter number="3" style="c" sid="PRO 3" />
+  <para style="q1">
+    <verse number="1" style="v" sid="PRO 3:1" />My son, don’t forget my teaching;</para>
+  <para style="q2" vid="PRO 3:1">but let your heart keep my commandments:<verse eid="PRO 3:1" /></para>
+  <para style="q1">
+    <verse number="2" style="v" sid="PRO 3:2" />for they will add to you length of days,</para>
+  <para style="q2" vid="PRO 3:2">years of life, and peace.<verse eid="PRO 3:2" /></para>
+  <para style="q1">
+    <verse number="3" style="v" sid="PRO 3:3" />Don’t let kindness and truth forsake you.</para>
+  <para style="q2" vid="PRO 3:3">Bind them around your neck.</para>
+  <para style="q2" vid="PRO 3:3">Write them on the tablet of your heart.<verse eid="PRO 3:3" /></para>
+  <para style="q1">
+    <verse number="4" style="v" sid="PRO 3:4" />So you will find favor,</para>
+  <para style="q2" vid="PRO 3:4">and good understanding in the sight of God and man.<verse eid="PRO 3:4" /></para>
+  <para style="q1">
+    <verse number="5" style="v" sid="PRO 3:5" />Trust in Yahweh with all your heart,</para>
+  <para style="q2" vid="PRO 3:5">and don’t lean on your own understanding.<verse eid="PRO 3:5" /></para>
+  <para style="q1">
+    <verse number="6" style="v" sid="PRO 3:6" />In all your ways acknowledge him,</para>
+  <para style="q2" vid="PRO 3:6">and he will make your paths straight.<verse eid="PRO 3:6" /></para>
+  <para style="q1">
+    <verse number="7" style="v" sid="PRO 3:7" />Don’t be wise in your own eyes.</para>
+  <para style="q2" vid="PRO 3:7">Fear Yahweh, and depart from evil.<verse eid="PRO 3:7" /></para>
+  <para style="q1">
+    <verse number="8" style="v" sid="PRO 3:8" />It will be health to your body,</para>
+  <para style="q2" vid="PRO 3:8">and nourishment to your bones.<verse eid="PRO 3:8" /></para>
+  <para style="q1">
+    <verse number="9" style="v" sid="PRO 3:9" />Honor Yahweh with your substance,</para>
+  <para style="q2" vid="PRO 3:9">with the first fruits of all your increase:<verse eid="PRO 3:9" /></para>
+  <para style="q1">
+    <verse number="10" style="v" sid="PRO 3:10" />so your barns will be filled with plenty,</para>
+  <para style="q2" vid="PRO 3:10">and your vats will overflow with new wine.<verse eid="PRO 3:10" /></para>
+  <para style="q1">
+    <verse number="11" style="v" sid="PRO 3:11" />My son, don’t despise Yahweh’s discipline,</para>
+  <para style="q2" vid="PRO 3:11">neither be weary of his correction;<verse eid="PRO 3:11" /></para>
+  <para style="q1">
+    <verse number="12" style="v" sid="PRO 3:12" />for whom Yahweh loves, he corrects,</para>
+  <para style="q2" vid="PRO 3:12">even as a father reproves the son in whom he delights.<verse eid="PRO 3:12" /></para>
+  <para style="b" />
+  <para style="q1">
+    <verse number="13" style="v" sid="PRO 3:13" />Happy is the man who finds wisdom,</para>
+  <para style="q2" vid="PRO 3:13">the man who gets understanding.<verse eid="PRO 3:13" /></para>
+  <para style="q1">
+    <verse number="14" style="v" sid="PRO 3:14" />For her good profit is better than getting silver,</para>
+  <para style="q2" vid="PRO 3:14">and her return is better than fine gold.<verse eid="PRO 3:14" /></para>
+  <para style="q1">
+    <verse number="15" style="v" sid="PRO 3:15" />She is more precious than rubies.</para>
+  <para style="q2" vid="PRO 3:15">None of the things you can desire are to be compared to her.<verse eid="PRO 3:15" /></para>
+  <para style="q1">
+    <verse number="16" style="v" sid="PRO 3:16" />Length of days is in her right hand.</para>
+  <para style="q2" vid="PRO 3:16">In her left hand are riches and honor.<verse eid="PRO 3:16" /></para>
+  <para style="q1">
+    <verse number="17" style="v" sid="PRO 3:17" />Her ways are ways of pleasantness.</para>
+  <para style="q2" vid="PRO 3:17">All her paths are peace.<verse eid="PRO 3:17" /></para>
+  <para style="q1">
+    <verse number="18" style="v" sid="PRO 3:18" />She is a tree of life to those who lay hold of her.</para>
+  <para style="q2" vid="PRO 3:18">Happy is everyone who retains her.<verse eid="PRO 3:18" /></para>
+  <para style="q1">
+    <verse number="19" style="v" sid="PRO 3:19" />By wisdom Yahweh founded the earth.</para>
+  <para style="q2" vid="PRO 3:19">By understanding, he established the heavens.<verse eid="PRO 3:19" /></para>
+  <para style="q1">
+    <verse number="20" style="v" sid="PRO 3:20" />By his knowledge, the depths were broken up,</para>
+  <para style="q2" vid="PRO 3:20">and the skies drop down the dew.<verse eid="PRO 3:20" /></para>
+  <para style="q1">
+    <verse number="21" style="v" sid="PRO 3:21" />My son, let them not depart from your eyes.</para>
+  <para style="q2" vid="PRO 3:21">Keep sound wisdom and discretion:<verse eid="PRO 3:21" /></para>
+  <para style="q1">
+    <verse number="22" style="v" sid="PRO 3:22" />so they will be life to your soul,</para>
+  <para style="q2" vid="PRO 3:22">and grace for your neck.<verse eid="PRO 3:22" /></para>
+  <para style="q1">
+    <verse number="23" style="v" sid="PRO 3:23" />Then you shall walk in your way securely.</para>
+  <para style="q2" vid="PRO 3:23">Your foot won’t stumble.<verse eid="PRO 3:23" /></para>
+  <para style="q1">
+    <verse number="24" style="v" sid="PRO 3:24" />When you lie down, you will not be afraid.</para>
+  <para style="q2" vid="PRO 3:24">Yes, you will lie down, and your sleep will be sweet.<verse eid="PRO 3:24" /></para>
+  <para style="q1">
+    <verse number="25" style="v" sid="PRO 3:25" />Don’t be afraid of sudden fear,</para>
+  <para style="q2" vid="PRO 3:25">neither of the desolation of the wicked, when it comes;<verse eid="PRO 3:25" /></para>
+  <para style="q1">
+    <verse number="26" style="v" sid="PRO 3:26" />for Yahweh will be your confidence,</para>
+  <para style="q2" vid="PRO 3:26">and will keep your foot from being taken.<verse eid="PRO 3:26" /></para>
+  <para style="b" />
+  <para style="q1">
+    <verse number="27" style="v" sid="PRO 3:27" />Don’t withhold good from those to whom it is due,</para>
+  <para style="q2" vid="PRO 3:27">when it is in the power of your hand to do it.<verse eid="PRO 3:27" /></para>
+  <para style="q1">
+    <verse number="28" style="v" sid="PRO 3:28" />Don’t say to your neighbor, “Go, and come again;</para>
+  <para style="q2" vid="PRO 3:28">tomorrow I will give it to you,”</para>
+  <para style="q2" vid="PRO 3:28">when you have it by you.<verse eid="PRO 3:28" /></para>
+  <para style="q1">
+    <verse number="29" style="v" sid="PRO 3:29" />Don’t devise evil against your neighbor,</para>
+  <para style="q2" vid="PRO 3:29">since he dwells securely by you.<verse eid="PRO 3:29" /></para>
+  <para style="q1">
+    <verse number="30" style="v" sid="PRO 3:30" />Don’t strive with a man without cause,</para>
+  <para style="q2" vid="PRO 3:30">if he has done you no harm.<verse eid="PRO 3:30" /></para>
+  <para style="q1">
+    <verse number="31" style="v" sid="PRO 3:31" />Don’t envy the man of violence.</para>
+  <para style="q2" vid="PRO 3:31">Choose none of his ways.<verse eid="PRO 3:31" /></para>
+  <para style="q1">
+    <verse number="32" style="v" sid="PRO 3:32" />For the perverse is an abomination to Yahweh,</para>
+  <para style="q2" vid="PRO 3:32">but his friendship is with the upright.<verse eid="PRO 3:32" /></para>
+  <para style="q1">
+    <verse number="33" style="v" sid="PRO 3:33" />Yahweh’s curse is in the house of the wicked,</para>
+  <para style="q2" vid="PRO 3:33">but he blesses the habitation of the righteous.<verse eid="PRO 3:33" /></para>
+  <para style="q1">
+    <verse number="34" style="v" sid="PRO 3:34" />Surely he mocks the mockers,</para>
+  <para style="q2" vid="PRO 3:34">but he gives grace to the humble.<verse eid="PRO 3:34" /></para>
+  <para style="q1">
+    <verse number="35" style="v" sid="PRO 3:35" />The wise will inherit glory,</para>
+  <para style="q2" vid="PRO 3:35">but shame will be the promotion of fools.<verse eid="PRO 3:35" /></para>
+  <chapter eid="PRO 3" />
+  <chapter number="4" style="c" sid="PRO 4" />
+  <para style="q1">
+    <verse number="1" style="v" sid="PRO 4:1" />Listen, sons, to a father’s instruction.</para>
+  <para style="q2" vid="PRO 4:1">Pay attention and know understanding;<verse eid="PRO 4:1" /></para>
+  <para style="q1">
+    <verse number="2" style="v" sid="PRO 4:2" />for I give you sound learning.</para>
+  <para style="q2" vid="PRO 4:2">Don’t forsake my law.<verse eid="PRO 4:2" /></para>
+  <para style="q1">
+    <verse number="3" style="v" sid="PRO 4:3" />For I was a son to my father,</para>
+  <para style="q2" vid="PRO 4:3">tender and an only child in the sight of my mother.<verse eid="PRO 4:3" /></para>
+  <para style="q1">
+    <verse number="4" style="v" sid="PRO 4:4" />He taught me, and said to me:</para>
+  <para style="q2" vid="PRO 4:4">“Let your heart retain my words.</para>
+  <para style="q2" vid="PRO 4:4">Keep my commandments, and live.<verse eid="PRO 4:4" /></para>
+  <para style="q1">
+    <verse number="5" style="v" sid="PRO 4:5" />Get wisdom.</para>
+  <para style="q2" vid="PRO 4:5">Get understanding.</para>
+  <para style="q2" vid="PRO 4:5">Don’t forget, and don’t deviate from the words of my mouth.<verse eid="PRO 4:5" /></para>
+  <para style="q1">
+    <verse number="6" style="v" sid="PRO 4:6" />Don’t forsake her, and she will preserve you.</para>
+  <para style="q2" vid="PRO 4:6">Love her, and she will keep you.<verse eid="PRO 4:6" /></para>
+  <para style="q1">
+    <verse number="7" style="v" sid="PRO 4:7" />Wisdom is supreme.</para>
+  <para style="q2" vid="PRO 4:7">Get wisdom.</para>
+  <para style="q2" vid="PRO 4:7">Yes, though it costs all your possessions, get understanding.<verse eid="PRO 4:7" /></para>
+  <para style="q1">
+    <verse number="8" style="v" sid="PRO 4:8" />Esteem her, and she will exalt you.</para>
+  <para style="q2" vid="PRO 4:8">She will bring you to honor when you embrace her.<verse eid="PRO 4:8" /></para>
+  <para style="q1">
+    <verse number="9" style="v" sid="PRO 4:9" />She will give to your head a garland of grace.</para>
+  <para style="q2" vid="PRO 4:9">She will deliver a crown of splendor to you.”<verse eid="PRO 4:9" /></para>
+  <para style="b" />
+  <para style="q1">
+    <verse number="10" style="v" sid="PRO 4:10" />Listen, my son, and receive my sayings.</para>
+  <para style="q2" vid="PRO 4:10">The years of your life will be many.<verse eid="PRO 4:10" /></para>
+  <para style="q1">
+    <verse number="11" style="v" sid="PRO 4:11" />I have taught you in the way of wisdom.</para>
+  <para style="q2" vid="PRO 4:11">I have led you in straight paths.<verse eid="PRO 4:11" /></para>
+  <para style="q1">
+    <verse number="12" style="v" sid="PRO 4:12" />When you go, your steps will not be hampered.</para>
+  <para style="q2" vid="PRO 4:12">When you run, you will not stumble.<verse eid="PRO 4:12" /></para>
+  <para style="q1">
+    <verse number="13" style="v" sid="PRO 4:13" />Take firm hold of instruction.</para>
+  <para style="q2" vid="PRO 4:13">Don’t let her go.</para>
+  <para style="q2" vid="PRO 4:13">Keep her, for she is your life.<verse eid="PRO 4:13" /></para>
+  <para style="q1">
+    <verse number="14" style="v" sid="PRO 4:14" />Don’t enter into the path of the wicked.</para>
+  <para style="q2" vid="PRO 4:14">Don’t walk in the way of evil men.<verse eid="PRO 4:14" /></para>
+  <para style="q1">
+    <verse number="15" style="v" sid="PRO 4:15" />Avoid it, and don’t pass by it.</para>
+  <para style="q2" vid="PRO 4:15">Turn from it, and pass on.<verse eid="PRO 4:15" /></para>
+  <para style="q1">
+    <verse number="16" style="v" sid="PRO 4:16" />For they don’t sleep unless they do evil.</para>
+  <para style="q2" vid="PRO 4:16">Their sleep is taken away, unless they make someone fall.<verse eid="PRO 4:16" /></para>
+  <para style="q1">
+    <verse number="17" style="v" sid="PRO 4:17" />For they eat the bread of wickedness</para>
+  <para style="q2" vid="PRO 4:17">and drink the wine of violence.<verse eid="PRO 4:17" /></para>
+  <para style="q1">
+    <verse number="18" style="v" sid="PRO 4:18" />But the path of the righteous is like the dawning light</para>
+  <para style="q2" vid="PRO 4:18">that shines more and more until the perfect day.<verse eid="PRO 4:18" /></para>
+  <para style="q1">
+    <verse number="19" style="v" sid="PRO 4:19" />The way of the wicked is like darkness.</para>
+  <para style="q2" vid="PRO 4:19">They don’t know what they stumble over.<verse eid="PRO 4:19" /></para>
+  <para style="b" />
+  <para style="q1">
+    <verse number="20" style="v" sid="PRO 4:20" />My son, attend to my words.</para>
+  <para style="q2" vid="PRO 4:20">Turn your ear to my sayings.<verse eid="PRO 4:20" /></para>
+  <para style="q1">
+    <verse number="21" style="v" sid="PRO 4:21" />Let them not depart from your eyes.</para>
+  <para style="q2" vid="PRO 4:21">Keep them in the center of your heart.<verse eid="PRO 4:21" /></para>
+  <para style="q1">
+    <verse number="22" style="v" sid="PRO 4:22" />For they are life to those who find them,</para>
+  <para style="q2" vid="PRO 4:22">and health to their whole body.<verse eid="PRO 4:22" /></para>
+  <para style="q1">
+    <verse number="23" style="v" sid="PRO 4:23" />Keep your heart with all diligence,</para>
+  <para style="q2" vid="PRO 4:23">for out of it is the wellspring of life.<verse eid="PRO 4:23" /></para>
+  <para style="q1">
+    <verse number="24" style="v" sid="PRO 4:24" />Put away from yourself a perverse mouth.</para>
+  <para style="q2" vid="PRO 4:24">Put corrupt lips far from you.<verse eid="PRO 4:24" /></para>
+  <para style="q1">
+    <verse number="25" style="v" sid="PRO 4:25" />Let your eyes look straight ahead.</para>
+  <para style="q2" vid="PRO 4:25">Fix your gaze directly before you.<verse eid="PRO 4:25" /></para>
+  <para style="q1">
+    <verse number="26" style="v" sid="PRO 4:26" />Make the path of your feet level.</para>
+  <para style="q2" vid="PRO 4:26">Let all of your ways be established.<verse eid="PRO 4:26" /></para>
+  <para style="q1">
+    <verse number="27" style="v" sid="PRO 4:27" />Don’t turn to the right hand nor to the left.</para>
+  <para style="q2" vid="PRO 4:27">Remove your foot from evil.<verse eid="PRO 4:27" /></para>
+  <chapter eid="PRO 4" />
+  <chapter number="5" style="c" sid="PRO 5" />
+  <para style="q1">
+    <verse number="1" style="v" sid="PRO 5:1" />My son, pay attention to my wisdom.</para>
+  <para style="q2" vid="PRO 5:1">Turn your ear to my understanding,<verse eid="PRO 5:1" /></para>
+  <para style="q1">
+    <verse number="2" style="v" sid="PRO 5:2" />that you may maintain discretion,</para>
+  <para style="q2" vid="PRO 5:2">that your lips may preserve knowledge.<verse eid="PRO 5:2" /></para>
+  <para style="q1">
+    <verse number="3" style="v" sid="PRO 5:3" />For the lips of an adulteress drip honey.</para>
+  <para style="q2" vid="PRO 5:3">Her mouth is smoother than oil,<verse eid="PRO 5:3" /></para>
+  <para style="q1">
+    <verse number="4" style="v" sid="PRO 5:4" />but in the end she is as bitter as wormwood,</para>
+  <para style="q2" vid="PRO 5:4">and as sharp as a two-edged sword.<verse eid="PRO 5:4" /></para>
+  <para style="q1">
+    <verse number="5" style="v" sid="PRO 5:5" />Her feet go down to death.</para>
+  <para style="q2" vid="PRO 5:5">Her steps lead straight to Sheol.<note caller="+" style="f"><char style="fr">5:5 </char><char style="ft">Sheol is the place of the dead. </char></note><verse eid="PRO 5:5" /></para>
+  <para style="q1">
+    <verse number="6" style="v" sid="PRO 5:6" />She gives no thought to the way of life.</para>
+  <para style="q2" vid="PRO 5:6">Her ways are crooked, and she doesn’t know it.<verse eid="PRO 5:6" /></para>
+  <para style="b" />
+  <para style="q1">
+    <verse number="7" style="v" sid="PRO 5:7" />Now therefore, my sons, listen to me.</para>
+  <para style="q2" vid="PRO 5:7">Don’t depart from the words of my mouth.<verse eid="PRO 5:7" /></para>
+  <para style="q1">
+    <verse number="8" style="v" sid="PRO 5:8" />Remove your way far from her.</para>
+  <para style="q2" vid="PRO 5:8">Don’t come near the door of her house,<verse eid="PRO 5:8" /></para>
+  <para style="q1">
+    <verse number="9" style="v" sid="PRO 5:9" />lest you give your honor to others,</para>
+  <para style="q2" vid="PRO 5:9">and your years to the cruel one;<verse eid="PRO 5:9" /></para>
+  <para style="q1">
+    <verse number="10" style="v" sid="PRO 5:10" />lest strangers feast on your wealth,</para>
+  <para style="q2" vid="PRO 5:10">and your labors enrich another man’s house.<verse eid="PRO 5:10" /></para>
+  <para style="q1">
+    <verse number="11" style="v" sid="PRO 5:11" />You will groan at your latter end,</para>
+  <para style="q2" vid="PRO 5:11">when your flesh and your body are consumed,<verse eid="PRO 5:11" /></para>
+  <para style="q1">
+    <verse number="12" style="v" sid="PRO 5:12" />and say, “How I have hated instruction,</para>
+  <para style="q2" vid="PRO 5:12">and my heart despised reproof.<verse eid="PRO 5:12" /></para>
+  <para style="q1">
+    <verse number="13" style="v" sid="PRO 5:13" />I haven’t obeyed the voice of my teachers,</para>
+  <para style="q2" vid="PRO 5:13">nor turned my ear to those who instructed me!<verse eid="PRO 5:13" /></para>
+  <para style="q1">
+    <verse number="14" style="v" sid="PRO 5:14" />I have come to the brink of utter ruin,</para>
+  <para style="q2" vid="PRO 5:14">among the gathered assembly.”<verse eid="PRO 5:14" /></para>
+  <para style="b" />
+  <para style="q1">
+    <verse number="15" style="v" sid="PRO 5:15" />Drink water out of your own cistern,</para>
+  <para style="q2" vid="PRO 5:15">running water out of your own well.<verse eid="PRO 5:15" /></para>
+  <para style="q1">
+    <verse number="16" style="v" sid="PRO 5:16" />Should your springs overflow in the streets,</para>
+  <para style="q2" vid="PRO 5:16">streams of water in the public squares?<verse eid="PRO 5:16" /></para>
+  <para style="q1">
+    <verse number="17" style="v" sid="PRO 5:17" />Let them be for yourself alone,</para>
+  <para style="q2" vid="PRO 5:17">not for strangers with you.<verse eid="PRO 5:17" /></para>
+  <para style="q1">
+    <verse number="18" style="v" sid="PRO 5:18" />Let your spring be blessed.</para>
+  <para style="q2" vid="PRO 5:18">Rejoice in the wife of your youth.<verse eid="PRO 5:18" /></para>
+  <para style="q1">
+    <verse number="19" style="v" sid="PRO 5:19" />A loving doe and a graceful deer—</para>
+  <para style="q2" vid="PRO 5:19">let her breasts satisfy you at all times.</para>
+  <para style="q2" vid="PRO 5:19">Be captivated always with her love.<verse eid="PRO 5:19" /></para>
+  <para style="q1">
+    <verse number="20" style="v" sid="PRO 5:20" />For why should you, my son, be captivated with an adulteress?</para>
+  <para style="q2" vid="PRO 5:20">Why embrace the bosom of another?<verse eid="PRO 5:20" /></para>
+  <para style="q1">
+    <verse number="21" style="v" sid="PRO 5:21" />For the ways of man are before Yahweh’s eyes.</para>
+  <para style="q2" vid="PRO 5:21">He examines all his paths.<verse eid="PRO 5:21" /></para>
+  <para style="q1">
+    <verse number="22" style="v" sid="PRO 5:22" />The evil deeds of the wicked ensnare him.</para>
+  <para style="q2" vid="PRO 5:22">The cords of his sin hold him firmly.<verse eid="PRO 5:22" /></para>
+  <para style="q1">
+    <verse number="23" style="v" sid="PRO 5:23" />He will die for lack of instruction.</para>
+  <para style="q2" vid="PRO 5:23">In the greatness of his folly, he will go astray.<verse eid="PRO 5:23" /></para>
+  <chapter eid="PRO 5" />
+  <chapter number="6" style="c" sid="PRO 6" />
+  <para style="q1">
+    <verse number="1" style="v" sid="PRO 6:1" />My son, if you have become collateral for your neighbor,</para>
+  <para style="q2" vid="PRO 6:1">if you have struck your hands in pledge for a stranger,<verse eid="PRO 6:1" /></para>
+  <para style="q1">
+    <verse number="2" style="v" sid="PRO 6:2" />you are trapped by the words of your mouth;</para>
+  <para style="q2" vid="PRO 6:2">you are ensnared with the words of your mouth.<verse eid="PRO 6:2" /></para>
+  <para style="q1">
+    <verse number="3" style="v" sid="PRO 6:3" />Do this now, my son, and deliver yourself,</para>
+  <para style="q2" vid="PRO 6:3">since you have come into the hand of your neighbor.</para>
+  <para style="q1" vid="PRO 6:3">Go, humble yourself.</para>
+  <para style="q2" vid="PRO 6:3">Press your plea with your neighbor.<verse eid="PRO 6:3" /></para>
+  <para style="q1">
+    <verse number="4" style="v" sid="PRO 6:4" />Give no sleep to your eyes,</para>
+  <para style="q2" vid="PRO 6:4">nor slumber to your eyelids.<verse eid="PRO 6:4" /></para>
+  <para style="q1">
+    <verse number="5" style="v" sid="PRO 6:5" />Free yourself, like a gazelle from the hand of the hunter,</para>
+  <para style="q2" vid="PRO 6:5">like a bird from the snare of the fowler.<verse eid="PRO 6:5" /></para>
+  <para style="b" />
+  <para style="q1">
+    <verse number="6" style="v" sid="PRO 6:6" />Go to the ant, you sluggard.</para>
+  <para style="q2" vid="PRO 6:6">Consider her ways, and be wise;<verse eid="PRO 6:6" /></para>
+  <para style="q1">
+    <verse number="7" style="v" sid="PRO 6:7" />which having no chief, overseer, or ruler,<verse eid="PRO 6:7" /></para>
+  <para style="q2">
+    <verse number="8" style="v" sid="PRO 6:8" />provides her bread in the summer,</para>
+  <para style="q2" vid="PRO 6:8">and gathers her food in the harvest.<verse eid="PRO 6:8" /></para>
+  <para style="q1">
+    <verse number="9" style="v" sid="PRO 6:9" />How long will you sleep, sluggard?</para>
+  <para style="q2" vid="PRO 6:9">When will you arise out of your sleep?<verse eid="PRO 6:9" /></para>
+  <para style="q1">
+    <verse number="10" style="v" sid="PRO 6:10" />A little sleep, a little slumber,</para>
+  <para style="q2" vid="PRO 6:10">a little folding of the hands to sleep:<verse eid="PRO 6:10" /></para>
+  <para style="q1">
+    <verse number="11" style="v" sid="PRO 6:11" />so your poverty will come as a robber,</para>
+  <para style="q2" vid="PRO 6:11">and your scarcity as an armed man.<verse eid="PRO 6:11" /></para>
+  <para style="b" />
+  <para style="q1">
+    <verse number="12" style="v" sid="PRO 6:12" />A worthless person, a man of iniquity,</para>
+  <para style="q2" vid="PRO 6:12">is he who walks with a perverse mouth,<verse eid="PRO 6:12" /></para>
+  <para style="q1">
+    <verse number="13" style="v" sid="PRO 6:13" />who winks with his eyes, who signals with his feet,</para>
+  <para style="q2" vid="PRO 6:13">who motions with his fingers,<verse eid="PRO 6:13" /></para>
+  <para style="q1">
+    <verse number="14" style="v" sid="PRO 6:14" />in whose heart is perverseness,</para>
+  <para style="q2" vid="PRO 6:14">who devises evil continually,</para>
+  <para style="q2" vid="PRO 6:14">who always sows discord.<verse eid="PRO 6:14" /></para>
+  <para style="q1">
+    <verse number="15" style="v" sid="PRO 6:15" />Therefore his calamity will come suddenly.</para>
+  <para style="q2" vid="PRO 6:15">He will be broken suddenly, and that without remedy.<verse eid="PRO 6:15" /></para>
+  <para style="b" />
+  <para style="q1">
+    <verse number="16" style="v" sid="PRO 6:16" />There are six things which Yahweh hates;</para>
+  <para style="q2" vid="PRO 6:16">yes, seven which are an abomination to him:<verse eid="PRO 6:16" /></para>
+  <para style="q1">
+    <verse number="17" style="v" sid="PRO 6:17" />arrogant eyes, a lying tongue,</para>
+  <para style="q2" vid="PRO 6:17">hands that shed innocent blood,<verse eid="PRO 6:17" /></para>
+  <para style="q1">
+    <verse number="18" style="v" sid="PRO 6:18" />a heart that devises wicked schemes,</para>
+  <para style="q2" vid="PRO 6:18">feet that are swift in running to mischief,<verse eid="PRO 6:18" /></para>
+  <para style="q1">
+    <verse number="19" style="v" sid="PRO 6:19" />a false witness who utters lies,</para>
+  <para style="q2" vid="PRO 6:19">and he who sows discord among brothers.<verse eid="PRO 6:19" /></para>
+  <para style="b" />
+  <para style="q1">
+    <verse number="20" style="v" sid="PRO 6:20" />My son, keep your father’s commandment,</para>
+  <para style="q2" vid="PRO 6:20">and don’t forsake your mother’s teaching.<verse eid="PRO 6:20" /></para>
+  <para style="q1">
+    <verse number="21" style="v" sid="PRO 6:21" />Bind them continually on your heart.</para>
+  <para style="q2" vid="PRO 6:21">Tie them around your neck.<verse eid="PRO 6:21" /></para>
+  <para style="q1">
+    <verse number="22" style="v" sid="PRO 6:22" />When you walk, it will lead you.</para>
+  <para style="q2" vid="PRO 6:22">When you sleep, it will watch over you.</para>
+  <para style="q2" vid="PRO 6:22">When you awake, it will talk with you.<verse eid="PRO 6:22" /></para>
+  <para style="q1">
+    <verse number="23" style="v" sid="PRO 6:23" />For the commandment is a lamp,</para>
+  <para style="q2" vid="PRO 6:23">and the law is light.</para>
+  <para style="q2" vid="PRO 6:23">Reproofs of instruction are the way of life,<verse eid="PRO 6:23" /></para>
+  <para style="q1">
+    <verse number="24" style="v" sid="PRO 6:24" />to keep you from the immoral woman,</para>
+  <para style="q2" vid="PRO 6:24">from the flattery of the wayward wife’s tongue.<verse eid="PRO 6:24" /></para>
+  <para style="q1">
+    <verse number="25" style="v" sid="PRO 6:25" />Don’t lust after her beauty in your heart,</para>
+  <para style="q2" vid="PRO 6:25">neither let her captivate you with her eyelids.<verse eid="PRO 6:25" /></para>
+  <para style="q1">
+    <verse number="26" style="v" sid="PRO 6:26" />For a prostitute reduces you to a piece of bread.</para>
+  <para style="q2" vid="PRO 6:26">The adulteress hunts for your precious life.<verse eid="PRO 6:26" /></para>
+  <para style="q1">
+    <verse number="27" style="v" sid="PRO 6:27" />Can a man scoop fire into his lap,</para>
+  <para style="q2" vid="PRO 6:27">and his clothes not be burned?<verse eid="PRO 6:27" /></para>
+  <para style="q1">
+    <verse number="28" style="v" sid="PRO 6:28" />Or can one walk on hot coals,</para>
+  <para style="q2" vid="PRO 6:28">and his feet not be scorched?<verse eid="PRO 6:28" /></para>
+  <para style="q1">
+    <verse number="29" style="v" sid="PRO 6:29" />So is he who goes in to his neighbor’s wife.</para>
+  <para style="q2" vid="PRO 6:29">Whoever touches her will not be unpunished.<verse eid="PRO 6:29" /></para>
+  <para style="q1">
+    <verse number="30" style="v" sid="PRO 6:30" />Men don’t despise a thief</para>
+  <para style="q2" vid="PRO 6:30">if he steals to satisfy himself when he is hungry;<verse eid="PRO 6:30" /></para>
+  <para style="q1">
+    <verse number="31" style="v" sid="PRO 6:31" />but if he is found, he shall restore seven times.</para>
+  <para style="q2" vid="PRO 6:31">He shall give all the wealth of his house.<verse eid="PRO 6:31" /></para>
+  <para style="q1">
+    <verse number="32" style="v" sid="PRO 6:32" />He who commits adultery with a woman is void of understanding.</para>
+  <para style="q2" vid="PRO 6:32">He who does it destroys his own soul.<verse eid="PRO 6:32" /></para>
+  <para style="q1">
+    <verse number="33" style="v" sid="PRO 6:33" />He will get wounds and dishonor.</para>
+  <para style="q2" vid="PRO 6:33">His reproach will not be wiped away.<verse eid="PRO 6:33" /></para>
+  <para style="q1">
+    <verse number="34" style="v" sid="PRO 6:34" />For jealousy arouses the fury of the husband.</para>
+  <para style="q2" vid="PRO 6:34">He won’t spare in the day of vengeance.<verse eid="PRO 6:34" /></para>
+  <para style="q1">
+    <verse number="35" style="v" sid="PRO 6:35" />He won’t regard any ransom,</para>
+  <para style="q2" vid="PRO 6:35">neither will he rest content, though you give many gifts.<verse eid="PRO 6:35" /></para>
+  <chapter eid="PRO 6" />
+  <chapter number="7" style="c" sid="PRO 7" />
+  <para style="q1">
+    <verse number="1" style="v" sid="PRO 7:1" />My son, keep my words.</para>
+  <para style="q2" vid="PRO 7:1">Lay up my commandments within you.<verse eid="PRO 7:1" /></para>
+  <para style="q1">
+    <verse number="2" style="v" sid="PRO 7:2" />Keep my commandments and live!</para>
+  <para style="q2" vid="PRO 7:2">Guard my teaching as the apple of your eye.<verse eid="PRO 7:2" /></para>
+  <para style="q1">
+    <verse number="3" style="v" sid="PRO 7:3" />Bind them on your fingers.</para>
+  <para style="q2" vid="PRO 7:3">Write them on the tablet of your heart.<verse eid="PRO 7:3" /></para>
+  <para style="q1">
+    <verse number="4" style="v" sid="PRO 7:4" />Tell wisdom, “You are my sister.”</para>
+  <para style="q2" vid="PRO 7:4">Call understanding your relative,<verse eid="PRO 7:4" /></para>
+  <para style="q1">
+    <verse number="5" style="v" sid="PRO 7:5" />that they may keep you from the strange woman,</para>
+  <para style="q2" vid="PRO 7:5">from the foreigner who flatters with her words.<verse eid="PRO 7:5" /></para>
+  <para style="q1">
+    <verse number="6" style="v" sid="PRO 7:6" />For at the window of my house,</para>
+  <para style="q2" vid="PRO 7:6">I looked out through my lattice.<verse eid="PRO 7:6" /></para>
+  <para style="q1">
+    <verse number="7" style="v" sid="PRO 7:7" />I saw among the simple ones.</para>
+  <para style="q2" vid="PRO 7:7">I discerned among the youths a young man void of understanding,<verse eid="PRO 7:7" /></para>
+  <para style="q1">
+    <verse number="8" style="v" sid="PRO 7:8" />passing through the street near her corner,</para>
+  <para style="q2" vid="PRO 7:8">he went the way to her house,<verse eid="PRO 7:8" /></para>
+  <para style="q1">
+    <verse number="9" style="v" sid="PRO 7:9" />in the twilight, in the evening of the day,</para>
+  <para style="q2" vid="PRO 7:9">in the middle of the night and in the darkness.<verse eid="PRO 7:9" /></para>
+  <para style="q1">
+    <verse number="10" style="v" sid="PRO 7:10" />Behold, there a woman met him with the attire of a prostitute,</para>
+  <para style="q2" vid="PRO 7:10">and with crafty intent.<verse eid="PRO 7:10" /></para>
+  <para style="q1">
+    <verse number="11" style="v" sid="PRO 7:11" />She is loud and defiant.</para>
+  <para style="q2" vid="PRO 7:11">Her feet don’t stay in her house.<verse eid="PRO 7:11" /></para>
+  <para style="q1">
+    <verse number="12" style="v" sid="PRO 7:12" />Now she is in the streets, now in the squares,</para>
+  <para style="q2" vid="PRO 7:12">and lurking at every corner.<verse eid="PRO 7:12" /></para>
+  <para style="q1">
+    <verse number="13" style="v" sid="PRO 7:13" />So she caught him, and kissed him.</para>
+  <para style="q2" vid="PRO 7:13">With an impudent face she said to him:<verse eid="PRO 7:13" /></para>
+  <para style="q1">
+    <verse number="14" style="v" sid="PRO 7:14" />“Sacrifices of peace offerings are with me.</para>
+  <para style="q2" vid="PRO 7:14">Today I have paid my vows.<verse eid="PRO 7:14" /></para>
+  <para style="q1">
+    <verse number="15" style="v" sid="PRO 7:15" />Therefore I came out to meet you,</para>
+  <para style="q2" vid="PRO 7:15">to diligently seek your face,</para>
+  <para style="q2" vid="PRO 7:15">and I have found you.<verse eid="PRO 7:15" /></para>
+  <para style="q1">
+    <verse number="16" style="v" sid="PRO 7:16" />I have spread my couch with carpets of tapestry,</para>
+  <para style="q2" vid="PRO 7:16">with striped cloths of the yarn of Egypt.<verse eid="PRO 7:16" /></para>
+  <para style="q1">
+    <verse number="17" style="v" sid="PRO 7:17" />I have perfumed my bed with myrrh, aloes, and cinnamon.<verse eid="PRO 7:17" /></para>
+  <para style="q1">
+    <verse number="18" style="v" sid="PRO 7:18" />Come, let’s take our fill of loving until the morning.</para>
+  <para style="q2" vid="PRO 7:18">Let’s solace ourselves with loving.<verse eid="PRO 7:18" /></para>
+  <para style="q1">
+    <verse number="19" style="v" sid="PRO 7:19" />For my husband isn’t at home.</para>
+  <para style="q2" vid="PRO 7:19">He has gone on a long journey.<verse eid="PRO 7:19" /></para>
+  <para style="q1">
+    <verse number="20" style="v" sid="PRO 7:20" />He has taken a bag of money with him.</para>
+  <para style="q2" vid="PRO 7:20">He will come home at the full moon.”<verse eid="PRO 7:20" /></para>
+  <para style="q1">
+    <verse number="21" style="v" sid="PRO 7:21" />With persuasive words, she led him astray.</para>
+  <para style="q2" vid="PRO 7:21">With the flattering of her lips, she seduced him.<verse eid="PRO 7:21" /></para>
+  <para style="q1">
+    <verse number="22" style="v" sid="PRO 7:22" />He followed her immediately,</para>
+  <para style="q2" vid="PRO 7:22">as an ox goes to the slaughter,</para>
+  <para style="q2" vid="PRO 7:22">as a fool stepping into a noose.<verse eid="PRO 7:22" /></para>
+  <para style="q1">
+    <verse number="23" style="v" sid="PRO 7:23" />Until an arrow strikes through his liver,</para>
+  <para style="q2" vid="PRO 7:23">as a bird hurries to the snare,</para>
+  <para style="q2" vid="PRO 7:23">and doesn’t know that it will cost his life.<verse eid="PRO 7:23" /></para>
+  <para style="b" />
+  <para style="q1">
+    <verse number="24" style="v" sid="PRO 7:24" />Now therefore, sons, listen to me.</para>
+  <para style="q2" vid="PRO 7:24">Pay attention to the words of my mouth.<verse eid="PRO 7:24" /></para>
+  <para style="q1">
+    <verse number="25" style="v" sid="PRO 7:25" />Don’t let your heart turn to her ways.</para>
+  <para style="q2" vid="PRO 7:25">Don’t go astray in her paths,<verse eid="PRO 7:25" /></para>
+  <para style="q1">
+    <verse number="26" style="v" sid="PRO 7:26" />for she has thrown down many wounded.</para>
+  <para style="q2" vid="PRO 7:26">Yes, all her slain are a mighty army.<verse eid="PRO 7:26" /></para>
+  <para style="q1">
+    <verse number="27" style="v" sid="PRO 7:27" />Her house is the way to Sheol,<note caller="+" style="f"><char style="fr">7:27 </char><char style="ft">Sheol is the place of the dead. </char></note></para>
+  <para style="q2" vid="PRO 7:27">going down to the rooms of death.<verse eid="PRO 7:27" /></para>
+  <chapter eid="PRO 7" />
+  <chapter number="8" style="c" sid="PRO 8" />
+  <para style="q1">
+    <verse number="1" style="v" sid="PRO 8:1" />Doesn’t wisdom cry out?</para>
+  <para style="q2" vid="PRO 8:1">Doesn’t understanding raise her voice?<verse eid="PRO 8:1" /></para>
+  <para style="q1">
+    <verse number="2" style="v" sid="PRO 8:2" />On the top of high places by the way,</para>
+  <para style="q2" vid="PRO 8:2">where the paths meet, she stands.<verse eid="PRO 8:2" /></para>
+  <para style="q1">
+    <verse number="3" style="v" sid="PRO 8:3" />Beside the gates, at the entry of the city,</para>
+  <para style="q2" vid="PRO 8:3">at the entry doors, she cries aloud:<verse eid="PRO 8:3" /></para>
+  <para style="q1">
+    <verse number="4" style="v" sid="PRO 8:4" />“I call to you men!</para>
+  <para style="q2" vid="PRO 8:4">I send my voice to the sons of mankind.<verse eid="PRO 8:4" /></para>
+  <para style="q1">
+    <verse number="5" style="v" sid="PRO 8:5" />You simple, understand prudence!</para>
+  <para style="q2" vid="PRO 8:5">You fools, be of an understanding heart!<verse eid="PRO 8:5" /></para>
+  <para style="q1">
+    <verse number="6" style="v" sid="PRO 8:6" />Hear, for I will speak excellent things.</para>
+  <para style="q2" vid="PRO 8:6">The opening of my lips is for right things.<verse eid="PRO 8:6" /></para>
+  <para style="q1">
+    <verse number="7" style="v" sid="PRO 8:7" />For my mouth speaks truth.</para>
+  <para style="q2" vid="PRO 8:7">Wickedness is an abomination to my lips.<verse eid="PRO 8:7" /></para>
+  <para style="q1">
+    <verse number="8" style="v" sid="PRO 8:8" />All the words of my mouth are in righteousness.</para>
+  <para style="q2" vid="PRO 8:8">There is nothing crooked or perverse in them.<verse eid="PRO 8:8" /></para>
+  <para style="q1">
+    <verse number="9" style="v" sid="PRO 8:9" />They are all plain to him who understands,</para>
+  <para style="q2" vid="PRO 8:9">right to those who find knowledge.<verse eid="PRO 8:9" /></para>
+  <para style="q1">
+    <verse number="10" style="v" sid="PRO 8:10" />Receive my instruction rather than silver,</para>
+  <para style="q2" vid="PRO 8:10">knowledge rather than choice gold.<verse eid="PRO 8:10" /></para>
+  <para style="q1">
+    <verse number="11" style="v" sid="PRO 8:11" />For wisdom is better than rubies.</para>
+  <para style="q2" vid="PRO 8:11">All the things that may be desired can’t be compared to it.<verse eid="PRO 8:11" /></para>
+  <para style="b" />
+  <para style="q1">
+    <verse number="12" style="v" sid="PRO 8:12" />“I, wisdom, have made prudence my dwelling.</para>
+  <para style="q2" vid="PRO 8:12">Find out knowledge and discretion.<verse eid="PRO 8:12" /></para>
+  <para style="q1">
+    <verse number="13" style="v" sid="PRO 8:13" />The fear of Yahweh is to hate evil.</para>
+  <para style="q2" vid="PRO 8:13">I hate pride, arrogance, the evil way, and the perverse mouth.<verse eid="PRO 8:13" /></para>
+  <para style="q1">
+    <verse number="14" style="v" sid="PRO 8:14" />Counsel and sound knowledge are mine.</para>
+  <para style="q2" vid="PRO 8:14">I have understanding and power.<verse eid="PRO 8:14" /></para>
+  <para style="q1">
+    <verse number="15" style="v" sid="PRO 8:15" />By me kings reign,</para>
+  <para style="q2" vid="PRO 8:15">and princes decree justice.<verse eid="PRO 8:15" /></para>
+  <para style="q1">
+    <verse number="16" style="v" sid="PRO 8:16" />By me princes rule,</para>
+  <para style="q2" vid="PRO 8:16">nobles, and all the righteous rulers of the earth.<verse eid="PRO 8:16" /></para>
+  <para style="q1">
+    <verse number="17" style="v" sid="PRO 8:17" />I love those who love me.</para>
+  <para style="q2" vid="PRO 8:17">Those who seek me diligently will find me.<verse eid="PRO 8:17" /></para>
+  <para style="q1">
+    <verse number="18" style="v" sid="PRO 8:18" />With me are riches, honor,</para>
+  <para style="q2" vid="PRO 8:18">enduring wealth, and prosperity.<verse eid="PRO 8:18" /></para>
+  <para style="q1">
+    <verse number="19" style="v" sid="PRO 8:19" />My fruit is better than gold, yes, than fine gold,</para>
+  <para style="q2" vid="PRO 8:19">my yield than choice silver.<verse eid="PRO 8:19" /></para>
+  <para style="q1">
+    <verse number="20" style="v" sid="PRO 8:20" />I walk in the way of righteousness,</para>
+  <para style="q2" vid="PRO 8:20">in the middle of the paths of justice,<verse eid="PRO 8:20" /></para>
+  <para style="q1">
+    <verse number="21" style="v" sid="PRO 8:21" />that I may give wealth to those who love me.</para>
+  <para style="q2" vid="PRO 8:21">I fill their treasuries.<verse eid="PRO 8:21" /></para>
+  <para style="b" />
+  <para style="q1">
+    <verse number="22" style="v" sid="PRO 8:22" />“Yahweh possessed me in the beginning of his work,</para>
+  <para style="q2" vid="PRO 8:22">before his deeds of old.<verse eid="PRO 8:22" /></para>
+  <para style="q1">
+    <verse number="23" style="v" sid="PRO 8:23" />I was set up from everlasting, from the beginning,</para>
+  <para style="q2" vid="PRO 8:23">before the earth existed.<verse eid="PRO 8:23" /></para>
+  <para style="q1">
+    <verse number="24" style="v" sid="PRO 8:24" />When there were no depths, I was born,</para>
+  <para style="q2" vid="PRO 8:24">when there were no springs abounding with water.<verse eid="PRO 8:24" /></para>
+  <para style="q1">
+    <verse number="25" style="v" sid="PRO 8:25" />Before the mountains were settled in place,</para>
+  <para style="q2" vid="PRO 8:25">before the hills, I was born;<verse eid="PRO 8:25" /></para>
+  <para style="q1">
+    <verse number="26" style="v" sid="PRO 8:26" />while as yet he had not made the earth, nor the fields,</para>
+  <para style="q2" vid="PRO 8:26">nor the beginning of the dust of the world.<verse eid="PRO 8:26" /></para>
+  <para style="q1">
+    <verse number="27" style="v" sid="PRO 8:27" />When he established the heavens, I was there.</para>
+  <para style="q2" vid="PRO 8:27">When he set a circle on the surface of the deep,<verse eid="PRO 8:27" /></para>
+  <para style="q1">
+    <verse number="28" style="v" sid="PRO 8:28" />when he established the clouds above,</para>
+  <para style="q2" vid="PRO 8:28">when the springs of the deep became strong,<verse eid="PRO 8:28" /></para>
+  <para style="q1">
+    <verse number="29" style="v" sid="PRO 8:29" />when he gave to the sea its boundary,</para>
+  <para style="q2" vid="PRO 8:29">that the waters should not violate his commandment,</para>
+  <para style="q2" vid="PRO 8:29">when he marked out the foundations of the earth,<verse eid="PRO 8:29" /></para>
+  <para style="q1">
+    <verse number="30" style="v" sid="PRO 8:30" />then I was the craftsman by his side.</para>
+  <para style="q2" vid="PRO 8:30">I was a delight day by day,</para>
+  <para style="q2" vid="PRO 8:30">always rejoicing before him,<verse eid="PRO 8:30" /></para>
+  <para style="q1">
+    <verse number="31" style="v" sid="PRO 8:31" />rejoicing in his whole world.</para>
+  <para style="q2" vid="PRO 8:31">My delight was with the sons of men.<verse eid="PRO 8:31" /></para>
+  <para style="b" />
+  <para style="q1">
+    <verse number="32" style="v" sid="PRO 8:32" />“Now therefore, my sons, listen to me,</para>
+  <para style="q2" vid="PRO 8:32">for blessed are those who keep my ways.<verse eid="PRO 8:32" /></para>
+  <para style="q1">
+    <verse number="33" style="v" sid="PRO 8:33" />Hear instruction, and be wise.</para>
+  <para style="q2" vid="PRO 8:33">Don’t refuse it.<verse eid="PRO 8:33" /></para>
+  <para style="q1">
+    <verse number="34" style="v" sid="PRO 8:34" />Blessed is the man who hears me,</para>
+  <para style="q2" vid="PRO 8:34">watching daily at my gates,</para>
+  <para style="q2" vid="PRO 8:34">waiting at my door posts.<verse eid="PRO 8:34" /></para>
+  <para style="q1">
+    <verse number="35" style="v" sid="PRO 8:35" />For whoever finds me, finds life,</para>
+  <para style="q2" vid="PRO 8:35">and will obtain favor from Yahweh.<verse eid="PRO 8:35" /></para>
+  <para style="q1">
+    <verse number="36" style="v" sid="PRO 8:36" />But he who sins against me wrongs his own soul.</para>
+  <para style="q2" vid="PRO 8:36">All those who hate me love death.”<verse eid="PRO 8:36" /></para>
+  <chapter eid="PRO 8" />
+  <chapter number="9" style="c" sid="PRO 9" />
+  <para style="q1">
+    <verse number="1" style="v" sid="PRO 9:1" />Wisdom has built her house.</para>
+  <para style="q2" vid="PRO 9:1">She has carved out her seven pillars.<verse eid="PRO 9:1" /></para>
+  <para style="q1">
+    <verse number="2" style="v" sid="PRO 9:2" />She has prepared her meat.</para>
+  <para style="q2" vid="PRO 9:2">She has mixed her wine.</para>
+  <para style="q2" vid="PRO 9:2">She has also set her table.<verse eid="PRO 9:2" /></para>
+  <para style="q1">
+    <verse number="3" style="v" sid="PRO 9:3" />She has sent out her maidens.</para>
+  <para style="q2" vid="PRO 9:3">She cries from the highest places of the city:<verse eid="PRO 9:3" /></para>
+  <para style="q1">
+    <verse number="4" style="v" sid="PRO 9:4" />“Whoever is simple, let him turn in here!”</para>
+  <para style="q2" vid="PRO 9:4">As for him who is void of understanding, she says to him,<verse eid="PRO 9:4" /></para>
+  <para style="q1">
+    <verse number="5" style="v" sid="PRO 9:5" />“Come, eat some of my bread,</para>
+  <para style="q2" vid="PRO 9:5">Drink some of the wine which I have mixed!<verse eid="PRO 9:5" /></para>
+  <para style="q1">
+    <verse number="6" style="v" sid="PRO 9:6" />Leave your simple ways, and live.</para>
+  <para style="q2" vid="PRO 9:6">Walk in the way of understanding.”<verse eid="PRO 9:6" /></para>
+  <para style="b" />
+  <para style="q1">
+    <verse number="7" style="v" sid="PRO 9:7" />One who corrects a mocker invites insult.</para>
+  <para style="q2" vid="PRO 9:7">One who reproves a wicked man invites abuse.<verse eid="PRO 9:7" /></para>
+  <para style="q1">
+    <verse number="8" style="v" sid="PRO 9:8" />Don’t reprove a scoffer, lest he hate you.</para>
+  <para style="q2" vid="PRO 9:8">Reprove a wise person, and he will love you.<verse eid="PRO 9:8" /></para>
+  <para style="q1">
+    <verse number="9" style="v" sid="PRO 9:9" />Instruct a wise person, and he will be still wiser.</para>
+  <para style="q2" vid="PRO 9:9">Teach a righteous person, and he will increase in learning.<verse eid="PRO 9:9" /></para>
+  <para style="q1">
+    <verse number="10" style="v" sid="PRO 9:10" />The fear of Yahweh is the beginning of wisdom.</para>
+  <para style="q2" vid="PRO 9:10">The knowledge of the Holy One is understanding.<verse eid="PRO 9:10" /></para>
+  <para style="q1">
+    <verse number="11" style="v" sid="PRO 9:11" />For by me your days will be multiplied.</para>
+  <para style="q2" vid="PRO 9:11">The years of your life will be increased.<verse eid="PRO 9:11" /></para>
+  <para style="q1">
+    <verse number="12" style="v" sid="PRO 9:12" />If you are wise, you are wise for yourself.</para>
+  <para style="q2" vid="PRO 9:12">If you mock, you alone will bear it.<verse eid="PRO 9:12" /></para>
+  <para style="b" />
+  <para style="q1">
+    <verse number="13" style="v" sid="PRO 9:13" />The foolish woman is loud,</para>
+  <para style="q2" vid="PRO 9:13">undisciplined, and knows nothing.<verse eid="PRO 9:13" /></para>
+  <para style="q1">
+    <verse number="14" style="v" sid="PRO 9:14" />She sits at the door of her house,</para>
+  <para style="q2" vid="PRO 9:14">on a seat in the high places of the city,<verse eid="PRO 9:14" /></para>
+  <para style="q1">
+    <verse number="15" style="v" sid="PRO 9:15" />to call to those who pass by,</para>
+  <para style="q2" vid="PRO 9:15">who go straight on their ways,<verse eid="PRO 9:15" /></para>
+  <para style="q1">
+    <verse number="16" style="v" sid="PRO 9:16" />“Whoever is simple, let him turn in here.”</para>
+  <para style="q2" vid="PRO 9:16">as for him who is void of understanding, she says to him,<verse eid="PRO 9:16" /></para>
+  <para style="q1">
+    <verse number="17" style="v" sid="PRO 9:17" />“Stolen water is sweet.</para>
+  <para style="q2" vid="PRO 9:17">Food eaten in secret is pleasant.”<verse eid="PRO 9:17" /></para>
+  <para style="q1">
+    <verse number="18" style="v" sid="PRO 9:18" />But he doesn’t know that the departed spirits are there,</para>
+  <para style="q2" vid="PRO 9:18">that her guests are in the depths of Sheol.<note caller="+" style="f"><char style="fr">9:18 </char><char style="ft">Sheol is the place of the dead.</char></note><verse eid="PRO 9:18" /></para>
+  <chapter eid="PRO 9" />
+  <chapter number="10" style="c" sid="PRO 10" />
+  <para style="p">
+    <verse number="1" style="v" sid="PRO 10:1" />The proverbs of Solomon.</para>
+  <para style="q1" vid="PRO 10:1">A wise son makes a glad father;</para>
+  <para style="q2" vid="PRO 10:1">but a foolish son brings grief to his mother.<verse eid="PRO 10:1" /></para>
+  <para style="q1">
+    <verse number="2" style="v" sid="PRO 10:2" />Treasures of wickedness profit nothing,</para>
+  <para style="q2" vid="PRO 10:2">but righteousness delivers from death.<verse eid="PRO 10:2" /></para>
+  <para style="q1">
+    <verse number="3" style="v" sid="PRO 10:3" />Yahweh will not allow the soul of the righteous to go hungry,</para>
+  <para style="q2" vid="PRO 10:3">but he thrusts away the desire of the wicked.<verse eid="PRO 10:3" /></para>
+  <para style="q1">
+    <verse number="4" style="v" sid="PRO 10:4" />He becomes poor who works with a lazy hand,</para>
+  <para style="q2" vid="PRO 10:4">but the hand of the diligent brings wealth.<verse eid="PRO 10:4" /></para>
+  <para style="q1">
+    <verse number="5" style="v" sid="PRO 10:5" />He who gathers in summer is a wise son,</para>
+  <para style="q2" vid="PRO 10:5">but he who sleeps during the harvest is a son who causes shame.<verse eid="PRO 10:5" /></para>
+  <para style="q1">
+    <verse number="6" style="v" sid="PRO 10:6" />Blessings are on the head of the righteous,</para>
+  <para style="q2" vid="PRO 10:6">but violence covers the mouth of the wicked.<verse eid="PRO 10:6" /></para>
+  <para style="q1">
+    <verse number="7" style="v" sid="PRO 10:7" />The memory of the righteous is blessed,</para>
+  <para style="q2" vid="PRO 10:7">but the name of the wicked will rot.<verse eid="PRO 10:7" /></para>
+  <para style="q1">
+    <verse number="8" style="v" sid="PRO 10:8" />The wise in heart accept commandments,</para>
+  <para style="q2" vid="PRO 10:8">but a chattering fool will fall.<verse eid="PRO 10:8" /></para>
+  <para style="q1">
+    <verse number="9" style="v" sid="PRO 10:9" />He who walks blamelessly walks surely,</para>
+  <para style="q2" vid="PRO 10:9">but he who perverts his ways will be found out.<verse eid="PRO 10:9" /></para>
+  <para style="q1">
+    <verse number="10" style="v" sid="PRO 10:10" />One winking with the eye causes sorrow,</para>
+  <para style="q2" vid="PRO 10:10">but a chattering fool will fall.<verse eid="PRO 10:10" /></para>
+  <para style="q1">
+    <verse number="11" style="v" sid="PRO 10:11" />The mouth of the righteous is a spring of life,</para>
+  <para style="q2" vid="PRO 10:11">but violence covers the mouth of the wicked.<verse eid="PRO 10:11" /></para>
+  <para style="q1">
+    <verse number="12" style="v" sid="PRO 10:12" />Hatred stirs up strife,</para>
+  <para style="q2" vid="PRO 10:12">but love covers all wrongs.<verse eid="PRO 10:12" /></para>
+  <para style="q1">
+    <verse number="13" style="v" sid="PRO 10:13" />Wisdom is found on the lips of him who has discernment,</para>
+  <para style="q2" vid="PRO 10:13">but a rod is for the back of him who is void of understanding.<verse eid="PRO 10:13" /></para>
+  <para style="q1">
+    <verse number="14" style="v" sid="PRO 10:14" />Wise men lay up knowledge,</para>
+  <para style="q2" vid="PRO 10:14">but the mouth of the foolish is near ruin.<verse eid="PRO 10:14" /></para>
+  <para style="q1">
+    <verse number="15" style="v" sid="PRO 10:15" />The rich man’s wealth is his strong city.</para>
+  <para style="q2" vid="PRO 10:15">The destruction of the poor is their poverty.<verse eid="PRO 10:15" /></para>
+  <para style="q1">
+    <verse number="16" style="v" sid="PRO 10:16" />The labor of the righteous leads to life.</para>
+  <para style="q2" vid="PRO 10:16">The increase of the wicked leads to sin.<verse eid="PRO 10:16" /></para>
+  <para style="q1">
+    <verse number="17" style="v" sid="PRO 10:17" />He is in the way of life who heeds correction,</para>
+  <para style="q2" vid="PRO 10:17">but he who forsakes reproof leads others astray.<verse eid="PRO 10:17" /></para>
+  <para style="q1">
+    <verse number="18" style="v" sid="PRO 10:18" />He who hides hatred has lying lips.</para>
+  <para style="q2" vid="PRO 10:18">He who utters a slander is a fool.<verse eid="PRO 10:18" /></para>
+  <para style="q1">
+    <verse number="19" style="v" sid="PRO 10:19" />In the multitude of words there is no lack of disobedience,</para>
+  <para style="q2" vid="PRO 10:19">but he who restrains his lips does wisely.<verse eid="PRO 10:19" /></para>
+  <para style="q1">
+    <verse number="20" style="v" sid="PRO 10:20" />The tongue of the righteous is like choice silver.</para>
+  <para style="q2" vid="PRO 10:20">The heart of the wicked is of little worth.<verse eid="PRO 10:20" /></para>
+  <para style="q1">
+    <verse number="21" style="v" sid="PRO 10:21" />The lips of the righteous feed many,</para>
+  <para style="q2" vid="PRO 10:21">but the foolish die for lack of understanding.<verse eid="PRO 10:21" /></para>
+  <para style="q1">
+    <verse number="22" style="v" sid="PRO 10:22" />Yahweh’s blessing brings wealth,</para>
+  <para style="q2" vid="PRO 10:22">and he adds no trouble to it.<verse eid="PRO 10:22" /></para>
+  <para style="q1">
+    <verse number="23" style="v" sid="PRO 10:23" />It is a fool’s pleasure to do wickedness,</para>
+  <para style="q2" vid="PRO 10:23">but wisdom is a man of understanding’s pleasure.<verse eid="PRO 10:23" /></para>
+  <para style="q1">
+    <verse number="24" style="v" sid="PRO 10:24" />What the wicked fear will overtake them,</para>
+  <para style="q2" vid="PRO 10:24">but the desire of the righteous will be granted.<verse eid="PRO 10:24" /></para>
+  <para style="q1">
+    <verse number="25" style="v" sid="PRO 10:25" />When the whirlwind passes, the wicked is no more;</para>
