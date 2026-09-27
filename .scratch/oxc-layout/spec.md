@@ -270,9 +270,9 @@ Michael picked 38, 41 and 43 on 2026-09-26 and all three are resolved;
 which Michael picked next and is resolved too. 39 and 40 wait as they were.
 Ticket 42 became M7 (below) on 2026-09-26, and M7 closed on 2026-09-27.
 Beside them, the hardening plan's own unchecked boxes
-(`docs/plans/hardening.md`): marker-at-end-of-line handling, `\fig`
-attribute naming, a malformed real-world corpus, and a benchmark gate in
-CI (numbers are compared by hand at each boundary, per "Reading a
+(`docs/plans/hardening.md`): marker-at-end-of-line handling and `\fig`
+attribute naming (both done 2026-09-27), a malformed real-world corpus, and
+a benchmark gate in CI (numbers are compared by hand at each boundary, per "Reading a
 regression" in `docs/benchmarks.md`).
 
 **Work with no plan yet**, which needs a spec section before a loop could

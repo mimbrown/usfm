@@ -410,7 +410,13 @@ ordering or naming mismatches, 4 missing children.
       no longer regex-strips note/cell ends from the expected side only; it trims
       both trees structurally, since the reference files write `text </char></note>`,
       `text </char> </note>` and `text </char>\n</note>` interchangeably.
-- [ ] Marker-at-end-of-line and marker-followed-by-backslash handling.
+- [x] Marker-at-end-of-line and marker-followed-by-backslash handling.
+      Done by Phase 1's recovery, and pinned 2026-09-27:
+      `whitespace.rs`'s `a_marker_is_delimited_by_a_line_break_or_the_next_backslash`
+      parses fourteen spellings (`\p\n\v 1`, `\p\v 1`, `\v 1\add`, `\c 2\p`,
+      `\add\nb`, `\f\n+`, `\fr\ft`, a `\*` on the next line, …) and requires
+      each to report nothing and give the tree of its one-space spelling;
+      `\id\nGEN` is the same `\id`.
 - [x] Attribute naming: `\fig` mappings, default attribute names, ordering.
       Default names (`\w` -> `lemma`, `\rb` -> `gloss`, `\xt`/`\jmp` ->
       `link-href`, a milestone's `who`) and source order were done with word-level
