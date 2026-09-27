@@ -1,0 +1,15 @@
+---
+source: crates/usfm_usx/tests/reader.rs
+description: machine-py/usx/Tes/MRK.usx
+---
+Book MRK "- Test" @64..105
+Para usfm@47..60
+  Text "2.6"@56..59
+Para ide@108..156
+  Text "65001 - Unicode (UTF-8)"@126..149
+Para h@159..186
+  Text "Mark"@175..179
+Para mt@189..217
+  Text "Mark"@206..210
+Para ip@220..267
+  Text "An introduction to Mark"@237..260

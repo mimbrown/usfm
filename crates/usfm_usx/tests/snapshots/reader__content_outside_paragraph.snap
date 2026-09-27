@@ -13,5 +13,7 @@ Para p@91..168
     Text "text"@157..161
 Para p@168..207
   Text "then a paragraph"@184..200
+  VerseEnd 1
+ChapterEnd 1
 --- diagnostics
 error[content-outside-paragraph] @91..134: content outside a paragraph; kept in an implicit `\p`

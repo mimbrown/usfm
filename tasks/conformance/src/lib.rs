@@ -251,7 +251,10 @@ impl TestCase {
         })
     }
 
-    fn parse_usx_text(text: &str) -> Result<XmlNode, TestError> {
+    /// Parse USX text the way the reference side of every comparison is
+    /// parsed, through the same textual normalisation. Public for the USX
+    /// files that are not a case's reference (the machine.py books, ticket 47).
+    pub fn parse_usx_text(text: &str) -> Result<XmlNode, TestError> {
         let normalized = normalize_usx(text);
         let doc =
             XmlDocument::from(BufReader::new(normalized.as_bytes())).map_err(TestError::Xml)?;

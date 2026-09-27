@@ -36,6 +36,28 @@
 //! tree as a USX 3 one (spec, M7). An attribute list has no `|` in USX, so
 //! its `pipe` is [`SPAN`] too.
 //!
+//! **Verse and chapter ends** (ticket 47). A USX 3 file's `<verse eid>` and
+//! `<chapter eid>` are read where they stand. A USX 2 file has none, and the
+//! reader builds every end where the parser builds it (plan D4,
+//! `usfm_parser/tests/verse_ends.rs`): before the next verse in the same
+//! container, with the space before it moved after the end; before the
+//! container when the next verse is the first thing in it, and so on
+//! outward; at block level, at the end of the last paragraph of verse text or
+//! the last table cell, so never in a heading; not inside a sidebar; and
+//! before a chapter, a `<periph>` and the end of the file, which close the
+//! chapter too. So a file reads to one tree whichever version it is, and
+//! nothing is reported. Which rule applies is decided per file: a file with
+//! an `eid` anywhere closes its verses itself, and a verse or chapter it
+//! leaves open is ended the same way and reported as
+//! [`Code::UsxVerseEndMissing`] (machine.py's `Tes/MAT.usx`, a USX 2.6 book
+//! with one `eid`, is that case). The rules are mirrored from the parser's
+//! `OpenVerse`, not shared: the parser places an end while it builds the
+//! container, from state only a parse has, and an output crate may not
+//! depend on the parser; a shared pass over the finished tree is the path
+//! arithmetic plan D4 took out of the parser. What keeps the two in step is
+//! `tasks/conformance/tests/usx_reader.rs`, which strips the `eid`s from
+//! every conformance reference and requires the same tree.
+//!
 //! **Whitespace** in a paragraph, a cell, a character style or a note is read
 //! by the rules on [`Text`]: a run of ASCII whitespace is one space, and a
 //! run is trimmed where the parser would trim it (after a marker, and at a
@@ -79,7 +101,12 @@ pub fn read_usx(source: &str) -> ParseResult<'_> {
 pub fn read_usx_with<'a>(source: &'a str, style_sheet: &Arc<StyleSheet>) -> ParseResult<'a> {
     let mut reader = Reader::new(source, style_sheet);
     let blocks = match roxmltree::Document::parse(source) {
-        Ok(xml) => reader.document(xml.root_element()),
+        Ok(xml) => {
+            reader.uses_eids = xml.descendants().any(|node| {
+                matches!(name(node), "verse" | "chapter") && node.attribute("eid").is_some()
+            });
+            reader.document(xml.root_element())
+        }
         Err(error) => {
             let position = error.pos();
             let at = offset_of(source, position.row, position.col);
@@ -93,6 +120,12 @@ pub fn read_usx_with<'a>(source: &'a str, style_sheet: &Arc<StyleSheet>) -> Pars
     };
     let document =
         Document::new(blocks, reader.style_sheet).with_span(Span::new(0, to_u32(source.len())));
+    // In source order, as the parser and `usfm_semantic` report: a missing
+    // end is only known when the next verse starts, and points back at the
+    // start that was never ended.
+    reader
+        .diagnostics
+        .sort_by_key(|diagnostic| diagnostic.span.start);
     ParseResult {
         document,
         diagnostics: reader.diagnostics,
@@ -210,7 +243,8 @@ enum Inside {
 }
 
 /// A list of blocks being read, with the implicit `\p` that holds content
-/// found outside any paragraph until the next block element closes it.
+/// found outside any paragraph until the next block element closes it
+/// ([`Reader::close_implicit`], which every block element calls first).
 struct BlockList<'a> {
     blocks: Vec<Block<'a>>,
     implicit: Option<Para<'a>>,
@@ -225,19 +259,12 @@ impl<'a> BlockList<'a> {
     }
 
     fn push(&mut self, block: Block<'a>) {
-        self.close_implicit();
+        debug_assert!(self.implicit.is_none(), "an implicit `\\p` left open");
         self.blocks.push(block);
     }
 
-    fn close_implicit(&mut self) {
-        if let Some(mut para) = self.implicit.take() {
-            trim_paragraph_end(&mut para);
-            self.blocks.push(Block::Para(para));
-        }
-    }
-
-    fn finish(mut self) -> Vec<Block<'a>> {
-        self.close_implicit();
+    fn finish(self) -> Vec<Block<'a>> {
+        debug_assert!(self.implicit.is_none(), "an implicit `\\p` left open");
         self.blocks
     }
 }
@@ -268,6 +295,12 @@ fn trim_paragraph_end<'a>(container: &mut impl InlineContainer<'a>) {
     }
 }
 
+/// A verse end the tree synthesizes: an end is where the tree says a verse
+/// stops, so it carries no span of its own.
+fn verse_end<'a>(number: NumberList) -> Inline<'a> {
+    Inline::VerseEnd(VerseEnd { number, span: SPAN })
+}
+
 /// A verse end goes before the whitespace in front of it, where the parser
 /// puts it (`text<eid/> <v/>`, plan D4): a reference written the other way
 /// round (`text <eid/><v/>`) reads to the same tree.
@@ -291,9 +324,22 @@ fn push_verse_end<'a>(container: &mut impl InlineContainer<'a>, end: VerseEnd) {
     }
 }
 
+/// A verse whose end has been neither read nor built yet: the parser's
+/// `OpenVerse`, and what the writer names in an `eid` or a `vid`.
+struct OpenVerse {
+    number: NumberList,
+    /// Whether it started in the block being read. A paragraph a verse
+    /// started in holds its end whatever its style.
+    started_in_current_block: bool,
+    /// The `<verse>` it started at, for `usx-verse-end-missing`.
+    span: Span,
+}
+
 /// The walk, and what it has to remember while walking: the book, chapter and
 /// verse the writer would name in a `sid`, `eid` or `vid`, so that the ones
-/// the file has can be checked against them.
+/// the file has can be checked against them, and the state the verse-end
+/// placement needs to build an end the file does not have (see
+/// [`Reader::open_verse`]).
 struct Reader<'a> {
     source: &'a str,
     /// The caller's sheet until a style has to be derived, then the
@@ -306,8 +352,28 @@ struct Reader<'a> {
     /// rather than only the first.
     derived: HashSet<usize>,
     book: Option<BookCode>,
-    chapter: Option<usize>,
-    verse: Option<NumberList>,
+    /// The chapter whose end is still to come, and its `<chapter>`.
+    chapter: Option<(usize, Span)>,
+    /// The verse whose end is still to come.
+    verse: Option<OpenVerse>,
+    /// Whether the file has an `eid` anywhere. Then it closes its verses and
+    /// chapters itself, and one it leaves open is `usx-verse-end-missing`; a
+    /// file with none is USX 2, whose ends are built without a word.
+    uses_eids: bool,
+    /// An end that could not go in the container where the next verse
+    /// started, because that container was empty (or is a paragraph that is
+    /// not verse text), with that container's depth: the parser's
+    /// `pending_verse_end`.
+    pending_verse_end: Option<(OpenVerse, usize)>,
+    /// Character styles and notes open around what is being read: 0 is a
+    /// paragraph or a cell.
+    depth: usize,
+    /// Reading a table cell rather than a paragraph at depth 0.
+    in_cell: bool,
+    /// Whether the paragraph being read is verse text.
+    para_is_verse_text: bool,
+    /// Depth inside sidebars, where verses are not tracked.
+    suspended: usize,
 }
 
 impl<'a> Reader<'a> {
@@ -320,6 +386,12 @@ impl<'a> Reader<'a> {
             book: None,
             chapter: None,
             verse: None,
+            uses_eids: false,
+            pending_verse_end: None,
+            depth: 0,
+            in_cell: false,
+            para_is_verse_text: true,
+            suspended: 0,
         }
     }
 
@@ -499,7 +571,7 @@ impl<'a> Reader<'a> {
         format!(
             "{} {}:{}",
             self.book.unwrap_or(BookCode::Oth),
-            self.chapter.unwrap_or(0),
+            self.chapter.map_or(0, |(number, _)| number),
             number
         )
     }
@@ -530,8 +602,212 @@ impl<'a> Reader<'a> {
 
     /// A paragraph or table continuing an open verse may name it in `vid`.
     fn check_vid(&mut self, node: Node<'_, 'a>) {
-        let expected = self.verse.as_ref().map(|verse| self.verse_reference(verse));
+        let expected = self
+            .verse
+            .as_ref()
+            .map(|verse| self.verse_reference(&verse.number));
         self.check_reference(node, "vid", expected);
+    }
+
+    // ----- verse and chapter ends (plan D4) ------------------------------
+    //
+    // A USX 3 file's `eid`s are read where they stand. An end the file does
+    // not have — every one in a USX 2 file, and in a USX 3 file the one a
+    // verse or chapter was left without — is built where the parser builds
+    // it, by the parser's rules (its `OpenVerse`), mirrored here in the order
+    // the walk meets the same structure: before the next verse in the same
+    // container; before the container when it is empty, and so on outward;
+    // before a paragraph that is not verse text, unless the verse started in
+    // it; at block level, at the end of the last paragraph of verse text or
+    // the last table cell. So a file reads to one tree whichever version it
+    // is, and `tasks/conformance/tests/usx_reader.rs` strips the `eid`s from
+    // every reference to hold that.
+    //
+    // Mirrored, not shared: the parser places an end *while* it builds the
+    // container, from state only a parse has (its open-marker stack, the
+    // paragraph's text type, the `\esbe` line pushed before it is read), and
+    // an output crate may not depend on the parser. The alternative — one
+    // pass over a finished tree, in `usfm_ast`, that both would call — is the
+    // path arithmetic plan D4 took out of the parser.
+
+    /// Whether verse and chapter ends are built here at all: not inside a
+    /// sidebar.
+    fn tracking(&self) -> bool {
+        self.suspended == 0
+    }
+
+    /// A new block is starting: the open verse, if any, did not start in it.
+    fn start_block(&mut self) {
+        if let Some(open) = &mut self.verse {
+            open.started_in_current_block = false;
+        }
+    }
+
+    /// A paragraph styled `style` is starting, at depth 0.
+    fn start_paragraph(&mut self, style: StyleId) {
+        self.para_is_verse_text = self.style_sheet.get_rule(style.index()).is_verse_text();
+        self.in_cell = false;
+        self.start_block();
+    }
+
+    /// `usx-verse-end-missing` for `what`, in a file that closes its verses
+    /// itself. A USX 2 file has no `eid` to be missing.
+    fn missing_end(&mut self, span: Span, what: String) {
+        if self.uses_eids {
+            self.report(
+                Code::UsxVerseEndMissing,
+                span,
+                format!(
+                    "{what} is never closed by an `eid`; it ends where the parser would end it"
+                ),
+            );
+        }
+    }
+
+    /// A `<verse number>` in `container`: end the open verse, when the file
+    /// has not, and open this one.
+    fn open_verse(
+        &mut self,
+        container: &mut impl InlineContainer<'a>,
+        number: NumberList,
+        span: Span,
+    ) {
+        if self.tracking()
+            && let Some(open) = self.verse.take()
+        {
+            let what = format!("verse `{}`", self.verse_reference(&open.number));
+            self.missing_end(open.span, what);
+            self.place_verse_end(container, open);
+        }
+        self.verse = Some(OpenVerse {
+            number,
+            started_in_current_block: true,
+            span,
+        });
+    }
+
+    /// Place the end of `open` before whatever is added to `container` next,
+    /// or hand it outward when it belongs before `container` itself.
+    fn place_verse_end(&mut self, container: &mut impl InlineContainer<'a>, open: OpenVerse) {
+        let in_non_verse_text_para = self.depth == 0
+            && !self.in_cell
+            && !self.para_is_verse_text
+            && !open.started_in_current_block;
+        if in_non_verse_text_para || container.children().is_empty() {
+            self.pending_verse_end = Some((open, self.depth));
+            return;
+        }
+        push_verse_end(
+            container,
+            VerseEnd {
+                number: open.number,
+                span: SPAN,
+            },
+        );
+    }
+
+    /// The pending verse end, if it was left by a container at `depth`.
+    fn take_pending_verse_end(&mut self, depth: usize) -> Option<OpenVerse> {
+        match self.pending_verse_end.take() {
+            Some((open, at)) if at == depth => Some(open),
+            other => {
+                self.pending_verse_end = other;
+                None
+            }
+        }
+    }
+
+    /// Add a character style to `container`, placing first a verse end that
+    /// could not go inside it.
+    fn add_char(&mut self, container: &mut impl InlineContainer<'a>, char: Char<'a>) {
+        if let Some(open) = self.take_pending_verse_end(self.depth + 1) {
+            self.place_verse_end(container, open);
+        }
+        container.add_child(Inline::Char(char));
+    }
+
+    /// A paragraph is about to be pushed: a verse end that belongs before it
+    /// goes in the last block before it that can hold one.
+    fn place_pending_verse_end_before_block(&mut self, blocks: &mut [Block<'a>]) {
+        if let Some(open) = self.take_pending_verse_end(0) {
+            self.end_verse_in_last_block(blocks, open.number);
+        }
+    }
+
+    /// Close the open verse at a block boundary.
+    fn end_verse_before_block(&mut self, blocks: &mut [Block<'a>]) {
+        if !self.tracking() {
+            return;
+        }
+        if let Some((open, _)) = self.pending_verse_end.take() {
+            self.end_verse_in_last_block(blocks, open.number);
+        }
+        if let Some(open) = self.verse.take() {
+            let what = format!("verse `{}`", self.verse_reference(&open.number));
+            self.missing_end(open.span, what);
+            self.end_verse_in_last_block(blocks, open.number);
+        }
+    }
+
+    /// Close the open verse and the open chapter at a block boundary: a
+    /// chapter, a `<periph>`, the end of a division or of the file.
+    fn end_chapter(&mut self, blocks: &mut Vec<Block<'a>>) {
+        if !self.tracking() {
+            return;
+        }
+        self.end_verse_before_block(blocks);
+        if let Some((number, span)) = self.chapter.take() {
+            let what = format!("chapter `{}`", self.chapter_reference(number));
+            self.missing_end(span, what);
+            blocks.push(Block::ChapterEnd(ChapterEnd { number, span: SPAN }));
+        }
+    }
+
+    /// Append the end of verse `number` to the last paragraph of verse text,
+    /// or the last table cell, in `blocks`. Sidebars, periphs, headings and
+    /// other non-verse blocks are skipped: a verse never ends inside them.
+    fn end_verse_in_last_block(&self, blocks: &mut [Block<'a>], number: NumberList) {
+        for block in blocks.iter_mut().rev() {
+            match block {
+                Block::Para(para) => {
+                    // A paragraph the verse started in holds its end whatever
+                    // its style; otherwise only verse text qualifies.
+                    let starts_a_verse = para
+                        .children
+                        .iter()
+                        .any(|inline| matches!(inline, Inline::VerseStart(_)));
+                    if !para.children.is_empty()
+                        && (starts_a_verse
+                            || self
+                                .style_sheet
+                                .get_rule(para.style.index())
+                                .is_verse_text())
+                    {
+                        para.children.push(verse_end(number));
+                        return;
+                    }
+                }
+                Block::Table(table) => {
+                    if let Some(cell) = table.rows.last_mut().and_then(|row| row.cells.last_mut()) {
+                        cell.children.push(verse_end(number));
+                        return;
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    /// Close `list`'s implicit `\p`, placing first a verse end that belongs
+    /// before it. Every block element calls this before it is read, so that a
+    /// verse end the element hands outward lands after the implicit
+    /// paragraph, not before it.
+    fn close_implicit(&mut self, list: &mut BlockList<'a>) {
+        if let Some(mut para) = list.implicit.take() {
+            trim_paragraph_end(&mut para);
+            self.place_pending_verse_end_before_block(&mut list.blocks);
+            list.blocks.push(Block::Para(para));
+        }
     }
 
     // ----- blocks ------------------------------------------------------
@@ -547,6 +823,9 @@ impl<'a> Reader<'a> {
         }
         let mut list = BlockList::new();
         self.blocks(root, &mut list);
+        // End of input closes the open verse and chapter.
+        self.close_implicit(&mut list);
+        self.end_chapter(&mut list.blocks);
         let mut blocks = list.finish();
         // The version is a `\usfm` paragraph, which USFM writes right after
         // `\id` (see `Document::usfm_version`). It was read from the
@@ -589,33 +868,54 @@ impl<'a> Reader<'a> {
             }
             match name(child) {
                 "book" => {
+                    self.close_implicit(list);
                     if let Some(book) = self.book(child) {
                         list.push(Block::Book(book));
                     }
                 }
                 "chapter" => {
-                    if let Some(block) = self.chapter(child) {
+                    self.close_implicit(list);
+                    if let Some(block) = self.chapter(child, &mut list.blocks) {
                         list.push(block);
                     }
                 }
-                "para" => match self.para(child) {
-                    Some(para) => list.push(Block::Para(para)),
+                "para" => match self.element_style(child, StyleType::Paragraph) {
+                    Some(style) => {
+                        self.close_implicit(list);
+                        let para = self.para(child, style);
+                        self.place_pending_verse_end_before_block(&mut list.blocks);
+                        list.push(Block::Para(para));
+                    }
                     None => self.blocks(child, list),
                 },
                 "table" => {
-                    let table = self.table(child);
+                    self.close_implicit(list);
+                    let (table, before_table) = self.table(child);
+                    if let Some(open) = before_table {
+                        self.end_verse_in_last_block(&mut list.blocks, open.number);
+                    }
                     list.push(Block::Table(table));
                 }
                 "ms" => {
+                    self.close_implicit(list);
                     if let Some(milestone) = self.milestone(child) {
                         list.push(Block::Milestone(milestone));
                     }
                 }
-                "sidebar" => match self.sidebar(child) {
-                    Some(sidebar) => list.push(Block::Sidebar(sidebar)),
+                "sidebar" => match self.element_style(child, StyleType::Paragraph) {
+                    Some(style) => {
+                        self.close_implicit(list);
+                        let sidebar = self.sidebar(child, style);
+                        list.push(Block::Sidebar(sidebar));
+                    }
                     None => self.blocks(child, list),
                 },
                 "periph" => {
+                    // A division runs to the next `<periph>` or the end of
+                    // the book, so the verse and chapter open before it end
+                    // before it (the parser's rule since ticket 44).
+                    self.close_implicit(list);
+                    self.end_chapter(&mut list.blocks);
                     let periph = self.periph(child);
                     list.push(Block::Periph(periph));
                 }
@@ -659,6 +959,7 @@ impl<'a> Reader<'a> {
                 span,
                 "content outside a paragraph; kept in an implicit `\\p`",
             );
+            self.start_paragraph(StyleId::new(p as u32));
             list.implicit = Some(Para {
                 style: StyleId::new(p as u32),
                 children: Vec::new(),
@@ -704,7 +1005,9 @@ impl<'a> Reader<'a> {
         })
     }
 
-    fn chapter(&mut self, node: Node<'_, 'a>) -> Option<Block<'a>> {
+    /// A `<chapter>`. A start ends the open verse and chapter first, into
+    /// `blocks`, when the file has not ended them itself.
+    fn chapter(&mut self, node: Node<'_, 'a>, blocks: &mut Vec<Block<'a>>) -> Option<Block<'a>> {
         let span = span_of(node.range());
         if let Some((number, number_span)) = self.attribute(node, "number") {
             let Ok(parsed) = number.parse::<usize>() else {
@@ -737,7 +1040,8 @@ impl<'a> Reader<'a> {
                 None => None,
             };
             let pub_number = self.attribute(node, "pubnumber").map(|(value, _)| value);
-            self.chapter = Some(parsed);
+            self.end_chapter(blocks);
+            self.chapter = Some((parsed, span));
             let expected = self.chapter_reference(parsed);
             self.check_reference(node, "sid", Some(expected));
             return Some(Block::ChapterStart(ChapterStart {
@@ -748,7 +1052,9 @@ impl<'a> Reader<'a> {
             }));
         }
         if let Some((eid, eid_span)) = self.attribute(node, "eid") {
-            let Some(open) = self.chapter.take() else {
+            // A verse still open ends before the chapter does.
+            self.end_verse_before_block(blocks);
+            let Some((open, _)) = self.chapter.take() else {
                 self.report(
                     Code::UsxVerseEndMismatch,
                     eid_span,
@@ -777,9 +1083,9 @@ impl<'a> Reader<'a> {
         None
     }
 
-    fn para(&mut self, node: Node<'_, 'a>) -> Option<Para<'a>> {
-        let style = self.element_style(node, StyleType::Paragraph)?;
+    fn para(&mut self, node: Node<'_, 'a>, style: StyleId) -> Para<'a> {
         self.check_vid(node);
+        self.start_paragraph(style);
         let mut para = Para {
             style,
             children: Vec::new(),
@@ -787,15 +1093,29 @@ impl<'a> Reader<'a> {
         };
         self.inlines(node, &mut para, Inside::Text);
         trim_paragraph_end(&mut para);
-        Some(para)
+        para
     }
 
-    fn table(&mut self, node: Node<'_, 'a>) -> Table<'a> {
+    /// A `<table>`, and the end of a verse that a `<verse>` at the start of
+    /// its first cell left for the caller to place before it.
+    fn table(&mut self, node: Node<'_, 'a>) -> (Table<'a>, Option<OpenVerse>) {
         self.check_vid(node);
-        let mut rows = Vec::new();
+        self.start_block();
+        let mut rows: Vec<TableRow<'a>> = Vec::new();
+        let mut before_table = None;
         for child in node.children() {
             if child.is_element() && name(child) == "row" {
-                rows.push(self.row(child));
+                let (row, before_row) = self.row(child);
+                // A verse starting in the first cell of this row ends the
+                // previous one at the end of the previous row's last cell,
+                // or before the table when this is the first row.
+                if let Some(open) = before_row {
+                    match rows.last_mut().and_then(|row| row.cells.last_mut()) {
+                        Some(cell) => cell.children.push(verse_end(open.number)),
+                        None => before_table = Some(open),
+                    }
+                }
+                rows.push(row);
             } else if child.is_element() {
                 self.unknown_element(child, "is not a row of the `<table>` it stands in");
             } else if child
@@ -809,18 +1129,23 @@ impl<'a> Reader<'a> {
                 );
             }
         }
-        Table {
+        let table = Table {
             rows,
             span: span_of(node.range()),
-        }
+        };
+        (table, before_table)
     }
 
     /// A row's cells. `usx.rnc` lets a `<verse>` stand between them
     /// (usfm-grammar ends a verse after the last cell); the tree has nowhere
     /// but a cell to put it, so an end goes into the cell before it and a
     /// start into the cell after it.
-    fn row(&mut self, node: Node<'_, 'a>) -> TableRow<'a> {
+    ///
+    /// Also returns the end of a verse that a `<verse>` at the start of the
+    /// row's first cell left for the caller to place before the row.
+    fn row(&mut self, node: Node<'_, 'a>) -> (TableRow<'a>, Option<OpenVerse>) {
         let mut cells: Vec<TableCell<'a>> = Vec::new();
+        let mut before_row = None;
         let mut pending: Vec<Node<'_, 'a>> = Vec::new();
         for child in node.children() {
             if !child.is_element() {
@@ -842,6 +1167,14 @@ impl<'a> Reader<'a> {
                         .last()
                         .map_or(1, |cell| cell.column.saturating_add(cell.colspan));
                     let cell = self.cell(child, next_column, &mut pending);
+                    // A verse starting at the beginning of this cell ends
+                    // the previous one at the end of the previous cell.
+                    if let Some(open) = self.take_pending_verse_end(0) {
+                        match cells.last_mut() {
+                            Some(previous) => previous.children.push(verse_end(open.number)),
+                            None => before_row = Some(open),
+                        }
+                    }
                     cells.push(cell);
                 }
                 "verse" if self.attribute(child, "eid").is_some() && !cells.is_empty() => {
@@ -853,18 +1186,21 @@ impl<'a> Reader<'a> {
             }
         }
         if let Some(cell) = cells.last_mut() {
+            self.in_cell = true;
             for verse in pending.drain(..) {
                 self.inline(verse, cell, Inside::Text);
             }
+            self.in_cell = false;
         } else {
             for verse in pending {
                 self.unknown_element(verse, "stands in a `<row>` with no cell to hold it");
             }
         }
-        TableRow {
+        let row = TableRow {
             cells,
             span: span_of(node.range()),
-        }
+        };
+        (row, before_row)
     }
 
     /// A `<cell style="tcr1-2">`: header or not, the alignment letter and the
@@ -906,30 +1242,40 @@ impl<'a> Reader<'a> {
             children: Vec::new(),
             span,
         };
+        self.in_cell = true;
         for verse in pending.drain(..) {
             self.inline(verse, &mut cell, Inside::Text);
         }
         self.inlines(node, &mut cell, Inside::Text);
+        self.in_cell = false;
         trim_paragraph_end(&mut cell);
         cell
     }
 
-    fn sidebar(&mut self, node: Node<'_, 'a>) -> Option<Sidebar<'a>> {
-        let style = self.element_style(node, StyleType::Paragraph)?;
+    fn sidebar(&mut self, node: Node<'_, 'a>, style: StyleId) -> Sidebar<'a> {
         let category = self.attribute_text(node, "category");
         // A sidebar is outside the verse flow, as the writer has it: its
         // paragraphs name no verse, and the one open before it is open again
-        // after it.
-        let verse = self.verse.take();
+        // after it. As in the parser, verses are not tracked inside: no end
+        // is built there, and none is built for a verse started there.
+        let mut verse = self.verse.take();
+        self.suspended += 1;
         let mut list = BlockList::new();
         self.blocks(node, &mut list);
+        self.close_implicit(&mut list);
+        self.suspended -= 1;
+        // The sidebar was a block of its own, so the verse open around it did
+        // not start in whatever block comes next.
+        if let Some(open) = &mut verse {
+            open.started_in_current_block = false;
+        }
         self.verse = verse;
-        Some(Sidebar {
+        Sidebar {
             style,
             category,
             blocks: list.finish(),
             span: span_of(node.range()),
-        })
+        }
     }
 
     fn periph(&mut self, node: Node<'_, 'a>) -> Periph<'a> {
@@ -939,6 +1285,9 @@ impl<'a> Reader<'a> {
         let attributes = self.attribute_list(node, &["alt", "style"], &[]);
         let mut list = BlockList::new();
         self.blocks(node, &mut list);
+        // Whatever the division opened ends with it.
+        self.close_implicit(&mut list);
+        self.end_chapter(&mut list.blocks);
         Periph {
             style,
             title,
@@ -1001,7 +1350,7 @@ impl<'a> Reader<'a> {
             "char" => match self.element_style(node, StyleType::Character) {
                 Some(style) => {
                     let char = self.char(node, style, &["style"], &[], inside);
-                    container.add_child(Inline::Char(char));
+                    self.add_char(container, char);
                 }
                 None => self.inlines(node, container, inside),
             },
@@ -1010,13 +1359,13 @@ impl<'a> Reader<'a> {
                 let style = self.style("fig", StyleType::Character, span);
                 // The writer spells `\fig`'s `src` as USX's `file`.
                 let char = self.char(node, style, &["style"], &[("file", "src")], inside);
-                container.add_child(Inline::Char(char));
+                self.add_char(container, char);
             }
             "ref" => {
                 let span = span_of(node.range());
                 let style = self.style("ref", StyleType::Character, span);
                 let char = self.char(node, style, &["style"], &[], inside);
-                container.add_child(Inline::Char(char));
+                self.add_char(container, char);
             }
             "note" => match self.note(node) {
                 Some(note) => container.add_child(Inline::Note(note)),
@@ -1104,7 +1453,7 @@ impl<'a> Reader<'a> {
             let pub_number = self.attribute(node, "pubnumber").map(|(value, _)| value);
             let expected = self.verse_reference(&parsed);
             self.check_reference(node, "sid", Some(expected));
-            self.verse = Some(parsed.clone());
+            self.open_verse(container, parsed.clone(), span);
             container.add_child(Inline::VerseStart(VerseStart {
                 number: parsed,
                 alt_number,
@@ -1122,7 +1471,7 @@ impl<'a> Reader<'a> {
                 );
                 return;
             };
-            let expected = self.verse_reference(&open);
+            let expected = self.verse_reference(&open.number);
             if eid != expected {
                 self.report(
                     Code::UsxVerseEndMismatch,
@@ -1133,7 +1482,7 @@ impl<'a> Reader<'a> {
             push_verse_end(
                 container,
                 VerseEnd {
-                    number: open,
+                    number: open.number,
                     span: SPAN,
                 },
             );
@@ -1160,7 +1509,9 @@ impl<'a> Reader<'a> {
             attributes: self.attribute_list(node, skip, rename),
             span: span_of(node.range()),
         };
+        self.depth += 1;
         self.inlines(node, &mut char, inside);
+        self.depth -= 1;
         char
     }
 
@@ -1191,7 +1542,9 @@ impl<'a> Reader<'a> {
             children: Vec::new(),
             span,
         };
+        self.depth += 1;
         self.inlines(node, &mut note, Inside::Note);
+        self.depth -= 1;
         Some(note)
     }
 

@@ -149,6 +149,24 @@ fn usx_reference_mismatch() {
     );
 }
 
+#[test]
+fn usx_verse_end_missing() {
+    // A file that closes verses with `eid` and leaves one open: the end is
+    // built where the parser would put it, and reported.
+    check(
+        Code::UsxVerseEndMissing,
+        &in_paragraph(
+            r#"<verse number="1" style="v" sid="GEN 1:1"/>one <verse number="2" style="v" sid="GEN 1:2"/>two<verse eid="GEN 1:2"/>"#,
+        ),
+    );
+    // A chapter the same, which ends where the next one starts.
+    check_variant(
+        Code::UsxVerseEndMissing,
+        "chapter",
+        r#"<usx version="3.0"><book code="GEN" style="id"/><chapter number="1" style="c" sid="GEN 1"/><para style="p"><verse number="1" style="v" sid="GEN 1:1"/>one<verse eid="GEN 1:1"/></para><chapter number="2" style="c" sid="GEN 2"/><para style="p">two</para><chapter eid="GEN 2"/></usx>"#,
+    );
+}
+
 /// Every code [`Code::origin`] gives to the USX reader has a snapshot
 /// produced by a test in this file. The mirror of `recovery.rs`'s
 /// `recovery_table_is_covered` and `checks.rs`'s `semantic_checks_are_covered`,
@@ -239,6 +257,30 @@ fn an_unknown_book_code_drops_the_book() {
 }
 
 // ----- shapes the reader has to get right -------------------------------
+
+/// USX 2 has no `eid`: every verse and chapter end is built, by the parser's
+/// rules (plan D4), and nothing is reported. Before the next verse in the same
+/// paragraph, with the space moved after the end; at the end of the last
+/// paragraph of verse text when the next verse starts a paragraph, so never
+/// in a heading; before a character style the next verse starts in; in the
+/// cell before a cell the next verse starts; not inside a sidebar, and not
+/// for a verse started there; and at a chapter and at the end of the file.
+/// Written out, the ends are `eid`s, and the USX 3 file reads back to the same
+/// tree. `usx_reader.rs` holds the same over every conformance reference.
+#[test]
+fn a_usx_2_file_reads_to_the_ends_the_parser_builds() {
+    let source = r#"<usx version="2.6"><book code="GEN" style="id"/><chapter number="1" style="c"/><para style="p"><verse number="1" style="v"/>one <verse number="2" style="v"/>two</para><para style="s">Heading</para><para style="p"><char style="add"><verse number="3" style="v"/>three</char></para><sidebar style="esb"><para style="p"><verse number="9" style="v"/>aside</para></sidebar><para style="q1">still three</para><table><row style="tr"><cell style="tc1"><verse number="4" style="v"/>four</cell><cell style="tc2"><verse number="5" style="v"/>five</cell></row></table><chapter number="2" style="c"/><para style="p"><verse number="1" style="v"/>last</para></usx>"#;
+    let result = usfm_usx::read_usx(source);
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    let written = usfm_usx::to_usx_string(&result.document);
+    let again = usfm_usx::read_usx(&written);
+    assert!(again.diagnostics.is_empty(), "{:?}", again.diagnostics);
+    assert!(
+        eq_ignoring_spans(&result.document, &again.document),
+        "{written}"
+    );
+    snapshot("usx_2_verse_ends", source);
+}
 
 /// DBL's USX is pretty-printed *inside* paragraphs: a line break and an
 /// indent after `<para>` and after each `<verse …/>`, and words as
@@ -375,5 +417,121 @@ fn what_the_writer_writes_reads_back() {
     assert!(
         eq_ignoring_spans(&first.document, &second.document),
         "{written}"
+    );
+}
+
+// ----- real-world USX: machine.py (ticket 47) ----------------------------
+//
+// `tasks/conformance/fixtures/machine-py/usx/`, from sillsdev/machine.py
+// (MIT; see its README): USX no tool of ours wrote. The WEB books are a DBL
+// release's, the Tes books a Paratext test project's USX 2.6. Whole files, so
+// each snapshot's description is the file's path rather than its text.
+// `tasks/conformance/tests/usx_reader.rs` round-trips the WEB books and
+// strips their `eid`s.
+
+const MACHINE_PY_1JN: &str =
+    include_str!("../../../tasks/conformance/fixtures/machine-py/usx/WEB-DBL/1JN.usx");
+const MACHINE_PY_2JN: &str =
+    include_str!("../../../tasks/conformance/fixtures/machine-py/usx/WEB-DBL/2JN.usx");
+const MACHINE_PY_3JN: &str =
+    include_str!("../../../tasks/conformance/fixtures/machine-py/usx/WEB-DBL/3JN.usx");
+const MACHINE_PY_MAT: &str =
+    include_str!("../../../tasks/conformance/fixtures/machine-py/usx/Tes/MAT.usx");
+const MACHINE_PY_MRK: &str =
+    include_str!("../../../tasks/conformance/fixtures/machine-py/usx/Tes/MRK.usx");
+
+/// Snapshot the tree read from a fixture, described by its path.
+fn snapshot_fixture(name: &str, path: &str, source: &str) {
+    let rendered = common::render(source);
+    assert!(
+        !rendered.starts_with("PANIC"),
+        "reader panicked: {rendered}"
+    );
+    insta::with_settings!({
+        snapshot_path => "snapshots",
+        prepend_module_to_snapshot => false,
+        description => path,
+        omit_expression => true,
+    }, {
+        insta::assert_snapshot!(format!("reader__{name}"), rendered);
+    });
+}
+
+/// The World English Bible's 1–3 John as a DBL release writes them: USX 3.0
+/// with a byte-order mark, every word a `<char style="w" strong="…">`, a line
+/// break and an indent after each `<para>` and each verse's first `<verse/>`,
+/// `vid` on a paragraph that continues a verse, and every verse and chapter
+/// closed. They read with nothing to report. 2 and 3 John are snapshotted
+/// whole; 1 John is five chapters of the same shape, and its tree would be a
+/// quarter-megabyte snapshot that says nothing theirs do not, so it is held
+/// to no diagnostics here and to the round trip in `usx_reader.rs`.
+#[test]
+fn machine_py_web_books_read_with_nothing_to_report() {
+    assert_eq!(common::codes(MACHINE_PY_1JN), Vec::<Code>::new(), "1JN");
+    for (name, book, source) in [
+        ("machine_py_web_2jn", "WEB-DBL/2JN.usx", MACHINE_PY_2JN),
+        ("machine_py_web_3jn", "WEB-DBL/3JN.usx", MACHINE_PY_3JN),
+    ] {
+        assert_eq!(common::codes(source), Vec::<Code>::new(), "{book}");
+        snapshot_fixture(name, &format!("machine-py/usx/{book}"), source);
+    }
+}
+
+/// `Tes/MAT.usx`, a USX 2.6 book that is malformed on purpose, pinned whole:
+///
+/// - `\v 1` stands between `<para style="s">` and the next paragraph: an
+///   implicit `\p`, `content-outside-paragraph`, as in USFM.
+/// - `\v 2:1` alone has a `sid` and an `eid`, so the file closes verses
+///   itself and every other verse and both chapters are
+///   `usx-verse-end-missing`: the end is built where the parser would put it,
+///   which is where a USX 2 file gets it too. Stripped of that one `eid`, the
+///   file reads to the same tree and reports nothing about ends.
+/// - The repeated `\v 6` and the `\v 5` after it are read as written: which
+///   verse comes when is `usfm_semantic`'s to report
+///   (`duplicate-verse-number`, `verse-out-of-order`), over the tree.
+/// - USX 2's `<figure file=… size=… ref=…>` is `\fig` with `src`, `size` and
+///   `ref` attributes and its caption as content, as USX 3's is.
+/// - `<para style="restore">` is not unknown: `\restore` is in Paratext's
+///   sheet (`TextType Other`), so it reads as a paragraph like any other.
+#[test]
+fn machine_py_tes_mat() {
+    let codes = common::codes(MACHINE_PY_MAT);
+    let count = |code: Code| codes.iter().filter(|c| **c == code).count();
+    assert_eq!(count(Code::ContentOutsideParagraph), 1, "{codes:?}");
+    // Thirteen verses and two chapters with no `eid`.
+    assert_eq!(count(Code::UsxVerseEndMissing), 13 + 2, "{codes:?}");
+    assert_eq!(codes.len(), 1 + 13 + 2, "{codes:?}");
+    snapshot_fixture(
+        "machine_py_tes_mat",
+        "machine-py/usx/Tes/MAT.usx",
+        MACHINE_PY_MAT,
+    );
+
+    let usx_2 = MACHINE_PY_MAT.replace(r#"<verse eid="MAT 2:1" />"#, "");
+    assert_ne!(usx_2, MACHINE_PY_MAT);
+    let as_usx_2 = usfm_usx::read_usx(&usx_2);
+    assert_eq!(
+        as_usx_2
+            .diagnostics
+            .iter()
+            .map(|diagnostic| diagnostic.code)
+            .collect::<Vec<_>>(),
+        vec![Code::ContentOutsideParagraph]
+    );
+    assert!(eq_ignoring_spans(
+        &usfm_usx::read_usx(MACHINE_PY_MAT).document,
+        &as_usx_2.document
+    ));
+}
+
+/// `Tes/MRK.usx`: a book that stops after its introduction, as its USFM twin
+/// `42MRKTes.SFM` does. No chapter, no verse, nothing reported.
+#[test]
+fn machine_py_tes_mrk() {
+    assert_eq!(common::codes(MACHINE_PY_MRK), Vec::<Code>::new());
+    snapshot_fixture(
+        "machine_py_tes_mrk",
+        "machine-py/usx/Tes/MRK.usx",
+        MACHINE_PY_MRK,
     );
 }

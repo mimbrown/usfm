@@ -26,6 +26,8 @@
 //! The runner's `--usx-read` and `--usx-roundtrip` gate these against their
 //! known lists the way `--roundtrip` gates [`crate::roundtrip`].
 
+use usfm::ast::visit_mut::{VisitMut, walk_document, walk_periph, walk_sidebar};
+use usfm::ast::{Block, Document, Inline, Para, Periph, Sidebar, TableCell};
 use usfm::codegen::to_usfm_string;
 use usfm::usx::{UsxOptions, XmlNode, read_usx, to_usx_node_with_options};
 use usfm::{DEFAULT_STYLESHEET, parse_with_options};
@@ -65,11 +67,19 @@ fn compare_with_reference(case: &TestCase, document: &usfm::Document<'_>) -> Res
 }
 
 /// Property 1: read the reference and write it back.
+///
+/// The reader builds the verse and chapter ends a reference without `eid`s
+/// leaves out (ticket 47), as a parse with ends would; the harness parses
+/// such a case without them, and so the ends are dropped here before the
+/// tree is written, the way `include_vid` follows the reference.
 pub fn check_read(case: &TestCase) -> Result<(), String> {
     let text = case
         .expected_usx_text()
         .map_err(|err| format!("cannot read the reference: {err}"))?;
-    let read = read_usx(&text);
+    let mut read = read_usx(&text);
+    if !case.expected_has_end_milestones() {
+        DropEnds.visit_document(&mut read.document);
+    }
     compare_with_reference(case, &read.document)
         .map_err(|mismatch| format!("write(read(reference)) differs: {mismatch}"))
 }
@@ -91,6 +101,59 @@ pub fn check_roundtrip(case: &TestCase) -> Result<(), String> {
     compare_with_reference(case, &parsed.document).map_err(|mismatch| {
         format!("write(parse(codegen(read(reference)))) differs: {mismatch}\n--- USFM ---\n{usfm}")
     })
+}
+
+/// Every `VerseEnd` and `ChapterEnd` in a tree, removed: what a parse
+/// without end milestones would have built.
+struct DropEnds;
+
+impl DropEnds {
+    fn blocks(blocks: &mut Vec<Block<'_>>) {
+        blocks.retain(|block| !matches!(block, Block::ChapterEnd(_)));
+    }
+
+    /// A built end stands between the text before it and the space it took
+    /// from that text (`text<eid/> <v/>`); without it, the two are one run
+    /// again, as a parse without ends reads them.
+    fn inlines(children: &mut Vec<Inline<'_>>) {
+        let mut kept: Vec<Inline<'_>> = Vec::with_capacity(children.len());
+        for inline in children.drain(..) {
+            match (kept.last_mut(), inline) {
+                (_, Inline::VerseEnd(_)) => {}
+                (Some(Inline::Text(before)), Inline::Text(text)) => {
+                    before.content.to_mut().push_str(&text.content);
+                }
+                (_, inline) => kept.push(inline),
+            }
+        }
+        *children = kept;
+    }
+}
+
+impl VisitMut for DropEnds {
+    fn visit_document(&mut self, document: &mut Document<'_>) {
+        Self::blocks(&mut document.blocks);
+        walk_document(self, document);
+    }
+
+    fn visit_sidebar(&mut self, sidebar: &mut Sidebar<'_>) {
+        Self::blocks(&mut sidebar.blocks);
+        walk_sidebar(self, sidebar);
+    }
+
+    fn visit_periph(&mut self, periph: &mut Periph<'_>) {
+        Self::blocks(&mut periph.blocks);
+        walk_periph(self, periph);
+    }
+
+    // An end is only ever a paragraph's or a cell's child.
+    fn visit_para(&mut self, para: &mut Para<'_>) {
+        Self::inlines(&mut para.children);
+    }
+
+    fn visit_table_cell(&mut self, cell: &mut TableCell<'_>) {
+        Self::inlines(&mut cell.children);
+    }
 }
 
 /// Run `property` over [`compared_cases`], in discovery order. Returns the
