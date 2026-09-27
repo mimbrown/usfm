@@ -28,12 +28,15 @@ usfm_html = { path = "../usfm_html", optional = true }
 usfm_json = { path = "../usfm_json", optional = true }
 usfm_pipeline = { path = "../usfm_pipeline", optional = true }
 usfm_usx = { path = "../usfm_usx", optional = true }
+# An input, not an output: a Paratext project folder (ticket 53).
+usfm_paratext = { path = "../usfm_paratext", optional = true }
 
 [features]
-default = ["usx", "html", "json", "codegen", "pipeline"]
+default = ["usx", "html", "json", "codegen", "pipeline", "paratext"]
 usx = ["dep:usfm_usx"]
 html = ["dep:usfm_html"]
 json = ["dep:usfm_json"]
+paratext = ["dep:usfm_paratext"]
 codegen = ["dep:usfm_codegen"]
 # The pipeline dispatches to all four writers, so it pulls them in.
 pipeline = ["dep:usfm_pipeline", "usx", "html", "json", "codegen"]

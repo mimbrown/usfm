@@ -1,0 +1,22 @@
+[package]
+name = "usfm_paratext"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+# A Paratext project folder, described (ticket 53): its `Settings.xml`, its
+# `BookNames.xml`, where each book's file is and which stylesheet the project
+# uses. It finds and describes files; it does not parse books, so the parser
+# is deliberately absent below — a caller hands `read_book`'s text and
+# `style_sheet` to `usfm::parse_with`.
+[dependencies]
+# `BookCode`, which names a book here as it does in the tree.
+usfm_ast = { path = "../usfm_ast" }
+# `CitationFormat` and `BookNameTable`, which a project's settings and book
+# names fill (ticket 54). The semantic crate depends on nothing of this one.
+usfm_semantic = { path = "../usfm_semantic" }
+# `StyleSheet` and `DEFAULT_STYLESHEET`, which a project's `custom.sty` is
+# read over (`StyleSheet::extend_from_str`, the language server's semantics).
+usfm_style = { path = "../usfm_style" }
+# `Settings.xml` and `BookNames.xml`. Already the USX reader's XML parser.
+roxmltree = { workspace = true }

@@ -245,9 +245,25 @@ Recent progress:
   `usfm parse` and `usfm format` take `--custom-stylesheet FILE`, a
   project's `custom.sty` read *over* the `--stylesheet` sheet or the
   built-in one (`StyleSheet::extend_from_str`, the language server's
-  semantics), where `--stylesheet` alone replaces it. 53–55 (a Paratext
-  project reader, the `\xt` reference parser, a glossary index) are
-  `ready-for-agent`; 52, 56 and 57 wait on Michael
+  semantics), where `--stylesheet` alone replaces it. Ticket 53 added
+  `crates/usfm_paratext` (`usfm::paratext`, feature `paratext`, default
+  on): `Project::open(dir)` reads `Settings.xml` and `BookNames.xml`,
+  finds each book's file by the project's naming rule (`41MATSSV.SFM`,
+  Paratext's file numbers in `canon`), reads it (UTF-8 only) and builds
+  the project's sheet — the default with its `custom.sty` over it. It
+  parses nothing: hand `read_book` and `style_sheet` to `parse_with`.
+  Ticket 54 added `usfm_semantic::citation`: `parse_citations` reads
+  references written as text (`Mt 5:3-10; Lk 6:20`, `متی ۵:۳، ۷`) in a
+  project's own punctuation (`CitationFormat`, from
+  `Settings::citation_format()`) and book names (`BookNameTable`, from
+  `BookNames::table()`), any Unicode decimal digits, and `xt_citations`
+  runs it over every `\xt` of a document. Ticket 55 added
+  `usfm_semantic::GlossaryIndex` (`usfm::GlossaryIndex`): every `\k` of
+  the documents it is built from (the glossary is usually its own book),
+  and for each `\w` of a document the entry its lemma or text names,
+  compared whitespace-collapsed and lower-cased. 52, 56 and 57 wait on
+  Michael: whether to keep unknown markers, how to represent interlinear
+  glosses, and a publishing layer
 - **Markers delimited by a line break or the next `\` (hardening plan,
   Phase 2).** Nothing changed in the parser: fourteen such spellings already
   parsed with no diagnostic to the tree of their one-space spelling, and
@@ -885,13 +901,16 @@ usfm-tools/
 │   │                      #   -> Vec<Diagnostic>. Reports, never repairs.
 │   │                      #   Also ReferenceIndex, the chapter/verse index,
 │   │                      #   and `placement::check`, the `OccursUnder` rule
-│   │                      #   the checks and the server's completion share
+│   │                      #   the checks and the server's completion share,
+│   │                      #   and `citation`, references written as text
 │   ├── usfm_usx/          # AST <-> USX: the XML tree and its writer, and
 │   │                      #   `read_usx` / `read_usx_with` (ticket 45), USX
 │   │                      #   into a `Document` + diagnostics on `roxmltree`;
 │   │                      #   USX 2 reads to the parser's verse ends (47)
 │   ├── usfm_html/         # AST -> HTML: ToHtml, SerializeHtml, Context
 │   ├── usfm_json/         # AST -> JSON: the tree as it is, one object per node
+│   ├── usfm_paratext/     # A Paratext project folder: Settings.xml,
+│   │                      #   BookNames.xml, book files, its stylesheet
 │   ├── usfm_codegen/      # AST -> USFM: one canonical spelling per construct,
 │   │                      #   `to_usfm_string`. Round-trips the tcdocs corpus
 │   ├── usfm_pipeline/     # Document -> Document/text: replacements, sections,
@@ -978,7 +997,7 @@ To fetch or update docs: `python3 .claude/import_docs.py`
 ## Context
 
 - Custom lexer/parser (not tree-sitter)
-- A Cargo workspace: twelve `crates/`, two `apps/`, and the `tasks/` packages (`tasks/fuzz` has its own workspace)
+- A Cargo workspace: thirteen `crates/`, two `apps/`, and the `tasks/` packages (`tasks/fuzz` has its own workspace)
 - Test suite from usfm-bible/tcdocs (git submodule)
 - Tests validate USFM → USX (XML) conversion
 - USFM spec: https://ubsicap.github.io/usfm/

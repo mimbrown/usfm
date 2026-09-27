@@ -1,6 +1,6 @@
 # 54. Parse the references written in `\xt` (and the like), in the project's own punctuation
 
-Status: ready-for-agent
+Status: resolved
 Milestone: after M7 (render gaps)
 Blocked by: 53
 
@@ -27,3 +27,31 @@ abbreviations from `BookNames.xml`; its app makes them tappable. We keep
   project.
 - Not in this ticket: a semantic check that the target exists (it needs
   the other books), and rewriting `link-href` from the parse.
+
+## Answer
+
+`usfm_semantic::citation` (named apart from `reference`, which is the
+`ReferenceIndex` of a document's own `\c`/`\v`): `CitationFormat`
+(Paratext's defaults; `link_href()` for `link-href` values),
+`BookNameTable` (names longest first; `with_codes()` / `codes()` also take a
+listed book's three-letter code), `parse_citations(text, format, names,
+default_book) -> Vec<Piece>` where a `Piece` is `Text(range)` or
+`Citation { book, start, end, range }`, and `xt_citations(&document, …)`,
+which reads every `\xt` with the book of the `\id` before it as the
+default. `usfm_paratext` fills both from a project:
+`Settings::citation_format()` (each setting split on `|`, defaults for the
+rest) and `BookNames::table()` (abbreviation, short and long names, and the
+codes).
+
+The rules are in the module doc; the ones that go past render's parser:
+any Unicode decimal digits, a range keeps its end, a segment letter is
+kept, a one-chapter book reads a bare number as a verse, directional marks
+inside a reference are skipped, and a bare number with no book name and no
+reference before it is not a reference.
+
+Tests: `citation.rs`'s unit tests (English and an Urdu reference with RLMs,
+the Arabic comma and semicolon), `tests/citation.rs` over a parsed
+document, and the fixture project's own spelling in `usfm_paratext`.
+
+Not done, as the ticket said: checking that the target exists, and
+rewriting `link-href` from the parse.

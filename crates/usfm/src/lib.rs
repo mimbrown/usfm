@@ -20,9 +20,10 @@
 //! | [`json`] | `usfm_json` | AST to JSON (feature `json`) |
 //! | [`codegen`] | `usfm_codegen` | AST back to USFM (feature `codegen`) |
 //! | [`pipeline`] | `usfm_pipeline` | text replacements, sectioning, diglot, output dispatch (feature `pipeline`) |
+//! | [`paratext`] | `usfm_paratext` | a Paratext project folder: settings, book names, book files, its stylesheet (feature `paratext`) |
 //!
-//! The five output features are on by default; turning them off leaves a
-//! parser-only build. `semantic` has no feature of its own: [`parse`] is a
+//! The five output features and `paratext` are on by default; turning them
+//! off leaves a parser-only build. `semantic` has no feature of its own: [`parse`] is a
 //! parse *and* the checks over what it produced, so the semantic pass is part
 //! of this crate's idea of parsing rather than an output to switch off. The
 //! crates under `crates/` never depend on this one — the facade is for `apps/`
@@ -45,6 +46,8 @@ pub use usfm_codegen as codegen;
 pub use usfm_html as html;
 #[cfg(feature = "json")]
 pub use usfm_json as json;
+#[cfg(feature = "paratext")]
+pub use usfm_paratext as paratext;
 #[cfg(feature = "pipeline")]
 pub use usfm_pipeline as pipeline;
 #[cfg(feature = "usx")]
@@ -54,7 +57,7 @@ pub use usfm_usx as usx;
 // does not have to remember which layer each one lives in.
 pub use usfm_ast::Document;
 pub use usfm_diagnostics::{Code, Diagnostic, ParseResult, Severity};
-pub use usfm_semantic::ReferenceIndex;
+pub use usfm_semantic::{GlossaryIndex, ReferenceIndex};
 pub use usfm_span::Span;
 pub use usfm_style::StyleSheet;
 
@@ -254,6 +257,29 @@ mod tests {
             "{:?}",
             result.diagnostics
         );
+    }
+
+    /// A Paratext project's book, parsed against the project's own sheet:
+    /// its `custom.sty` defines `\zgrk`, which the default sheet drops.
+    #[cfg(feature = "paratext")]
+    #[test]
+    fn a_project_book_parses_against_the_project_sheet() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../usfm_paratext/tests/fixtures/SSVx");
+        let project = paratext::Project::open(dir).unwrap();
+        let code = "MAT".parse().unwrap();
+        let text = project.read_book(code).unwrap();
+
+        let with_default = parse(&text);
+        assert!(
+            with_default
+                .diagnostics
+                .iter()
+                .any(|d| d.code == Code::UnknownCustomMarker)
+        );
+
+        let result = parse_with(&text, &project.style_sheet().unwrap());
+        assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
     }
 
     /// The same union for USX: `unlisted-book-code` is the semantic pass's,
