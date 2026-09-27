@@ -4,6 +4,11 @@
 # corpus's real aligned text, usfm-js's Acts (ticket 10). Idempotent: rerun it after
 # `git submodule update` and only new or changed files are written.
 #
+# Two kinds of target, two kinds of seed (ticket 49): the USFM targets get the
+# USFM inputs, and `read_usx`, whose input is USX, gets the reference USX of
+# the same cases (`origin.xml`, named like the USFM seed with `.xml`) and the
+# vendored machine.py USX (`machine-py__usx__<project>__<book>.usx`).
+#
 # A seed is named after the test it came from, with `/` replaced by `__`, so a
 # finding traces back to a real file. usfm-grammar's carry a `usfm-grammar__`
 # prefix (`usfm-grammar__bugfixes__q4.usfm`,
@@ -44,7 +49,9 @@ elif [[ $# -gt 0 ]]; then
   exit 2
 fi
 
-targets=(parse_lossy parse_utf8 parse_html roundtrip)
+usfm_targets=(parse_lossy parse_utf8 parse_html roundtrip usx_roundtrip)
+usx_targets=(read_usx)
+targets=("${usfm_targets[@]}" "${usx_targets[@]}")
 for target in "${targets[@]}"; do
   mkdir -p "corpus/$target"
 done
@@ -53,9 +60,15 @@ written=0
 truncated=0
 seeded=()
 
-# stage <source file> <seed name>
+# stage <source file> <seed name> [usx]
+# A USFM seed goes to every USFM target, a USX one (third argument `usx`) to
+# every USX target.
 stage() {
   local origin=$1 name=$2 staged
+  local -a into=("${usfm_targets[@]}")
+  if [[ ${3:-} == usx ]]; then
+    into=("${usx_targets[@]}")
+  fi
   staged=$(mktemp)
   if [[ $(wc -c <"$origin") -gt $MAX_LEN ]]; then
     head -c "$MAX_LEN" "$origin" | head -n -1 >"$staged"
@@ -65,7 +78,7 @@ stage() {
   fi
 
   seeded+=("$name")
-  for target in "${targets[@]}"; do
+  for target in "${into[@]}"; do
     destination="corpus/$target/$name"
     if ! cmp -s "$staged" "$destination"; then
       cp "$staged" "$destination"
@@ -90,6 +103,10 @@ while IFS= read -r -d '' origin; do
     [[ $relative == "$skip" ]] && continue 2
   done
   stage "$origin" "${relative//\//__}.usfm"
+  # Its reference, when it has one, is a USX seed of the same name.
+  if [[ -f ${origin%.usfm}.xml ]]; then
+    stage "${origin%.usfm}.xml" "${relative//\//__}.xml" usx
+  fi
 done < <(find "$TCDOCS/tests" -name origin.usfm -print0 | sort -z)
 
 # fixtures/usfm-grammar/bugfixes/<case>/origin.usfm
@@ -98,6 +115,9 @@ while IFS= read -r -d '' origin; do
   relative=${origin#"$FIXTURES/"}
   relative=${relative%/origin.usfm}
   stage "$origin" "usfm-grammar__${relative//\//__}.usfm"
+  if [[ -f ${origin%.usfm}.xml ]]; then
+    stage "${origin%.usfm}.xml" "usfm-grammar__${relative//\//__}.xml" usx
+  fi
 done < <(find "$FIXTURES/bugfixes" -name origin.usfm -print0 | sort -z)
 
 # fixtures/usfm-grammar/autofix/<name>.{usfm,txt}
@@ -118,6 +138,17 @@ while IFS= read -r -d '' origin; do
   relative=${relative%.SFM}
   stage "$origin" "machine-py__${relative//\//__}.usfm"
 done < <(find "$MACHINE_PY" -type f -name '*.SFM' -print0 | sort -z)
+
+# fixtures/machine-py/usx/<project>/<book>.usx
+#     -> machine-py__usx__<project>__<book>.usx
+# Real USX no tool of ours wrote (ticket 47). `WEB-DBL/1JN.usx` is 112 KiB, so
+# its seed is truncated like any other and is not well-formed XML any more;
+# 2 and 3 John, whole, are the DBL shape.
+while IFS= read -r -d '' origin; do
+  relative=${origin#"$MACHINE_PY/"}
+  relative=${relative%.usx}
+  stage "$origin" "machine-py__${relative//\//__}.usx" usx
+done < <(find "$MACHINE_PY/usx" -type f -name '*.usx' -print0 | sort -z)
 
 # benchmark/corpus/aligned/<book>.usfm -> usfm-js__<book>.usfm
 # Whole books, so both are truncated: what is left is most of Acts 1 in the

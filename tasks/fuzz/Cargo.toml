@@ -56,3 +56,17 @@ path = "fuzz_targets/roundtrip.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "read_usx"
+path = "fuzz_targets/read_usx.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "usx_roundtrip"
+path = "fuzz_targets/usx_roundtrip.rs"
+test = false
+doc = false
+bench = false

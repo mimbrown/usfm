@@ -16,7 +16,13 @@
 //!    (`check_html`, ticket 14);
 //! 5. writing the recovered tree back as USFM and parsing *that* gives the
 //!    same tree, gains no diagnostic, and writes out identically
-//!    (`check_roundtrip`, ticket 27).
+//!    (`check_roundtrip`, ticket 27);
+//! 6. the USX reader, which never fails either, does not panic on any input,
+//!    keeps its spans in its source, and builds a tree the writer turns into
+//!    well-formed USX (`check_read_usx`, ticket 49);
+//! 7. the USX a parse writes reads back to the parse, up to what USX cannot
+//!    say, and the tree it reads to round-trips through USFM as 5 asks
+//!    (`check_usx_roundtrip`, ticket 49).
 //!
 //! Nothing here catches a panic: a panic *is* the finding, and libFuzzer wants
 //! to see it.
@@ -26,6 +32,7 @@ use std::collections::BTreeMap;
 use usfm::codegen::to_usfm_string;
 use usfm::html::to_html_string;
 use usfm::parser::span_check;
+use usfm::usx::testing::normalise;
 use usfm::usx::to_usx_string;
 
 /// Run every check over one input.
@@ -83,13 +90,7 @@ pub fn check_roundtrip(source: &str) {
         second.document,
     );
 
-    let before = codes(&first.diagnostics);
-    let after = codes(&second.diagnostics);
-    let gained: Vec<String> = after
-        .iter()
-        .filter(|(code, count)| before.get(*code).unwrap_or(&0) < count)
-        .map(|(code, count)| format!("{code} ({} -> {count})", before.get(code).unwrap_or(&0)))
-        .collect();
+    let gained = gained_codes(&first.diagnostics, &second.diagnostics);
     assert!(
         gained.is_empty(),
         "the second parse gained diagnostics: {}\n--- written ---\n{written}\nsource: {source:?}",
@@ -102,6 +103,88 @@ pub fn check_roundtrip(source: &str) {
         "the output is not a fixed point.\n--- first ---\n{written}\n--- second ---\n\
          {rewritten}\nsource: {source:?}",
     );
+}
+
+/// Read `source` as USX, check the spans, and check the tree writes
+/// well-formed USX.
+///
+/// Through `usfm::parse_usx`, the reader and the semantic checks over what it
+/// built, as the USFM targets go through `usfm::parse`. The spans are held to
+/// `span_check::read_violations`, the invariants as they read for XML, which
+/// `tasks/conformance/tests/usx_reader.rs` asserts over every reference.
+pub fn check_read_usx(source: &str) {
+    let result = usfm::parse_usx(source);
+    span_check::check_read(source, &result.document);
+    let usx = to_usx_string(&result.document);
+    assert_well_formed(&usx, source);
+}
+
+/// Parse `source` as USFM, write USX, read it back, and assert the tree is
+/// the parse's up to what USX cannot say; then write the read tree as USFM
+/// and assert what [`check_roundtrip`] asserts of it.
+///
+/// 1. `read(usx(parse(source)))` equals `parse(source)` ignoring spans, after
+///    `usfm::usx::testing::normalise` on both — the list ticket 45 measured,
+///    shared with `tasks/conformance/tests/usx_reader.rs` rather than copied;
+/// 2. the read tree, written as USFM and parsed, is the same tree, the parse
+///    reports no code `usfm::parse_usx` did not, and writing it again gives
+///    the same bytes: [`check_roundtrip`]'s three, with the read as the first
+///    parse. The codes are compared with the read's, not with the parse of
+///    `source`, because the read tree is not the parse's but the parse's
+///    after the normalisation — an empty source has no `\id` to miss, while
+///    the `\usfm 3.0` every USX file declares makes a document that does.
+pub fn check_usx_roundtrip(source: &str) {
+    let first = usfm::parse(source);
+    let usx = to_usx_string(&first.document);
+    let read = usfm::parse_usx(&usx);
+
+    // No `Clone` on a `Document`: parse and read again for the copies the
+    // normalisation rewrites.
+    let mut parsed = usfm::parse(source).document;
+    let mut reread = usfm::parse_usx(&usx).document;
+    normalise(&mut parsed);
+    normalise(&mut reread);
+    assert!(
+        usfm::ast::eq_ignoring_spans(&parsed, &reread),
+        "USX read back to a different tree.\n--- USX ---\n{usx}\n--- parsed ---\n{}\n\
+         --- read ---\n{}\nsource: {source:?}",
+        to_usfm_string(&parsed),
+        to_usfm_string(&reread),
+    );
+
+    let written = to_usfm_string(&read.document);
+    let second = usfm::parse(&written);
+    assert!(
+        usfm::ast::eq_ignoring_spans(&read.document, &second.document),
+        "the read tree changed through USFM.\n--- USX ---\n{usx}\n--- written ---\n{written}\n\
+         --- read ---\n{:#?}\n--- after ---\n{:#?}\nsource: {source:?}",
+        read.document,
+        second.document,
+    );
+    let gained = gained_codes(&read.diagnostics, &second.diagnostics);
+    assert!(
+        gained.is_empty(),
+        "the parse of the read tree's USFM gained diagnostics: {}\n--- USX ---\n{usx}\n\
+         --- written ---\n{written}\nsource: {source:?}",
+        gained.join(", "),
+    );
+    let rewritten = to_usfm_string(&second.document);
+    assert!(
+        rewritten == written,
+        "the output is not a fixed point.\n--- first ---\n{written}\n--- second ---\n\
+         {rewritten}\nsource: {source:?}",
+    );
+}
+
+/// The codes `after` reports more often than `before` does, each with both
+/// counts.
+fn gained_codes(before: &[usfm::Diagnostic], after: &[usfm::Diagnostic]) -> Vec<String> {
+    let before = codes(before);
+    codes(after)
+        .iter()
+        .filter(|(code, count)| before.get(*code).unwrap_or(&0) < count)
+        .map(|(code, count)| format!("{code} ({} -> {count})", before.get(code).unwrap_or(&0)))
+        .collect()
 }
 
 /// The diagnostic codes of a parse, counted. Keyed by the code's name, which
