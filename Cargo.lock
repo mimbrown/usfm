@@ -1014,6 +1014,7 @@ dependencies = [
  "usfm_diagnostics",
  "usfm_html",
  "usfm_json",
+ "usfm_paratext",
  "usfm_parser",
  "usfm_pipeline",
  "usfm_semantic",
@@ -1095,6 +1096,16 @@ dependencies = [
  "tokio",
  "tower-lsp-server",
  "usfm",
+]
+
+[[package]]
+name = "usfm_paratext"
+version = "0.1.0"
+dependencies = [
+ "roxmltree",
+ "usfm_ast",
+ "usfm_semantic",
+ "usfm_style",
 ]
 
 [[package]]

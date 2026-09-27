@@ -1,6 +1,6 @@
 # 55. A glossary index: which `\k` entry a `\w` word refers to
 
-Status: ready-for-agent
+Status: resolved
 Milestone: after M7 (render gaps)
 
 Found by mapping Shahkar-Urdu-Apps/render (gap 6). render links every `\w`
@@ -20,3 +20,23 @@ already; what is missing is the index.
   twice is reported through `duplicates()` rather than a diagnostic (a
   semantic check would need the glossary in the same document).
 - Re-exported on the facade as `usfm::GlossaryIndex`.
+
+## Answer
+
+`usfm_semantic::glossary` (`usfm::GlossaryIndex` on the facade).
+`GlossaryIndex::new(&[&Document])` indexes every `\k` of the documents
+given, in order; each `GlossaryEntry` has its term (whitespace collapsed),
+the document's position in the slice, its book, its chapter and the `\k`
+node's span. `get(term)`, `words(&document)` (every `\w`, its term — the
+lemma, written as `lemma="…"` or as the default attribute, else its text —
+and its entry), `unresolved(&document)` and `duplicates()`. Terms compare
+after `normalise`: whitespace collapsed and lower-cased (a choice render
+does not make — it compares exactly — taken so `Grace` in a glossary
+matches `\w grace\w*`; the case fold is Unicode's, a no-op for Urdu).
+
+render rewrites its GLO book with regexes before parsing (`\s` to a fake
+`\c` + `\imt`) to make entries addressable; with this index an entry is
+addressed by its chapter and span as the parser read it.
+
+Tests: `crates/usfm_semantic/tests/glossary.rs` (a glossary book and a
+text in two documents, lemma forms, a repeat).

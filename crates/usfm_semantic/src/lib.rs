@@ -33,6 +33,10 @@
 //! all of which the walk already passes, where the index costs a second
 //! traversal and a [`usfm_ast::NodePath`] per verse.
 //!
+//! [`GlossaryIndex`] (ticket 55) and [`citation`] (ticket 54) are here on
+//! the same footing: which `\k` a `\w` refers to, and which verses the text
+//! of an `\xt` names, are read from the tree and change nothing in it.
+//!
 //! [`analyze`] is the whole API of the checks. Callers usually reach it through
 //! `usfm::parse`, which merges these diagnostics with the parser's; a caller
 //! that has a `Document` from somewhere else — an editor holding a cached
@@ -61,8 +65,11 @@
 //! when the parser reported it mid-parse.
 
 pub mod placement;
+pub mod citation;
+pub mod glossary;
 pub mod reference;
 
+pub use glossary::GlossaryIndex;
 pub use placement::Placement;
 pub use reference::{ChapterRef, ReferenceIndex, VerseRef};
 

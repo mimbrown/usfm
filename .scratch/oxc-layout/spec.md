@@ -507,9 +507,10 @@ hackily. The map is `reports/render-gap-map.md` in the project files. It
 became seven tickets, 51–57: the ones with an obvious shape are
 `ready-for-agent` and the rest wait on a decision.
 
-- **Ready, done in order:** 51 (`--custom-stylesheet`; resolved), 53 (a
-  Paratext project reader, `usfm_paratext`), 54 (the `\xt` reference parser
-  in the project's punctuation), 55 (a glossary index).
+- **Ready, and resolved the same day:** 51 (`--custom-stylesheet`), 53 (a
+  Paratext project reader, `usfm_paratext`), 54 (`usfm_semantic::citation`,
+  the `\xt` reference parser in the project's punctuation), 55
+  (`usfm_semantic::GlossaryIndex`).
 - **Waiting on Michael:** 52 (keep an unknown marker as a derived style, and
   which ones), 56 (interlinear and lexicon: aligned USFM or a side table;
   needs real project files), 57 (a publishing layer — volumes, output
