@@ -1,0 +1,13 @@
+---
+source: crates/usfm_usx/tests/reader.rs
+description: "<usx version=\"3.0\"><book code=\"GEN\" style=\"id\"/><list><para style=\"li1\">one</para><para style=\"li1\">two</para></list></usx>"
+---
+Book GEN "" @19..48
+Para usfm@5..18
+  Text "3.0"@14..17
+Para li1@54..82
+  Text "one"@72..75
+Para li1@82..110
+  Text "two"@100..103
+--- diagnostics
+warning[usx-unknown-element] @48..117: `<list>` is not a USX element; its content is read in its place

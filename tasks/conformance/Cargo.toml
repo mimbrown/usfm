@@ -20,4 +20,11 @@ serde_json = { workspace = true }
 diffy = "0.5.2"
 
 [dev-dependencies]
+# `tests/usx_reader.rs` asserts the span invariants over every read reference
+# with `usfm_parser::span_check::nodes`, which is behind `testing`.
+usfm = { path = "../../crates/usfm", default-features = false, features = [
+  "usx",
+  "codegen",
+  "testing",
+] }
 walkdir = "2"

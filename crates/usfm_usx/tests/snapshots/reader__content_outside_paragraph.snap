@@ -1,0 +1,17 @@
+---
+source: crates/usfm_usx/tests/reader.rs
+description: "<usx version=\"3.0\"><book code=\"GEN\" style=\"id\"/><chapter number=\"1\" style=\"c\" sid=\"GEN 1\"/><verse number=\"1\" style=\"v\" sid=\"GEN 1:1\"/>loose <char style=\"nd\">text</char><para style=\"p\">then a paragraph</para></usx>"
+---
+Book GEN "" @19..48
+Para usfm@5..18
+  Text "3.0"@14..17
+ChapterStart 1@48..91
+Para p@91..168
+  VerseStart 1@91..134
+  Text "loose "@134..140
+  Char nd@140..168
+    Text "text"@157..161
+Para p@168..207
+  Text "then a paragraph"@184..200
+--- diagnostics
+error[content-outside-paragraph] @91..134: content outside a paragraph; kept in an implicit `\p`

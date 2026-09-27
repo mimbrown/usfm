@@ -1,10 +1,7 @@
-/// The default stylesheet, generated from `usfm.sty` by `build.rs` into
-/// `OUT_DIR`. Nothing generated is checked in.
-mod generated {
-    include!(concat!(env!("OUT_DIR"), "/default_stylesheet.rs"));
-}
-
-pub use generated::*;
+/// The default stylesheet, generated from `usfm.sty` in `usfm_style`, where
+/// it moved so that a reader which is not this parser (`usfm_usx`'s, ticket
+/// 45) can resolve styles against the same sheet.
+pub use usfm_style::DEFAULT_STYLESHEET;
 
 pub use usfm_ast as ast;
 pub mod cursor;
@@ -129,7 +126,7 @@ pub(crate) const MAX_LEN: usize = if std::mem::size_of::<usize>() >= 8 {
 mod tests {
     use std::borrow::Cow;
 
-    use crate::{ast::*, generated::DEFAULT_STYLESHEET, lexer::span::Span, parser::Parser};
+    use crate::{DEFAULT_STYLESHEET, ast::*, lexer::span::Span, parser::Parser};
     use usfm_usx::to_usx_string;
 
     /// The `StyleId` of a marker in the default stylesheet.

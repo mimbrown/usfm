@@ -1,0 +1,27 @@
+---
+source: crates/usfm_usx/tests/reader.rs
+description: "<usx version=\"3.1\"><book code=\"GEN\" style=\"id\">Genesis</book><periph alt=\"Title Page\" id=\"title\"><para style=\"mt1\">The Book</para></periph><chapter number=\"1\" style=\"c\" altnumber=\"2\" pubnumber=\"A\" sid=\"GEN 1\"/><para style=\"p\"><verse number=\"1\" style=\"v\" altnumber=\"3\" pubnumber=\"1a\" sid=\"GEN 1:1\"/>a<note caller=\"a\" style=\"f\" category=\"People\"><char style=\"fr\">1:1 </char><char style=\"ft\">b</char></note> c<optbreak/>d<verse eid=\"GEN 1:1\"/></para><sidebar style=\"esb\" category=\"History\"><para style=\"p\">aside</para></sidebar><chapter eid=\"GEN 1\"/></usx>"
+---
+Book GEN "Genesis" @19..61
+Para usfm@5..18
+  Text "3.1"@14..17
+Periph periph@61..139 title="Title Page"@69..85 id="title"
+  Para mt1@97..130
+    Text "The Book"@115..123
+ChapterStart 1@139..210 alt=2 pub="A"
+Para p@210..447
+  VerseStart 1@226..298 alt=3 pub="1a"
+  Text "a"@298..299
+  Note f caller=a@299..404 category="People"@326..343
+    Char fr@344..372
+      Text "1:1 "@361..365
+    Char ft@372..397
+      Text "b"@389..390
+  Text " c"@404..406
+  OptBreak@406..417
+  Text "d"@417..418
+  VerseEnd 1
+Sidebar esb@447..525 category="History"@468..486
+  Para p@487..515
+    Text "aside"@503..508
+ChapterEnd 1

@@ -33,6 +33,10 @@ clap = { version = "4.6.7", features = ["derive"] }
 notify = "8.1.0"
 regex = "1.11.1"
 regex-automata = "0.4.9"
+# The USX reader's XML parser (ticket 45, spec M7): every node and attribute
+# carries its byte range, which is what a `Span` needs, and it only reads —
+# the writer stays `usfm_usx`'s own. MIT OR Apache-2.0, one dependency.
+roxmltree = "0.21"
 serde = "1.0.210"
 serde_json = "1.0"
 # The language server's runtime (ticket 30). `tower-lsp-server` is the maintained fork of

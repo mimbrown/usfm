@@ -1,0 +1,17 @@
+---
+source: crates/usfm_usx/tests/reader.rs
+description: "<usx version=\"3.0\"><book code=\"GEN\" style=\"id\"/><chapter number=\"1\" style=\"c\" sid=\"GEN 1\"/><para style=\"p\">\n  <verse number=\"1\" style=\"v\" sid=\"GEN 1:1\"/>  one\n two  three <verse eid=\"GEN 1:1\"/><verse number=\"2\" style=\"v\" sid=\"GEN 1:2\"/>four  <verse eid=\"GEN 1:2\"/>\n</para><chapter eid=\"GEN 1\"/></usx>"
+---
+Book GEN "" @19..48
+Para usfm@5..18
+  Text "3.0"@14..17
+ChapterStart 1@48..91
+Para p@91..274
+  VerseStart 1@110..153
+  Text "one two\u{a0}\u{a0}three"@153..173
+  VerseEnd 1
+  Text " "
+  VerseStart 2@195..238
+  Text "four"@238..244
+  VerseEnd 2
+ChapterEnd 1

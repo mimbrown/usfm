@@ -1,0 +1,13 @@
+---
+source: crates/usfm_usx/tests/reader.rs
+description: "<usx version=\"3.0\"><book code=\"GEN\" style=\"id\"/><chapter number=\"1\" style=\"c\" sid=\"GEN 1\"/><para style=\"p\">before <em>inside</em> after</para><chapter eid=\"GEN 1\"/></usx>"
+---
+Book GEN "" @19..48
+Para usfm@5..18
+  Text "3.0"@14..17
+ChapterStart 1@48..91
+Para p@91..142
+  Text "before inside after"@107..135
+ChapterEnd 1
+--- diagnostics
+warning[usx-unknown-element] @114..129: `<em>` is not a USX element; its content is read in its place
