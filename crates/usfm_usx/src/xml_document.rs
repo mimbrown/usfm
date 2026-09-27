@@ -46,7 +46,7 @@ const REPLACEMENT: &str = "\u{fffd}";
 /// U+FFFE/U+FFFF). The parser keeps whatever the input held, so such a
 /// character can reach the writer, and writing it out would produce something
 /// no XML reader accepts.
-fn is_forbidden_in_xml(c: char) -> bool {
+pub(crate) fn is_forbidden_in_xml(c: char) -> bool {
     matches!(
         c,
         '\u{0}'..='\u{8}' | '\u{b}' | '\u{c}' | '\u{e}'..='\u{1f}' | '\u{fffe}' | '\u{ffff}'
@@ -112,22 +112,33 @@ fn write_escaped(f: &mut std::fmt::Formatter<'_>, text: &str) -> std::fmt::Resul
     f.write_str(&text[written..])
 }
 
-/// An attribute value with the characters XML forbids replaced, or the value
-/// unchanged when it has none. Escaping the rest is `xml-rs`'s job, through
-/// `Display for OwnedAttribute`.
-fn without_forbidden(value: &str) -> std::borrow::Cow<'_, str> {
-    if !value.contains(is_forbidden_in_xml) {
-        return std::borrow::Cow::Borrowed(value);
+/// Writes an attribute value, quoted with `"` by the caller: the characters
+/// XML reserves there escaped, the characters it forbids replaced by U+FFFD,
+/// and tab, line feed and carriage return written as character references,
+/// since a reader turns each of them into a space when they stand in an
+/// attribute value as themselves (XML 1.0 §3.3.3). `xml-rs`'s own escaping,
+/// which this replaces, left the tab raw (ticket 49). The spelling is
+/// otherwise `xml-rs`'s, so nothing that was written before changes.
+fn write_escaped_attribute(f: &mut std::fmt::Formatter<'_>, value: &str) -> std::fmt::Result {
+    let mut written = 0;
+    for (index, character) in value.char_indices() {
+        let replacement = match character {
+            '<' => "&lt;",
+            '>' => "&gt;",
+            '"' => "&quot;",
+            '\'' => "&apos;",
+            '&' => "&amp;",
+            '\n' => "&#xA;",
+            '\r' => "&#xD;",
+            '\t' => "&#9;",
+            c if is_forbidden_in_xml(c) => REPLACEMENT,
+            _ => continue,
+        };
+        f.write_str(&value[written..index])?;
+        f.write_str(replacement)?;
+        written = index + character.len_utf8();
     }
-    let mut out = String::with_capacity(value.len());
-    for character in value.chars() {
-        if is_forbidden_in_xml(character) {
-            out.push_str(REPLACEMENT);
-        } else {
-            out.push(character);
-        }
-    }
-    std::borrow::Cow::Owned(out)
+    f.write_str(&value[written..])
 }
 
 impl XmlNode {
@@ -142,17 +153,9 @@ impl XmlNode {
                 }
                 write!(f, "<{}", element.name)?;
                 for attribute in element.attributes.iter() {
-                    match without_forbidden(&attribute.value) {
-                        std::borrow::Cow::Borrowed(_) => write!(f, " {}", attribute)?,
-                        std::borrow::Cow::Owned(value) => write!(
-                            f,
-                            " {}",
-                            OwnedAttribute {
-                                name: attribute.name.clone(),
-                                value,
-                            }
-                        )?,
-                    }
+                    write!(f, " {}=\"", attribute.name)?;
+                    write_escaped_attribute(f, &attribute.value)?;
+                    f.write_str("\"")?;
                 }
                 if element.children.is_empty() {
                     return write!(f, " />");
@@ -299,8 +302,8 @@ mod tests {
         );
     }
 
-    /// `xml-rs` escapes an attribute value, so the writer only has to hand it
-    /// one it can escape.
+    /// The characters XML reserves in an attribute value are escaped, spelled
+    /// as `xml-rs`, which wrote them until ticket 49, spells them.
     #[test]
     fn reserved_characters_are_escaped_in_attribute_values() {
         let node = element("char", vec![("lemma", r#"x&y<z">"#)], vec![]);
@@ -308,6 +311,20 @@ mod tests {
             node.to_string(),
             r#"<char lemma="x&amp;y&lt;z&quot;&gt;" />"#
         );
+    }
+
+    /// An XML reader normalises the whitespace in an attribute value — a tab,
+    /// a line feed, a carriage return each become a space — unless it is
+    /// written as a character reference. `xml-rs` writes the last two that
+    /// way and not the tab, so `\w |lemma=".\t"\w*` read back as `". "`
+    /// (ticket 49, the `usx_roundtrip` fuzz target). All three survive now.
+    #[test]
+    fn whitespace_in_attribute_values_survives_a_reader() {
+        let value = "a\tb\nc\rd\r\ne";
+        let written = element("char", vec![("lemma", value)], vec![]).to_string();
+        assert_eq!(written, r#"<char lemma="a&#9;b&#xA;c&#xD;d&#xD;&#xA;e" />"#);
+        let document = roxmltree::Document::parse(&written).unwrap();
+        assert_eq!(document.root_element().attribute("lemma"), Some(value));
     }
 
     /// XML 1.0 has no way to write a C0 control other than tab, newline and

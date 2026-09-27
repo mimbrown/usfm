@@ -15,7 +15,8 @@ licence). One command runs everything:
 cargo bench -p usfm_benchmark
 ```
 
-Nine groups, each reporting throughput over the bytes of USFM it was given:
+Ten groups, each reporting throughput over the bytes of USFM it was given —
+except `read_usx`, whose input is USX and which counts USX bytes:
 
 | Group | One iteration does |
 | --- | --- |
@@ -28,6 +29,7 @@ Nine groups, each reporting throughput over the bytes of USFM it was given:
 | `codegen` | `usfm_codegen::to_usfm_string(&document)`; the parse is done once **outside** the timed loop |
 | `reference_index` | `usfm_semantic::ReferenceIndex::new(&document)`; the parse is done once **outside** the timed loop |
 | `analyze` | `usfm_semantic::analyze(&document)`; the parse is done once **outside** the timed loop |
+| `read_usx` | `usfm::usx::read_usx(&usx)` over each file's USX, written once with `to_usx_string` **outside** the timed loop (ticket 49) |
 
 Five benchmark ids per group, one per file class. **The input of one id is the
 whole class**: an iteration lexes or parses every file of the class, one after
@@ -58,7 +60,8 @@ Criterion is configured in `benches/corpus.rs` at `warm_up_time` 1 s,
 `measurement_time` 5 s and `sample_size` 10 — the smallest settings that still
 give criterion its ten samples when one whole-corpus iteration takes a quarter
 of a second. The defaults (100 samples over 5 s) would take hours. A full run
-of all nine groups is about **8 minutes**.
+of the nine groups before `read_usx` was about **8 minutes**; the tenth adds
+about 35 s (five ids at one second of warm-up and five of measurement).
 
 Criterion's own output directory, `target/criterion`, is git-ignored through
 the `/target` entry in `.gitignore`, so nothing a run writes is committed.
@@ -1141,3 +1144,88 @@ attribute text that the writers pass through cheaply, and a UGNT half that is
 all `\w` with four attributes, which is attribute-heavy markup — the class the
 walks are slowest on. Nothing here asks for a ticket; it is the new baseline
 for the aligned class and for `whole-corpus`.
+
+## `read_usx` (ticket 49)
+
+The M7 group, 2026-09-27: `usfm_usx::read_usx` over the corpus as USX. Each
+file is parsed and written with `to_usx_string` once at setup, so the timed
+loop is the reader alone — `roxmltree`'s parse of the XML and the walk that
+builds the `Document` — and none of the writer. Like the `aligned` section
+above it is a **new row, compared to nothing**. Three rounds of
+`--bench '^read_usx/'` then `--bench '^parse/'` on the M7 tree
+(`CARGO_PROFILE_BENCH_CODEGEN_UNITS=1`), same VM class, nothing else running:
+`parse` is the same binary, alternated with it round by round, for the
+side-by-side the ticket asks for.
+
+**The units differ.** `read_usx` counts the bytes of USX it reads and `parse`
+the bytes of USFM: USX is the larger spelling of the same text, 22 388 111
+bytes for the whole corpus's 15 052 582 (×1.49), so per *document* the reader
+is slower than its MiB/s beside `parse`'s suggests; compare the times per
+iteration, below the table.
+
+| Id | R1 | R2 | R3 | **median** | spread |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `read_usx/plain` | 96.4 | 96.7 | 95.4 | **96.4** | 1.3% |
+| `read_usx/attributes-heavy` | 55.6 | 62.0 | 60.4 | **60.4** | 10.5% |
+| `read_usx/aligned` | 94.4 | 100.5 | 91.3 | **94.4** | 9.7% |
+| `read_usx/note-heavy` | 82.1 | 84.7 | 83.8 | **83.8** | 3.1% |
+| **`read_usx/whole-corpus`** | 85.9 | 84.1 | 81.0 | **84.1** | 5.9% |
+| `parse/plain` | 75.5 | 75.0 | 75.1 | **75.1** | 0.7% |
+| `parse/attributes-heavy` | 56.5 | 53.5 | 51.3 | **53.5** | 9.8% |
+| `parse/aligned` | 89.6 | 90.6 | 86.6 | **89.6** | 4.4% |
+| `parse/note-heavy` | 55.9 | 55.2 | 53.2 | **55.2** | 4.8% |
+| **`parse/whole-corpus`** | 69.4 | 68.7 | 63.6 | **68.7** | 8.4% |
+
+Over the whole corpus the reader takes **254 ms** an iteration (criterion's
+median-round estimate) against the parser's **209 ms**:
+reading a book from USX costs about **1.2×** reading it from USFM, or
+~57 MiB/s in USFM terms (per class it ranges from about 1.2× on `aligned` to
+1.4× on `attributes-heavy` and `note-heavy`). The likely reason, not attributed with a profiler: an
+XML tokenizer and a DOM before the walk — `roxmltree` builds its whole tree
+first, where the USFM parser builds the AST straight from the token stream —
+plus the reader's own bookkeeping, the verse ends it places the way the parser
+does. It is fast enough that no
+caller will notice: a book is a millisecond or two either way.
+
+## M7 close: measured against `8f8f568`
+
+The boundary rerun, against the commit M6 was closed on (`8f8f568`, #44) and
+the M7 tree as ticket 49 leaves it (`73a1198` plus this PR's changes), both
+at `CARGO_PROFILE_BENCH_CODEGEN_UNITS=1` (`8f8f568` built in a
+`git worktree`), three rounds turn about on every whole-corpus id,
+`--bench 'whole-corpus$'`. The corpus is the same on both sides (the ticket 10
+corpus: 91 files, 14.36 MiB). Between the two commits are tickets 38, 41, 43
+and 44, the BOM and `custom.sty` fixes, and M7 itself: a new reader crate
+module the parse path does not call, plus this ticket's fuzz fixes — two of
+which are in the parser (the `\usfm` line now parses like `\id`, and the
+nesting look-ahead counts a plussed style's closer as its own) and one in the
+USX writer (attribute values escape `\t`, `\n` and `\r`). MiB/s; Δ is new
+median over base median, **positive is faster**.
+
+| Id | `8f8f568` R1 | R2 | R3 | median | M7 R1 | R2 | R3 | median | Δ |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `lex/whole-corpus` | 169.5 | 170.5 | 166.5 | **169.5** | 168.8 | 163.3 | 167.2 | **167.2** | **−1.4%** |
+| `parse/whole-corpus` | 70.6 | 63.4 | 61.2 | **63.4** | 64.7 | 69.1 | 63.3 | **64.7** | **+2.0%** |
+| `parse_semantic/whole-corpus` | 59.9 | 64.2 | 66.6 | **64.2** | 63.2 | 65.1 | 60.3 | **63.2** | **−1.7%** |
+| `parse_usx/whole-corpus` | 26.0 | 23.4 | 25.4 | **25.4** | 27.2 | 25.8 | 24.5 | **25.8** | **+1.3%** |
+| `parse_html/whole-corpus` | 58.5 | 58.7 | 60.3 | **58.7** | 58.7 | 58.9 | 56.6 | **58.7** | **−0.0%** |
+| `parse_json/whole-corpus` | 8.7 | 8.4 | 8.5 | **8.5** | 8.7 | 8.6 | 8.4 | **8.6** | **+1.2%** |
+| `codegen/whole-corpus` | 286.9 | 303.1 | 275.3 | **286.9** | 302.0 | 299.4 | 272.9 | **299.4** | **+4.3%** |
+| `reference_index/whole-corpus` | 511.6 | 696.1 | 506.2 | **511.6** | 593.7 | 487.7 | 442.6 | **487.7** | **−4.7%** |
+| `analyze/whole-corpus` | 507.4 | 503.8 | 568.8 | **507.4** | 497.6 | 503.6 | 467.1 | **497.6** | **−1.9%** |
+
+`read_usx/whole-corpus` has no base; the M7 binary read 82.2 / 80.5 / 69.2
+MiB/s of USX in these rounds (median **80.5**), against **84.1** in the
+section above's quieter rounds.
+
+**Verdict: no regression over 3%, no ticket.** No row on the four steady ids
+the threshold applies to (`lex`, `parse`, `parse_usx`, `parse_html`) is
+slower by more than 1.4%. The one row past 3% in the slow direction is
+`reference_index` at −4.7%, which this file reads only past ~15%: its rounds
+spread 37% on the base side (506–696) and 31% on the M7 side, and
+`ReferenceIndex` did not change in M7. `codegen` is +4.3% the other way,
+inside the ~10% it is read at. `parse` moved +2.0% with round spreads of
+14.8% (base) and 8.9% (M7) — noisier than this id usually is, the first base
+round again the outlier — so it says only that the parser fixes above cost
+nothing measurable; since it is not a suspect in the slow direction, it was
+not rerun alone.

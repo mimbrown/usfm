@@ -1,0 +1,12 @@
+---
+source: crates/usfm_usx/tests/reader.rs
+description: "<usx version=\"3.0\"><book code=\"GEN\" style=\"id\"/><para style=\"p\">text</para><para style=\"esbe\"/></usx>"
+---
+Book GEN "" @19..48
+Para usfm@5..18
+  Text "3.0"@14..17
+Para p@48..75
+  Text "text"@64..68
+Para esbe@75..95
+--- diagnostics
+error[unmatched-sidebar-end] @75..95: `\esbe` with no open `\esb`

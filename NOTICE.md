@@ -12,7 +12,8 @@ derives from the following, which keep their own terms.
   `tasks/fuzz/corpus/` named after its test directories (`advanced__*`,
   `basic__*`, `biblica__*`, `introductions__*`, `mandatory__*`,
   `paratextTests__*`, `samples-from-wild__*`, `specExamples__*`,
-  `special-cases__*`, `usfmjsTests__*`), which are copies of its test inputs.
+  `special-cases__*`, `usfmjsTests__*`), which are copies of its test inputs
+  and, in `corpus/read_usx/`, of their reference USX (`origin.xml`).
   The two inputs that quote the New International Version
   (`biblica/PublishingVersesNotClosed` and `…WithFormatting`) are Biblica's
   copyright rather than open data, and neither is copied into this repository.
@@ -24,7 +25,8 @@ derives from the following, which keep their own terms.
   2021 Bridge Connectivity Solutions, MIT; the licence text is copied verbatim
   to `tasks/conformance/fixtures/usfm-grammar/LICENSE`. Only its `tests/autofix/` and
   `tests/bugfixes/` directories are vendored. The fuzz seeds named
-  `usfm-grammar__*` in `tasks/fuzz/corpus/` are copies of those inputs.
+  `usfm-grammar__*` in `tasks/fuzz/corpus/` are copies of those inputs and,
+  in `corpus/read_usx/`, of their reference USX.
   Scripture excerpts inside those inputs belong to their respective publishers.
 - **machine.py test data** (`tasks/conformance/fixtures/machine-py/`, from
   https://github.com/sillsdev/machine.py at commit
@@ -34,7 +36,8 @@ derives from the following, which keep their own terms.
   directory is vendored, and under `usx/` (fetched 2026-09-27, same commit)
   five USX files: `tests/testutils/data/usx/Tes/release/USX_1/{MAT,MRK}.usx`
   and `samples/data/WEB-DBL/release/USX_1/{1JN,2JN,3JN}.usx`. The fuzz seeds
-  named `machine-py__*` in `tasks/fuzz/corpus/` are copies of those inputs.
+  named `machine-py__*` in `tasks/fuzz/corpus/` are copies of those inputs
+  (the USX ones, `machine-py__usx__*`, in `corpus/read_usx/`).
   Scripture excerpts inside those inputs belong to their respective
   publishers; the three `WEB-DBL` books are the World English Bible, whose
   text is in the **public domain** (the bundle's own `metadata.xml` says so,

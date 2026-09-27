@@ -28,6 +28,12 @@ roxmltree = { workspace = true }
 # `OwnedName`, `OwnedAttribute` and the `EventReader` `XmlDocument` is built on.
 xml-rs = { workspace = true }
 
+[features]
+# Exposes `testing::normalise`, what USX cannot say, which
+# `tasks/conformance/tests/usx_reader.rs` and `tasks/fuzz`'s `usx_roundtrip`
+# both compare through (ticket 49).
+testing = []
+
 [dev-dependencies]
 # The reader's tests snapshot a tree and its diagnostics, as `recovery.rs` and
 # `checks.rs` do, and the coverage test finds a code's test by its snapshot.

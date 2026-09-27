@@ -8,7 +8,10 @@
 //! content when the parser had to open the node itself to recover.
 //!
 //! The module is shared: `usfm_parser/tests/spans.rs` runs it over hand-written
-//! inputs, and `tasks/fuzz` runs it over whatever libFuzzer invents. It is
+//! inputs, and `tasks/fuzz` runs it over whatever libFuzzer invents. The same
+//! invariants as they read for a tree read from USX are [`read_violations`],
+//! which `tasks/conformance/tests/usx_reader.rs` runs over every reference and
+//! `tasks/fuzz`'s `read_usx` over arbitrary bytes. It is
 //! behind the `testing` feature, so the default build does not carry it.
 
 use std::sync::Arc;
@@ -339,6 +342,82 @@ pub fn check_parse(source: &str, result: &ParseResult<'_>) {
              {marker:?} or {nested:?}"
         );
     }
+}
+
+/// The span invariants as they read for a tree read from XML (ticket 45; here
+/// since ticket 49, beside the USFM form, so the two cannot drift apart):
+/// every span in bounds, not inverted and on a character boundary; every node
+/// but a `Text` starting at the element it was read from (`<`) or at the
+/// attribute that stands for its marker (`version=` for the `\usfm`
+/// paragraph, `category=`, `alt=`), or, for an implicit `\p`, at or before
+/// its content; every attribute's at its name. The one invariant a read tree
+/// cannot hold is the marker the span starts with: USX has elements, not
+/// `\p`, and an attribute list has no `|` (its `pipe` is `SPAN`).
+///
+/// Returns every violation, each naming the node and its span, so a caller
+/// over a corpus can report them all; [`check_read`] panics on the first.
+pub fn read_violations(source: &str, document: &Document<'_>) -> Vec<String> {
+    let mut failures = Vec::new();
+    for NodeSpan {
+        label,
+        span,
+        prefix,
+    } in nodes(document)
+    {
+        let fail = |why: String| format!("{label} {span:?}: {why}");
+        if span.start > span.end || span.end as usize > source.len() {
+            failures.push(fail("out of bounds or inverted".into()));
+            continue;
+        }
+        if span == SPAN {
+            continue;
+        }
+        let (start, end) = (span.start as usize, span.end as usize);
+        if !source.is_char_boundary(start) || !source.is_char_boundary(end) {
+            failures.push(fail("splits a character".into()));
+            continue;
+        }
+        let slice = &source[start..end];
+        // What a node was read from: an element, or the attribute that
+        // stands for a marker (`version=`, `category=`, `alt=`).
+        let element_or_attribute = slice.starts_with('<')
+            || slice
+                .split_once('=')
+                .is_some_and(|(name, _)| is_valid_attribute_name(name));
+        let holds = match prefix {
+            Prefix::Anything => true,
+            Prefix::Exact(_) => false,
+            // A marker (`\p`, `//`): the element or attribute it became.
+            Prefix::Marker(marker) if marker.starts_with('\\') || marker == "//" => {
+                element_or_attribute
+            }
+            // An attribute of a list: its name, exactly as written — which
+            // need not be a name USFM allows, since XML allows more and the
+            // reader keeps what it read for `malformed-attribute-name`
+            // (ticket 49). `\fig`'s `src` is written `file` in USX.
+            Prefix::Marker(name) => slice == name || (name == "src" && slice == "file"),
+            Prefix::MarkerOrImplicit { content_start, .. } => {
+                element_or_attribute || content_start.is_some_and(|content| span.start <= content)
+            }
+        };
+        if !holds {
+            let shown: String = slice.chars().take(20).collect();
+            failures.push(fail(format!("starts {shown:?}")));
+        }
+    }
+    failures
+}
+
+/// Assert [`read_violations`] finds nothing in `document`, read from the USX
+/// `source`. Panics with every violation and the source.
+pub fn check_read(source: &str, document: &Document<'_>) {
+    let failures = read_violations(source, document);
+    assert!(
+        failures.is_empty(),
+        "{} span violation(s) in a read tree:\n{}\nsource: {source:?}",
+        failures.len(),
+        failures.join("\n"),
+    );
 }
 
 /// Parse `source` with `style_sheet` and assert the span invariants.

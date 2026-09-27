@@ -165,6 +165,35 @@ fn a_block_milestone_after_a_paragraph_that_nothing_closed_is_inline() {
     snapshot("block_milestone_after_an_unclosed_paragraph", source);
 }
 
+/// `\usfm` declares a version, which USX carries as an attribute of `<usx>`:
+/// its paragraph holds that and nothing else. It is read like `\id` — the
+/// text after the marker, up to the next marker — so a milestone on the line
+/// after it stands between blocks, as it does after `\id`, and anything else
+/// after it is content outside a paragraph. Before, `\usfm` ran on like any
+/// paragraph and took both in, where the USX writer, which writes the
+/// paragraph as the version, dropped them; and a USX file with an `<ms>`
+/// after `<book>` read to a tree no USFM spelled, since the reader's `\usfm`
+/// paragraph stood between the two (ticket 49, the `usx_roundtrip` fuzz
+/// target).
+#[test]
+fn the_usfm_line_holds_only_its_version() {
+    let source = "\\id GEN\n\\usfm 3.1\n\\zaln-e\\*\n\\c 1\n\\p x";
+    let rendered = common::render(source);
+    assert!(
+        rendered.contains("\nMilestone zaln-e"),
+        "the milestone should stand between blocks:\n{rendered}"
+    );
+    snapshot("usfm_line_then_a_milestone", source);
+
+    let source = "\\id GEN\n\\usfm 3.1 \\v 1 x\n\\c 1";
+    let rendered = common::render(source);
+    assert!(
+        rendered.contains("Para usfm") && rendered.contains("\nPara p"),
+        "the verse should open an implicit paragraph:\n{rendered}"
+    );
+    snapshot("usfm_line_then_a_verse", source);
+}
+
 /// The same rule, completed for the other three constructs whose written form
 /// runs to the next *paragraph* marker (ticket 35, and the rule is on
 /// `Block::Milestone`). `\esbe`, a `\tr` row and a `\periph` title each take in
@@ -460,6 +489,24 @@ fn character_style_nested_without_plus() {
         "nesting a NEST style is the only thing to report"
     );
     check(Code::CharacterStyleNestedWithoutPlus, source);
+}
+
+/// The closer that decides the nesting has to be the style's own: a
+/// `\+nd` ahead claims the `\+nd*` after it, so an unclosed `\nd` before
+/// them is not closed by it and does not nest. It had been, so the writer's
+/// `\xta \xt \ft \+xt .\+xt*` — `\xta` and `\xt` unclosed, as notes are
+/// written — read `\xt` into `\xta` where the tree it was written from had
+/// them side by side (ticket 49, the `usx_roundtrip` fuzz target, on
+/// `\fe\xta\xt\ft\xt.\xt*`; the `roundtrip` target fails on it too).
+#[test]
+fn a_plussed_style_ahead_claims_its_own_closer() {
+    let source = "\\id GEN\n\\c 1\n\\p \\v 1 \\bk a \\nd b \\em \\+nd c\\+nd*\\em*\\bk*";
+    let rendered = common::render(source);
+    assert!(
+        !common::codes(source).contains(&Code::CharacterStyleNestedWithoutPlus),
+        "`\\nd` has no closer of its own, so it does not nest:\n{rendered}"
+    );
+    snapshot("plussed_style_ahead_claims_its_own_closer", source);
 }
 
 /// A style that may nest but is never closed is a sibling: `\xo 1.1 \xt

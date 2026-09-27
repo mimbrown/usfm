@@ -1,0 +1,14 @@
+---
+source: crates/usfm_parser/tests/recovery.rs
+description: "\\id GEN\n\\usfm 3.1\n\\zaln-e\\*\n\\c 1\n\\p x"
+---
+Book GEN "" @0..7
+Para usfm@8..18
+  Text "3.1"@14..18
+Milestone zaln-e@18..27
+ChapterStart 1@28..32
+Para p@33..37
+  Text "x"@36..37
+ChapterEnd 1
+--- diagnostics
+info[unknown-custom-milestone] @18..25: custom milestone `\zaln-e` is not in the stylesheet

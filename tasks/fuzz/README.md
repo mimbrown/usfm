@@ -56,12 +56,33 @@ three):
 3. writing the second tree gives the same bytes, so a writer that produced
    something the parser reads differently cannot hide behind 1 and 2.
 
+`read_usx` and `usx_roundtrip` (ticket 49, M7) are the USX reader's.
+`read_usx` calls `usfm_fuzz::check_read_usx`: the bytes are USX, read through
+`usfm::parse_usx` (the reader, then the semantic checks), and the reader, which
+never fails either, must not panic, must keep every span in its source —
+`usfm_parser::span_check::read_violations`, the invariants as they read for
+XML, which `tasks/conformance/tests/usx_reader.rs` asserts over every
+reference — and must build a tree `to_usx_string` writes as well-formed XML.
+`usx_roundtrip` calls `usfm_fuzz::check_usx_roundtrip`: the bytes are USFM,
+parsed, written as USX and read back, and
+
+1. the read tree is the parse's, ignoring spans, after
+   `usfm_usx::testing::normalise` on both — the list of what USX cannot say,
+   which ticket 45 measured and this target added to, shared with
+   `usx_reader.rs` rather than copied (the `testing` feature, as `span_check`
+   is the parser's);
+2. the read tree, written as USFM and parsed, passes `roundtrip`'s three
+   assertions with the read as the first parse: the same tree, no code
+   `parse_usx` did not report, a fixed point.
+
 | Target | Input | Checks |
 | --- | --- | --- |
 | `parse_lossy` | any bytes, through `String::from_utf8_lossy` | parse, spans, USX |
 | `parse_utf8` | any bytes, skipped unless they are valid UTF-8 | parse, spans, USX |
 | `parse_html` | any bytes, through `String::from_utf8_lossy` | parse, HTML |
 | `roundtrip` | any bytes, through `String::from_utf8_lossy` | parse, USFM, parse |
+| `read_usx` | any bytes, through `String::from_utf8_lossy`, as USX | read, spans, USX |
+| `usx_roundtrip` | any bytes, through `String::from_utf8_lossy` | parse, USX, read, USFM, parse |
 
 ## Running
 
@@ -71,6 +92,8 @@ cargo +nightly fuzz run --fuzz-dir tasks/fuzz parse_lossy -- -max_total_time=600
 cargo +nightly fuzz run --fuzz-dir tasks/fuzz parse_utf8  -- -max_total_time=600 -max_len=65536
 cargo +nightly fuzz run --fuzz-dir tasks/fuzz parse_html  -- -max_total_time=600 -max_len=65536
 cargo +nightly fuzz run --fuzz-dir tasks/fuzz roundtrip   -- -max_total_time=600 -max_len=65536
+cargo +nightly fuzz run --fuzz-dir tasks/fuzz read_usx    -- -max_total_time=600 -max_len=65536
+cargo +nightly fuzz run --fuzz-dir tasks/fuzz usx_roundtrip -- -max_total_time=600 -max_len=65536
 
 # Four workers, same wall time.
 cargo +nightly fuzz run --fuzz-dir tasks/fuzz parse_lossy -- \
@@ -102,9 +125,9 @@ it breaks and what fixing it would take — so it is not lost.
 ## Seeds
 
 `./seed.sh` copies the conformance inputs into `corpus/parse_lossy/`,
-`corpus/parse_utf8/`, `corpus/parse_html/` and `corpus/roundtrip/` — one corpus
-per target, listed in the script's `targets` array — named after the test they
-came from:
+`corpus/parse_utf8/`, `corpus/parse_html/`, `corpus/roundtrip/` and
+`corpus/usx_roundtrip/` — one corpus per target, listed in the script's
+`usfm_targets` array — named after the test they came from:
 
 - the tcdocs inputs (`tcdocs/tests/*/*/origin.usfm`), as `<category>__<case>.usfm`,
   except `biblica/PublishingVersesNotClosed` and
@@ -123,6 +146,17 @@ came from:
   `\k-s` key terms. Both are whole books, so both seeds are truncated. With
   them there were 297 seeds per target, where the runs recorded below started
   from 295; without the two NIV inputs there are 295 again.
+
+`corpus/read_usx/` (the script's `usx_targets`) gets USX instead, 274 seeds:
+the reference of every case above that has one (`<category>__<case>.xml` and
+`usfm-grammar__bugfixes__<case>.xml`, the `.usfm` seed's name with `.xml`: 256
+tcdocs references, the two NIV cases' left out with their inputs, and 13
+usfm-grammar ones) and the vendored machine.py USX
+(`fixtures/machine-py/usx/`, ticket 47) as `machine-py__usx__<project>__<book>.usx`
+— the three WEB books and the malformed Tes pair. `WEB-DBL/1JN.usx` is
+112 KiB, so its seed is truncated like any other and is no longer
+well-formed XML; 2 and 3 John are the whole DBL shape. The references are CC
+BY 4.0 and MIT with their inputs (`NOTICE.md`).
 
 It is idempotent, and it truncates a seed longer than `-max_len` to the last
 whole line that fits, which is what libFuzzer would do with it anyway. Run
@@ -157,6 +191,16 @@ them.
 | `parse_utf8` | 83 (50 097 runs in 601 s) | 1622 files, 13.7 MB | 4200 | 22 225 | none |
 | `parse_html` | 166 (100 068 runs in 601 s) | 2110 files, 16 MB | 3408 | 20 830 | none |
 | `roundtrip` | 94 (56 987 runs in 601 s) | 2256 files, 22 MB | 4636 | 23 380 | none |
+| `roundtrip`, rerun on the ticket 49 parser | 115 (69 158 runs in 601 s) | 2483 files, 33 MB | 4770 | 24 105 | none |
+| `read_usx` | 736 (442 912 runs in 601 s) | 2651 files, 25 MB | 6311 | 28 298 | none |
+| `usx_roundtrip` | 40 (24 233 runs in 601 s) | 2158 files, 33 MB | 6923 | 32 048 | none |
+
+The last three rows were run side by side on 2026-09-27, from the
+pruned seeds (295 USFM, 274 USX), on the tree ticket 49 left; `roundtrip` was
+rerun because the parser changed under it. `usx_roundtrip` is the slowest
+target here by far: every input is parsed twice, written as USX, read twice
+(the comparison needs its own copies, and `Document` has no `Clone`) and
+written as USFM and parsed again.
 
 `parse_html` found nothing in either run: the escaping it checks for went in
 with the target (ticket 14), so the hole ticket 06 left in the HTML writer was
@@ -225,3 +269,38 @@ in the crate that was wrong.
 | `\v 1\vp x` | an unclosed `\vp` after `\v N` stayed beside the verse as a `Char`, a tree no USFM spells: closing it, as the writer must, reads it back as the published number (parser fix: it is lifted whether or not it is closed) | `recovery.rs::published_verse_number_not_closed` |
 | `\esb\c\sh\*`, `\p x\n\tr \tc1 y\n\c\n\zaln-s\*`, `\periph\id\e\*` | a `Block::Milestone` the writer has no line to put on: `\esbe`, a `\tr` row and a `\periph` title all run to the next paragraph marker, so the written form takes the milestone back — and the `\periph` title, which keeps only text, dropped it without a diagnostic (ticket 35, parser fix: such a milestone opens an implicit `\p`, the rule is on `Block::Milestone`) | `recovery.rs::a_block_milestone_after_a_sidebar_is_inside_an_implicit_paragraph`, `…_after_a_table_…`, `…_at_the_head_of_a_periph_…`, `usx_text.rs::a_milestone_on_a_periph_title_line_reaches_the_output` |
 | `\v 1\vp\` | a published verse number holding a backslash, written raw: it and the `\` of the `\vp*` after it made one escape, the closing marker was gone and the number came back as `\vp*` (ticket 35, codegen fix: `\vp`'s number is written as text; `\cp`'s stays verbatim, and the parser now folds a `\cp` paragraph only when a `Word` token could carry its first word) | `usfm_codegen`'s `a_published_number_is_written_the_way_its_marker_reads_it` |
+
+### The USX reader's targets (ticket 49)
+
+Before the clean runs above came two ten-minute discovery rounds in fork mode
+(`-fork=2 -ignore_crashes=1`, so one run collects every finding instead of
+stopping at the first), with the seed scan first. The seed scan failed at
+once on `usx_roundtrip`: seven `fail` cases of tcdocs and usfm-grammar, which
+the harness never compares, read back to a tree other than their parse. The
+first round then gave 37 `read_usx` crashes, all one finding, and 132
+`usx_roundtrip` ones, which triage (the parse and the read tree side by side,
+`tmin` on the smallest of each kind) sorted into the rows below. The second
+round, on the fixed code, found nothing in either target, nor in `roundtrip`
+run beside them. Seven bugs — four in the reader, two in the parser, one in
+the USX writer — and three entries the list of what USX cannot say lacked;
+each has the test named, and the bugs were each a failing test before the fix.
+
+| Input | What was wrong | Test |
+| --- | --- | --- |
+| `<char style="w" x\u{fffd}-morph="a">` (every `read_usx` crash) | the span check for a read tree took an attribute's span to start with a *valid* USFM name; XML allows more (U+FFFD is a name character), the reader keeps the name as the parser would, for `malformed-attribute-name`. The checker was wrong: it now asks for the name as written | `usx_reader.rs::a_malformed_attribute_name_keeps_its_span` |
+| `paratextTests/UnmatchedSidebarEnd` (a seed) | `<para style="esbe">` read silently, where the parser reports `\esbe` with no `\esb`: the USFM of the read tree reported a code the read had not (reader fix) | `reader.rs::a_sidebar_end_paragraph_is_an_unmatched_sidebar_end` |
+| `\v 4\ip\w p\v 4` | a verse that starts inside a character style of a paragraph that is not verse text had its end put in the paragraph *before*, ahead of its own start: "the paragraph a verse started in" looked only at the paragraph's own children (parser and reader fix, the rule is mirrored) | `verse_ends.rs::a_verse_that_starts_inside_a_character_style_ends_in_that_paragraph`, `usx_reader.rs::a_usx_2_file_is_the_parse_of_its_usfm` |
+| `\v 8\p\v 0\w\v 1` | two verse ends waiting at once — one for block level, one for the head of a character style — and the second replaced the first, so verse 8 never ended (parser and reader fix: a stack, not one slot) | `verse_ends.rs::an_end_waiting_for_block_level_is_kept_when_a_second_one_waits`, `usx_reader.rs::a_usx_2_file_is_the_parse_of_its_usfm` |
+| `\thc0`, `\tc3-2` in a table | the reader refused a cell style the parser reads (column 0, a span that ends before it starts) and fell back to `tc1` (reader fix) | `read.rs`'s `a_cell_style_is_header_alignment_and_columns` |
+| `\w\|.\t` | a tab in an attribute value was written raw, and an XML reader turns it into a space; `xml-rs` escapes a line feed and a carriage return but not a tab (writer fix: the writer escapes attribute values itself) | `xml_document.rs`'s `whitespace_in_attribute_values_survives_a_reader` |
+| `\fe\xta\xt\ft\xt.\xt*` | the nesting scan counted the `\+xt*` ahead, which closes a `\+xt`, as an unclosed `\xt`'s own closer, so the writer's `\xta \xt \ft \+xt .\+xt*` read `\xt` into `\xta`. `roundtrip` fails on this input too; it came after that target's last clean run (parser fix) | `recovery.rs::a_plussed_style_ahead_claims_its_own_closer`, `usfm_codegen`'s `the_fuzz_findings_round_trip` |
+| `\id MRK …` then block `\zaln-e\*`, and `\usfm 3.1.test . \v 1 …` | `\usfm` ran on like any paragraph, taking in a milestone on the next line and a verse on its own, and the USX writer, which writes that paragraph as `<usx version>`, dropped them; a USX file with an `<ms>` after `<book>` read to a tree no USFM spelled (parser fix: `\usfm` is read like `\id`, its text and nothing else, and a block milestone may follow it) | `recovery.rs::the_usfm_line_holds_only_its_version` |
+
+And three entries for `usfm_usx::testing::normalise`, each something the
+writer drops or replaces by design, not a bug: an attribute USX cannot carry
+(a bare value where the marker has no default attribute, a malformed name, a
+repeat, `style`), with the empty `|` list the spec expected and ticket 45
+had not measured (`paratextTests/EmptyFigure` and five other seeds); a
+character XML forbids, which the writer has written as U+FFFD since ticket 06
+(most of the first round's crashes); and where a `\usfm` stood and every one
+after the first, since `<usx version>` is all USX has of it.

@@ -599,8 +599,12 @@ and `unlisted-book-code` is the first check to have moved.
       `roundtrip` fuzz target. It is not "the second parse reports no error":
       an error about the document rather than its spelling is written back
       faithfully and reported again, which 21 of the 275 conformance cases do.
-      USX → USFM → USX is still not covered — nothing reads USX back into a
-      `Document`.
+      USX → USFM → USX is covered since M7 (closed 2026-09-27): `usfm_usx`
+      reads USX into a `Document` (ticket 45), the gate's
+      `--usx-roundtrip tasks/conformance/usx-roundtrip-known.txt` asserts it
+      over every reference the harness compares (ticket 46, known list
+      empty), and the `usx_roundtrip` fuzz target over arbitrary bytes
+      (ticket 49).
 
 ## Open questions
 
