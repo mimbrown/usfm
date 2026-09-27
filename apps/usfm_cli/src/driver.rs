@@ -94,6 +94,23 @@ pub fn read_stylesheet(path: &Path) -> Result<Option<Arc<StyleSheet>>, Error> {
         .map_err(Error::from)
 }
 
+/// The sheet a file of this run is parsed against: `base` (the one
+/// `--stylesheet` named, or the built-in default) with `custom`, the text of
+/// a `--custom-stylesheet`, read over it. Shared with [`crate::format`].
+pub fn extended_sheet(
+    base: Arc<StyleSheet>,
+    custom: Option<&str>,
+) -> Result<Arc<StyleSheet>, Error> {
+    let Some(custom) = custom else {
+        return Ok(base);
+    };
+    let mut sheet = (*base).clone();
+    sheet
+        .extend_from_str(custom)
+        .map_err(|e| Error::Custom(format!("cannot read the custom stylesheet: {e:?}")))?;
+    Ok(Arc::new(sheet))
+}
+
 /// The path a flag named, resolved so that a watch event's path can be
 /// compared against it. An input file has to exist; the output file does not
 /// yet.
@@ -168,6 +185,7 @@ fn enforce<'a>(
 pub struct Driver {
     inputs: Vec<Loaded<String>>,
     style_sheet: Option<Loaded<Option<Arc<StyleSheet>>>>,
+    custom_style_sheet: Option<Loaded<String>>,
     replacements: Vec<Loaded<TextReplacement>>,
     diglots: Vec<Loaded<String>>,
     diglot_style_sheet: Option<Loaded<Option<Arc<StyleSheet>>>>,
@@ -189,6 +207,7 @@ impl Driver {
         let diglot = resolve_all(&args.diglot, &mut errors);
         let diglot_replace = resolve_all(&args.diglot_replace, &mut errors);
         let stylesheet = resolve_one(args.stylesheet.as_deref(), &mut errors);
+        let custom_stylesheet = resolve_one(args.custom_stylesheet.as_deref(), &mut errors);
         let diglot_stylesheet = resolve_one(args.diglot_stylesheet.as_deref(), &mut errors);
 
         let output = match args.output.as_deref().map(absolute) {
@@ -206,6 +225,8 @@ impl Driver {
                 .map(|path| Loaded::new(path, read_source, &mut errors))
                 .collect(),
             style_sheet: stylesheet.map(|path| Loaded::new(path, read_stylesheet, &mut errors)),
+            custom_style_sheet: custom_stylesheet
+                .map(|path| Loaded::new(path, read_source, &mut errors)),
             replacements: replace
                 .into_iter()
                 .map(|path| Loaded::new(path, read_rules, &mut errors))
@@ -235,7 +256,12 @@ impl Driver {
     /// Reread whichever of this run's files are in `updated`.
     pub fn paths_updated(&mut self, updated: &[PathBuf]) -> Result<(), Vec<Error>> {
         let mut errors = Vec::new();
-        for input in self.inputs.iter_mut().chain(self.diglots.iter_mut()) {
+        for input in self
+            .inputs
+            .iter_mut()
+            .chain(self.diglots.iter_mut())
+            .chain(self.custom_style_sheet.iter_mut())
+        {
             input.reload(updated, read_source, &mut errors);
         }
         for rules in self
@@ -265,6 +291,7 @@ impl Driver {
         paths.extend(self.inputs.iter().map(|f| f.path.clone()));
         paths.extend(self.replacements.iter().map(|f| f.path.clone()));
         paths.extend(self.style_sheet.iter().map(|f| f.path.clone()));
+        paths.extend(self.custom_style_sheet.iter().map(|f| f.path.clone()));
         paths.extend(self.diglots.iter().map(|f| f.path.clone()));
         paths.extend(self.diglot_replacements.iter().map(|f| f.path.clone()));
         paths.extend(self.diglot_style_sheet.iter().map(|f| f.path.clone()));
@@ -279,11 +306,15 @@ impl Driver {
     /// Parse, transform and render, without writing anything.
     pub fn render(&mut self) -> Result<String, Error> {
         let mut input = String::new();
+        let sheet = extended_sheet(
+            sheet_or_default(&self.style_sheet),
+            self.custom_style_sheet.as_ref().map(|f| f.value.as_str()),
+        )?;
         let mut document = read(
             self.from,
             &self.inputs,
             "input",
-            &sheet_or_default(&self.style_sheet),
+            &sheet,
             &self.diagnostics,
             &mut input,
         )?;
@@ -296,7 +327,11 @@ impl Driver {
         }
 
         if self.diglots.is_empty() {
-            return Ok(usfm::pipeline::render(&document, &style_sheet, self.format)?);
+            return Ok(usfm::pipeline::render(
+                &document,
+                &style_sheet,
+                self.format,
+            )?);
         }
 
         // Checked before the second file is parsed, so `--format usx --diglot`
