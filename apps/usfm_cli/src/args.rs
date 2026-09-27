@@ -15,8 +15,8 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use usfm::diagnostics::Severity;
 use usfm::pipeline::OutputFormat;
 
-/// Parse USFM and write it out as USX, HTML, JSON, USFM, SILE or a
-/// translation prompt.
+/// Parse USFM (or read USX) and write it out as USX, HTML, JSON, USFM, SILE
+/// or a translation prompt.
 #[derive(Debug, Parser)]
 #[command(name = "usfm", version, about)]
 pub struct Cli {
@@ -26,7 +26,8 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
-    /// Parse USFM files and write them out in another format.
+    /// Parse USFM files (or, with --from usx, USX files) and write them out
+    /// in another format.
     Parse(ParseArgs),
     /// Rewrite USFM files in the writer's canonical shape.
     Format(FormatArgs),
@@ -34,9 +35,16 @@ pub enum Command {
 
 #[derive(Debug, Args)]
 pub struct ParseArgs {
-    /// The USFM files to read. Several are concatenated in the order given.
+    /// The files to read, USFM unless --from says otherwise. Several are
+    /// combined in the order given, into one document.
     #[arg(required = true, value_name = "FILES")]
     pub files: Vec<PathBuf>,
+
+    /// What the files (and the --diglot files) are written in. A file's
+    /// extension never changes it: a `.usx` file is read as USX only with
+    /// `--from usx`.
+    #[arg(long, value_enum, default_value_t = InputFormat::Usfm)]
+    pub from: InputFormat,
 
     /// The output format.
     #[arg(short, long, value_enum, default_value_t = Format::Usx)]
@@ -143,6 +151,16 @@ pub struct FormatArgs {
     /// How diagnostics are written to standard error.
     #[arg(long, value_enum, default_value_t = DiagnosticFormat::Text)]
     pub diagnostics: DiagnosticFormat,
+}
+
+/// `--from` (ticket 48).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+pub enum InputFormat {
+    /// USFM, read by the parser.
+    Usfm,
+    /// USX, read by `usfm_usx`'s reader: `--format usfm` converts it,
+    /// `--format usx` normalises it.
+    Usx,
 }
 
 /// `--format`. The same list as [`OutputFormat`], as a clap value enum.
@@ -269,6 +287,20 @@ mod tests {
         );
         assert_eq!(args.diglot_replace, vec![PathBuf::from("three.txt")]);
         assert_eq!(args.diglot_stylesheet, Some("b.sty".into()));
+    }
+
+    /// `--from` is USFM unless it says otherwise, whatever the files are
+    /// called (ticket 48).
+    #[test]
+    fn from_defaults_to_usfm() {
+        let args = parse_args(Cli::parse_from(["usfm", "parse", "book.usx"]));
+        assert_eq!(args.from, InputFormat::Usfm);
+        let args = parse_args(Cli::parse_from([
+            "usfm", "parse", "--from", "usx", "-f", "usfm", "book.usx",
+        ]));
+        assert_eq!(args.from, InputFormat::Usx);
+        assert_eq!(args.format, Format::Usfm);
+        assert!(Cli::try_parse_from(["usfm", "parse", "--from", "xml", "book.usx"]).is_err());
     }
 
     /// `format` takes its files and its three modes, and `--write --check`

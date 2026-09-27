@@ -4,19 +4,29 @@
 //! transforms themselves now in `usfm_pipeline`. What is left here is the part that
 //! touches the filesystem: which files were read, so watch mode can read them
 //! again, and where the result goes.
+//!
+//! `--from` (ticket 48) decides how the files become a document. USFM files
+//! are concatenated and parsed as one source, since a book split across files
+//! is still one book. USX files cannot be: two USX files side by side are not
+//! one XML document (each has its own `<usx>` root), so each is read on its
+//! own, reports its diagnostics under its own path with positions in its own
+//! file, and the documents are then combined block by block, in the order
+//! given ([`combine`]). That is what concatenation does for USFM, whose files
+//! are one book each in practice; a USX file always is.
 
 use std::io::Write;
 use std::path::{Path, PathBuf, absolute};
 use std::sync::Arc;
 
-use usfm::ast::Document;
+use usfm::ast::visit_mut::{self, VisitMut};
+use usfm::ast::{Char, Document, Milestone, Note, Para, Periph, Sidebar, StyleId};
 use usfm::diagnostics::{ParseResult, Severity};
 use usfm::parser::DEFAULT_STYLESHEET;
 use usfm::pipeline::{OutputFormat, TextReplacement};
 use usfm::span::LineIndex;
 use usfm::style::StyleSheet;
 
-use crate::args::{DiagnosticFormat, ParseArgs};
+use crate::args::{DiagnosticFormat, InputFormat, ParseArgs};
 use crate::error::Error;
 
 /// A file that was read, kept with the path it came from so watch mode can
@@ -129,6 +139,16 @@ fn report<'a>(
     options: &DiagnosticOptions,
 ) -> Result<Document<'a>, Error> {
     print_diagnostics(label, source, &result.diagnostics, options.format);
+    enforce(label, result, options)
+}
+
+/// The document, unless the run has a threshold and one of `result`'s
+/// diagnostics reached it.
+fn enforce<'a>(
+    label: &str,
+    result: ParseResult<'a>,
+    options: &DiagnosticOptions,
+) -> Result<Document<'a>, Error> {
     match options.threshold {
         None => Ok(result.document),
         Some(threshold) => result.strict_with(threshold).map_err(|diagnostics| {
@@ -152,6 +172,7 @@ pub struct Driver {
     diglots: Vec<Loaded<String>>,
     diglot_style_sheet: Option<Loaded<Option<Arc<StyleSheet>>>>,
     diglot_replacements: Vec<Loaded<TextReplacement>>,
+    from: InputFormat,
     format: OutputFormat,
     output: Option<PathBuf>,
     diagnostics: DiagnosticOptions,
@@ -199,6 +220,7 @@ impl Driver {
                 .into_iter()
                 .map(|path| Loaded::new(path, read_rules, &mut errors))
                 .collect(),
+            from: args.from,
             format: args.format.into(),
             output,
             diagnostics: DiagnosticOptions {
@@ -256,12 +278,15 @@ impl Driver {
 
     /// Parse, transform and render, without writing anything.
     pub fn render(&mut self) -> Result<String, Error> {
-        let input = join(&self.inputs);
-        // Through the facade, not `Parser` directly: `--strict`,
-        // `--deny-warnings` and `--diagnostics json` should see the semantic
-        // checks as well as the parser's repairs (ticket 19).
-        let result = usfm::parse_with(&input, &sheet_or_default(&self.style_sheet));
-        let mut document = report("input", &input, result, &self.diagnostics)?;
+        let mut input = String::new();
+        let mut document = read(
+            self.from,
+            &self.inputs,
+            "input",
+            &sheet_or_default(&self.style_sheet),
+            &self.diagnostics,
+            &mut input,
+        )?;
         // Everything downstream resolves styles against the document's own
         // stylesheet, not the one handed to the parser: they differ whenever
         // the parser had to derive a style (hardening plan D3).
@@ -279,9 +304,15 @@ impl Driver {
         if !self.format.supports_diglot() {
             return Err(usfm::pipeline::RenderError::NoDiglotForm(self.format).into());
         }
-        let diglot = join(&self.diglots);
-        let result = usfm::parse_with(&diglot, &sheet_or_default(&self.diglot_style_sheet));
-        let mut diglot_document = report("diglot", &diglot, result, &self.diagnostics)?;
+        let mut diglot = String::new();
+        let mut diglot_document = read(
+            self.from,
+            &self.diglots,
+            "diglot",
+            &sheet_or_default(&self.diglot_style_sheet),
+            &self.diagnostics,
+            &mut diglot,
+        )?;
         let diglot_style_sheet = Arc::clone(diglot_document.style_sheet());
         for replacement in self.diglot_replacements.iter_mut() {
             replacement.value.apply_to(&mut diglot_document);
@@ -337,6 +368,154 @@ fn resolve_one(path: Option<&Path>, errors: &mut Vec<Error>) -> Option<PathBuf> 
             errors.push(e);
             None
         }
+    }
+}
+
+/// The files of one side, as one document, with their diagnostics printed.
+///
+/// USFM is [joined](join) into `joined` — which the document then borrows —
+/// and parsed as one source, its diagnostics filed under `label`. USX is read
+/// file by file, each file's diagnostics filed under its own path, and the
+/// documents [combined](combine); `joined` stays empty. Either way through the
+/// facade, not `Parser` or `read_usx` directly: `--strict`, `--deny-warnings`
+/// and `--diagnostics json` should see the semantic checks as well as the
+/// repairs (ticket 19).
+fn read<'a>(
+    from: InputFormat,
+    files: &'a [Loaded<String>],
+    label: &str,
+    style_sheet: &Arc<StyleSheet>,
+    options: &DiagnosticOptions,
+    joined: &'a mut String,
+) -> Result<Document<'a>, Error> {
+    match from {
+        InputFormat::Usfm => {
+            *joined = join(files);
+            let joined: &'a str = joined;
+            report(
+                label,
+                joined,
+                usfm::parse_with(joined, style_sheet),
+                options,
+            )
+        }
+        InputFormat::Usx => {
+            // Every file's diagnostics are printed before any threshold
+            // stops the run, so one refused file does not hide what the
+            // others report.
+            let mut documents = Vec::with_capacity(files.len());
+            let mut refused = Vec::new();
+            for file in files {
+                let label = file.path.display().to_string();
+                let result = usfm::parse_usx_with(&file.value, style_sheet);
+                print_diagnostics(&label, &file.value, &result.diagnostics, options.format);
+                match enforce(&label, result, options) {
+                    Ok(document) => documents.push(document),
+                    Err(e) => refused.push(e),
+                }
+            }
+            match refused.len() {
+                0 => Ok(combine(documents, style_sheet)),
+                1 => Err(refused.remove(0)),
+                _ => {
+                    for e in &refused {
+                        e.print();
+                    }
+                    Err(Error::Consumed)
+                }
+            }
+        }
+    }
+}
+
+/// Several documents as one, their blocks in order: what concatenating their
+/// sources would have made, for documents that cannot be concatenated as
+/// text (USX, see the module docs).
+///
+/// Every document was read against `style_sheet`, so a `StyleId` below its
+/// length means the same style in all of them. Above it is a style that one
+/// document derived onto its own copy of the sheet (plan D3), and the same
+/// index can name different styles in two documents; each such id is moved to
+/// the combined sheet's entry for the same marker, added when no document
+/// before it derived that marker too. The combined document's `span` is
+/// [`SPAN`](usfm::ast::SPAN): its nodes' spans point into different files, and
+/// no one range covers them. A single document is returned as it is.
+fn combine<'a>(documents: Vec<Document<'a>>, style_sheet: &Arc<StyleSheet>) -> Document<'a> {
+    let mut documents = documents.into_iter();
+    let Some(first) = documents.next() else {
+        return Document::new(Vec::new(), Arc::clone(style_sheet));
+    };
+    let Some(second) = documents.next() else {
+        return first;
+    };
+    let shared = style_sheet.rules.len();
+    let mut sheet = Arc::clone(first.style_sheet());
+    let mut blocks = first.blocks;
+    for mut document in std::iter::once(second).chain(documents) {
+        let own = Arc::clone(document.style_sheet());
+        if !Arc::ptr_eq(&own, &sheet) && own.rules.len() > shared {
+            let ids: Vec<u32> = own
+                .rules
+                .iter()
+                .enumerate()
+                .map(|(index, rule)| {
+                    let index = if index < shared {
+                        index
+                    } else {
+                        match sheet.get_marker_index(&rule.marker) {
+                            Some(&existing) if existing >= shared => existing,
+                            _ => Arc::make_mut(&mut sheet).add_rule(rule.clone()),
+                        }
+                    };
+                    index as u32
+                })
+                .collect();
+            Restyle(&ids).visit_document(&mut document);
+        }
+        blocks.append(&mut document.blocks);
+    }
+    Document::new(blocks, sheet)
+}
+
+/// Moves every `StyleId` to `self.0[id]`, for [`combine`]. The six nodes
+/// with a `style` are the six overridden here.
+struct Restyle<'m>(&'m [u32]);
+
+impl Restyle<'_> {
+    fn restyle(&self, style: &mut StyleId) {
+        *style = StyleId::new(self.0[style.index()]);
+    }
+}
+
+impl VisitMut for Restyle<'_> {
+    fn visit_para(&mut self, para: &mut Para<'_>) {
+        self.restyle(&mut para.style);
+        visit_mut::walk_para(self, para);
+    }
+
+    fn visit_char(&mut self, char: &mut Char<'_>) {
+        self.restyle(&mut char.style);
+        visit_mut::walk_char(self, char);
+    }
+
+    fn visit_note(&mut self, note: &mut Note<'_>) {
+        self.restyle(&mut note.style);
+        visit_mut::walk_note(self, note);
+    }
+
+    fn visit_milestone(&mut self, milestone: &mut Milestone<'_>) {
+        self.restyle(&mut milestone.style);
+        visit_mut::walk_milestone(self, milestone);
+    }
+
+    fn visit_sidebar(&mut self, sidebar: &mut Sidebar<'_>) {
+        self.restyle(&mut sidebar.style);
+        visit_mut::walk_sidebar(self, sidebar);
+    }
+
+    fn visit_periph(&mut self, periph: &mut Periph<'_>) {
+        self.restyle(&mut periph.style);
+        visit_mut::walk_periph(self, periph);
     }
 }
 
