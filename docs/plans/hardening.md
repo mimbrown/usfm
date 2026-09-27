@@ -605,6 +605,9 @@ and `unlisted-book-code` is the first check to have moved.
       `parse`, `parse_usx`, `parse_html`, `parse_json` and `reference_index`,
       recorded in `docs/benchmarks.md`. What is left is the CI gate: the numbers are
       still compared by hand, interleaved against the previous commit.
+      Logged as ticket 50 (`needs-triage`, 2026-09-27): gate on instruction
+      counts rather than time, since wall clock on shared machines is noisier
+      than the regressions it would have to catch.
 - [x] **Property tests.** The round trip, now that `usfm_codegen` is the USFM
       writer: parse → USFM → parse gives the same tree ignoring spans, gains no
       diagnostic code, and writes out identically. Done 2026-09-20 by tickets
