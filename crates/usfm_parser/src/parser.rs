@@ -53,11 +53,15 @@ impl<'a> ParserInlineContext<'a> {
         }
     }
 
+    /// Whether the character style being parsed has its attribute list.
+    fn has_attributes(&self) -> bool {
+        matches!(self, ParserInlineContext::Char(char) if char.attributes.is_some())
+    }
+
     /// Attach word-level attributes to the character style being parsed.
     /// Returns false if this context is not a character style.
     ///
-    /// A second `|` in one style replaces the first, which is what the old
-    /// last-child-wins representation did.
+    /// Called once per style: a second `|` is text (`unexpected-pipe`).
     fn set_attributes(&mut self, attributes: Attributes<'a>) -> bool {
         match self {
             ParserInlineContext::Char(char) => {
@@ -160,6 +164,7 @@ pub struct ParserImpl<'a> {
     vp: usize,
     cp: usize,
     usfm: usize,
+    fig: usize,
     should_insert_end_milestones: bool,
     diagnostics: Vec<Diagnostic>,
     /// Stack of open character styles and notes, innermost last.
@@ -412,6 +417,7 @@ impl<'a> ParserImpl<'a> {
             vp: index("vp"),
             cp: index("cp"),
             usfm: index("usfm"),
+            fig: index("fig"),
             should_insert_end_milestones: true,
             diagnostics: Vec::new(),
             open: Vec::new(),
@@ -1797,9 +1803,26 @@ impl<'a> ParserImpl<'a> {
                 }
                 Kind::Pipe => {
                     let span = self.bump_span();
-                    if context.char_style().is_some() {
-                        let attributes = self.parse_attributes(span);
-                        context.set_attributes(attributes);
+                    let char_style = context.char_style();
+                    if char_style.is_some() && context.has_attributes() {
+                        // The list ran to this `|`: nothing in it reads one.
+                        // A second list would replace the first, and both
+                        // are what the author wrote, so the `|` and whatever
+                        // follows it are text, as outside a style.
+                        self.emit(
+                            Code::UnexpectedPipe,
+                            span,
+                            "a second `|` in one character style; kept as text",
+                        );
+                        context.add_child(Inline::Text(Text::new(Cow::Borrowed("|"), span)));
+                    } else if char_style.is_some() {
+                        let usfm2_figure = char_style
+                            .is_some_and(|style| style.index() == self.fig)
+                            && self.take_usfm2_figure(context, span);
+                        if !usfm2_figure {
+                            let attributes = self.parse_attributes(span);
+                            context.set_attributes(attributes);
+                        }
                     } else {
                         self.emit(
                             Code::UnexpectedPipe,
@@ -2619,6 +2642,113 @@ impl<'a> ParserImpl<'a> {
         // The content is normalised, so it is shorter than the source it came
         // from; the span still covers the whole run that was read.
         Text::new(Cow::Owned(owned), Span::new(run_start, end))
+    }
+
+    /// USFM 2's figure, `\fig DESC|FILE|SIZE|LOC|COPY|CAP|REF\fig*`, read at
+    /// its first `|` (consumed, `pipe`) into what USFM 3 spells
+    /// `\fig CAP|alt="DESC" src="FILE" size="SIZE" loc="LOC" copy="COPY"
+    /// ref="REF"\fig*`, which is how Paratext converts it and what
+    /// `paratextTests/EmptyFigure`'s reference reads `\fig |||||| \fig*` as.
+    /// Returns false, with nothing consumed, unless the form is exactly that:
+    /// plain text before the `|`, then six fields of text separated by five
+    /// more `|` and ended by `\fig*`. A USFM 3 list has one `|`, so the two
+    /// cannot be confused. On success the `\fig*` is the next token.
+    fn take_usfm2_figure(&mut self, context: &mut ParserInlineContext<'a>, pipe: Span) -> bool {
+        let ParserInlineContext::Char(figure) = context else {
+            return false;
+        };
+        let mut description = String::new();
+        for child in &figure.children {
+            match child {
+                Inline::Text(text) => description.push_str(&text.content),
+                _ => return false,
+            }
+        }
+
+        let checkpoint = self.lexer.checkpoint();
+        let checkpoint_end = self.prev_token_end;
+        // (start, end, has_escapes) of FILE, SIZE, LOC, COPY, CAP and REF.
+        let mut fields: Vec<(u32, u32, bool)> = Vec::with_capacity(6);
+        let mut start = pipe.end;
+        let mut has_escapes = false;
+        let closed = loop {
+            match self.cur_kind() {
+                Kind::Pipe | Kind::Marker { .. } => {
+                    let is_pipe = self.at(Kind::Pipe);
+                    if !is_pipe && self.cur_src() != "\\fig*" {
+                        break false;
+                    }
+                    fields.push((start, self.cur_span().start, has_escapes));
+                    if !is_pipe || fields.len() == 6 {
+                        break !is_pipe && fields.len() == 6;
+                    }
+                    start = self.bump_span().end;
+                    has_escapes = false;
+                }
+                Kind::Escape => {
+                    has_escapes = true;
+                    self.bump_any();
+                }
+                // `//` is an `OptBreak` node in running text, which a field
+                // read as a string would turn into two slashes.
+                Kind::MilestoneEnd | Kind::Backslash | Kind::OptBreak | Kind::Eof => break false,
+                _ => self.bump_any(),
+            }
+        };
+        if !closed {
+            self.lexer.rewind(checkpoint);
+            self.prev_token_end = checkpoint_end;
+            return false;
+        }
+
+        let field = |parser: &Self, (start, end, has_escapes): (u32, u32, bool)| {
+            let value = parser.attribute_value_text(start, end, has_escapes);
+            collapse_ascii_whitespace(value.trim_matches(|c: char| c.is_ascii_whitespace()))
+        };
+        let caption = field(self, fields[4]).replace('~', NO_BREAK_SPACE);
+        let values = [
+            (
+                "alt",
+                collapse_ascii_whitespace(
+                    description.trim_matches(|c: char| c.is_ascii_whitespace()),
+                ),
+                figure.span.start,
+                pipe.start,
+            ),
+            ("src", field(self, fields[0]), fields[0].0, fields[0].1),
+            ("size", field(self, fields[1]), fields[1].0, fields[1].1),
+            ("loc", field(self, fields[2]), fields[2].0, fields[2].1),
+            ("copy", field(self, fields[3]), fields[3].0, fields[3].1),
+            ("ref", field(self, fields[5]), fields[5].0, fields[5].1),
+        ];
+        let pairs: Vec<_> = values
+            .into_iter()
+            .filter(|(_, value, _, _)| !value.is_empty())
+            .map(|(name, value, start, end)| Attribute {
+                name: Cow::Borrowed(name),
+                value: Cow::Owned(value),
+                span: Span::new(start, end),
+            })
+            .collect();
+
+        figure.children.clear();
+        if !caption.is_empty() {
+            let (start, end, _) = fields[4];
+            figure.children.push(Inline::Text(Text::new(
+                Cow::Owned(caption),
+                Span::new(start, end),
+            )));
+        }
+        // An empty figure has no list: `\fig |\fig*` would be one with no
+        // pairs, which is `empty-attribute-list`, and nothing was written
+        // wrong enough for that.
+        figure.attributes = (!pairs.is_empty()).then_some(Attributes { pairs, pipe });
+        self.emit(
+            Code::Usfm2Figure,
+            Span::new(figure.span.start, self.cur_span().end),
+            "`\\fig` uses USFM 2's `DESC|FILE|SIZE|LOC|COPY|CAP|REF`; read as USFM 3's caption and attributes",
+        );
+        true
     }
 
     /// Parse attributes after a `|`, whose span the caller has already
