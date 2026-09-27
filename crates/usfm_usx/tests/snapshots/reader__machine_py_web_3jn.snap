@@ -1,0 +1,905 @@
+---
+source: crates/usfm_usx/tests/reader.rs
+description: machine-py/usx/WEB-DBL/3JN.usx
+---
+Book 3JN "64-3JN-web.sfm World English Bible (WEB)" @64..139
+Para usfm@47..60
+  Text "3.0"@56..59
+Para ide@142..172
+  Text "UTF-8"@160..165
+Para h@175..204
+  Text "3 John"@191..197
+Para toc1@207..254
+  Text "John’s Third Letter"@226..247
+Para toc2@257..289
+  Text "3 John"@276..282
+Para toc3@292..324
+  Text "3 John"@311..317
+Para mt1@327..373
+  Text "John’s Third Letter"@345..366
+ChapterStart 1@376..420
+Para p@423..994
+  VerseStart 1@444..488
+  Char w@493..534 strong="G3588"
+    Text "The"@524..527
+  Text " "@534..535
+  Char w@535..578 strong="G4245"
+    Text "elder"@566..571
+  Text " "@578..579
+  Char w@579..619 strong="G1722"
+    Text "to"@610..612
+  Text " "@619..620
+  Char w@620..663 strong="G1050"
+    Text "Gaius"@651..656
+  Text " "@663..664
+  Char w@664..705 strong="G3588"
+    Text "the"@695..698
+  Text " "@705..706
+  Char w@706..751 strong="G0027"
+    Text "beloved"@737..744
+  Text ", "@751..753
+  Char w@753..795 strong="G3739"
+    Text "whom"@784..788
+  Text " "@795..796
+  Char w@796..835 strong="G1473"
+    Text "I"@827..828
+  Text " "@835..836
+  Char w@836..878 strong="G0025"
+    Text "love"@867..871
+  Text " "@878..879
+  Char w@879..919 strong="G1722"
+    Text "in"@910..912
+  Text " "@919..920
+  Char w@920..963 strong="G0225"
+    Text "truth"@951..956
+  Text "."@963..964
+  VerseEnd 1
+Para p@997..3403
+  VerseStart 2@1018..1062
+  Char w@1067..1112 strong="G0027"
+    Text "Beloved"@1098..1105
+  Text ", "@1112..1114
+  Char w@1114..1153 strong="G2532"
+    Text "I"@1145..1146
+  Text " "@1153..1154
+  Char w@1154..1196 strong="G2172"
+    Text "pray"@1185..1189
+  Text " "@1196..1197
+  Char w@1197..1239 strong="G3956"
+    Text "that"@1228..1232
+  Text " "@1239..1240
+  Char w@1240..1281 strong="G4771"
+    Text "you"@1271..1274
+  Text " "@1281..1282
+  Char w@1282..1323 strong="G2532"
+    Text "may"@1313..1316
+  Text " "@1323..1324
+  Char w@1324..1369 strong="G2137"
+    Text "prosper"@1355..1362
+  Text " "@1369..1370
+  Char w@1370..1410 strong="G2532"
+    Text "in"@1401..1403
+  Text " "@1410..1411
+  Char w@1411..1452 strong="G3956"
+    Text "all"@1442..1445
+  Text " "@1452..1453
+  Char w@1453..1497 strong="G3956"
+    Text "things"@1484..1490
+  Text " "@1497..1498
+  Char w@1498..1539 strong="G2532"
+    Text "and"@1529..1532
+  Text " "@1539..1540
+  Char w@1540..1580 strong="G2532"
+    Text "be"@1571..1573
+  Text " healthy, "@1580..1590
+  Char w@1590..1632 strong="G2532"
+    Text "even"@1621..1625
+  Text " "@1632..1633
+  Char w@1633..1673 strong="G2531"
+    Text "as"@1664..1666
+  Text " "@1673..1674
+  Char w@1674..1716 strong="G3956"
+    Text "your"@1705..1709
+  Text " "@1716..1717
+  Char w@1717..1759 strong="G5590"
+    Text "soul"@1748..1752
+  Text " "@1759..1760
+  Char w@1760..1806 strong="G2137"
+    Text "prospers"@1791..1799
+  Text "."@1806..1808
+  VerseEnd 2
+  Text " "
+  VerseStart 3@1831..1875
+  Char w@1875..1916 strong="G1063"
+    Text "For"@1906..1909
+  Text " "@1916..1917
+  Char w@1917..1956 strong="G2532"
+    Text "I"@1948..1949
+  Text " "@1956..1957
+  Char w@1957..2003 strong="G5463"
+    Text "rejoiced"@1988..1996
+  Text " "@2003..2004
+  Char w@2004..2049 strong="G3029"
+    Text "greatly"@2035..2042
+  Text " "@2049..2050
+  Char w@2050..2092 strong="G2532"
+    Text "when"@2081..2085
+  Text " "@2092..2093
+  Char w@2093..2139 strong="G0080"
+    Text "brothers"@2124..2132
+  Text " "@2139..2140
+  Char w@2140..2182 strong="G2064"
+    Text "came"@2171..2175
+  Text " "@2182..2183
+  Char w@2183..2224 strong="G2532"
+    Text "and"@2214..2217
+  Text " "@2224..2225
+  Char w@2225..2272 strong="G3140"
+    Text "testified"@2256..2265
+  Text " "@2272..2273
+  Char w@2273..2316 strong="G1722"
+    Text "about"@2304..2309
+  Text " "@2316..2317
+  Char w@2317..2359 strong="G2532"
+    Text "your"@2348..2352
+  Text " "@2359..2360
+  Char w@2360..2403 strong="G0225"
+    Text "truth"@2391..2396
+  Text ", "@2403..2405
+  Char w@2405..2447 strong="G2532"
+    Text "even"@2436..2440
+  Text " "@2447..2448
+  Char w@2448..2488 strong="G2531"
+    Text "as"@2479..2481
+  Text " "@2488..2489
+  Char w@2489..2530 strong="G4771"
+    Text "you"@2520..2523
+  Text " "@2530..2531
+  Char w@2531..2573 strong="G4043"
+    Text "walk"@2562..2566
+  Text " "@2573..2574
+  Char w@2574..2614 strong="G1722"
+    Text "in"@2605..2607
+  Text " "@2614..2615
+  Char w@2615..2658 strong="G0225"
+    Text "truth"@2646..2651
+  Text "."@2658..2660
+  VerseEnd 3
+  Text " "
+  VerseStart 4@2683..2727
+  Char w@2727..2766 strong="G3778"
+    Text "I"@2758..2759
+  Text " "@2766..2767
+  Char w@2767..2809 strong="G2192"
+    Text "have"@2798..2802
+  Text " "@2809..2810
+  Char w@2810..2850 strong="G3756"
+    Text "no"@2841..2843
+  Text " "@2850..2851
+  Char w@2851..2896 strong="G3173"
+    Text "greater"@2882..2889
+  Text " "@2896..2897
+  Char w@2897..2938 strong="G5479"
+    Text "joy"@2928..2931
+  Text " "@2938..2939
+  Char w@2939..2981 strong="G3173"
+    Text "than"@2970..2974
+  Text " "@2981..2982
+  Char w@2982..3024 strong="G3778"
+    Text "this"@3013..3017
+  Text ": "@3024..3026
+  Char w@3026..3066 strong="G2443"
+    Text "to"@3057..3059
+  Text " "@3066..3067
+  Char w@3067..3109 strong="G0191"
+    Text "hear"@3098..3102
+  Text " "@3109..3110
+  Char w@3110..3153 strong="G1722"
+    Text "about"@3141..3146
+  Text " "@3153..3154
+  Char w@3154..3194 strong="G1699"
+    Text "my"@3185..3187
+  Text " "@3194..3195
+  Char w@3195..3241 strong="G5043"
+    Text "children"@3226..3234
+  Text " "@3241..3242
+  Char w@3242..3287 strong="G4043"
+    Text "walking"@3273..3280
+  Text " "@3287..3288
+  Char w@3288..3328 strong="G1722"
+    Text "in"@3319..3321
+  Text " "@3328..3329
+  Char w@3329..3372 strong="G0225"
+    Text "truth"@3360..3365
+  Text "."@3372..3373
+  VerseEnd 4
+Para p@3406..6804
+  VerseStart 5@3427..3471
+  Char w@3476..3521 strong="G0027"
+    Text "Beloved"@3507..3514
+  Text ", "@3521..3523
+  Char w@3523..3564 strong="G3739"
+    Text "you"@3554..3557
+  Text " "@3564..3565
+  Char w@3565..3605 strong="G4160"
+    Text "do"@3596..3598
+  Text " "@3605..3606
+  Char w@3606..3645 strong="G4160"
+    Text "a"@3637..3638
+  Text " "@3645..3646
+  Char w@3646..3692 strong="G4103"
+    Text "faithful"@3677..3685
+  Text " "@3692..3693
+  Char w@3693..3735 strong="G2038"
+    Text "work"@3724..3728
+  Text " "@3735..3736
+  Char w@3736..3776 strong="G1519"
+    Text "in"@3767..3769
+  Text " "@3776..3777
+  Char w@3777..3823 strong="G1437"
+    Text "whatever"@3808..3816
+  Text " "@3823..3824
+  Char w@3824..3865 strong="G3739"
+    Text "you"@3855..3858
+  Text " "@3865..3866
+  Char w@3866..3914 strong="G2038"
+    Text "accomplish"@3897..3907
+  Text " "@3914..3915
+  Char w@3915..3956 strong="G1519"
+    Text "for"@3946..3949
+  Text " "@3956..3957
+  Char w@3957..4000 strong="G3588"
+    Text "those"@3988..3993
+  Text " "@4000..4001
+  Char w@4001..4042 strong="G3739"
+    Text "who"@4032..4035
+  Text " "@4042..4043
+  Char w@4043..4084 strong="G3778"
+    Text "are"@4074..4077
+  Text " "@4084..4085
+  Char w@4085..4131 strong="G0080"
+    Text "brothers"@4116..4124
+  Text " "@4131..4132
+  Char w@4132..4173 strong="G2532"
+    Text "and"@4163..4166
+  Text " "@4173..4174
+  Char w@4174..4221 strong="G3581"
+    Text "strangers"@4205..4214
+  Text "."@4221..4223
+  VerseEnd 5
+  Text " "
+  VerseStart 6@4246..4290
+  Char w@4290..4332 strong="G3739"
+    Text "They"@4321..4325
+  Text " "@4332..4333
+  Char w@4333..4375 strong="G4160"
+    Text "have"@4364..4368
+  Text " "@4375..4376
+  Char w@4376..4423 strong="G3140"
+    Text "testified"@4407..4416
+  Text " "@4423..4424
+  Char w@4424..4467 strong="G3588"
+    Text "about"@4455..4460
+  Text " "@4467..4468
+  Char w@4468..4510 strong="G4160"
+    Text "your"@4499..4503
+  Text " "@4510..4511
+  Char w@4511..4553 strong="G0026"
+    Text "love"@4542..4546
+  Text " "@4553..4554
+  Char w@4554..4598 strong="G1799"
+    Text "before"@4585..4591
+  Text " "@4598..4599
+  Char w@4599..4640 strong="G3588"
+    Text "the"@4630..4633
+  Text " "@4640..4641
+  Char w@4641..4687 strong="G1577"
+    Text "assembly"@4672..4680
+  Text ". "@4687..4689
+  Char w@4689..4730 strong="G4771"
+    Text "You"@4720..4723
+  Text " "@4730..4731
+  Char w@4731..4773 strong="G2316"
+    Text "will"@4762..4766
+  Text " "@4773..4774
+  Char w@4774..4814 strong="G4160"
+    Text "do"@4805..4807
+  Text " "@4814..4815
+  Char w@4815..4857 strong="G2573"
+    Text "well"@4846..4850
+  Text " "@4857..4858
+  Char w@4858..4898 strong="G2316"
+    Text "to"@4889..4891
+  Text " "@4898..4899
+  Char w@4899..4941 strong="G4311"
+    Text "send"@4930..4934
+  Text " "@4941..4942
+  Char w@4942..4984 strong="G4160"
+    Text "them"@4973..4977
+  Text " forward "@4984..4993
+  Char w@4993..5033 strong="G4311"
+    Text "on"@5024..5026
+  Text " "@5033..5034
+  Char w@5034..5077 strong="G3739"
+    Text "their"@5065..5070
+  Text " "@5077..5078
+  Char w@5078..5123 strong="G4311"
+    Text "journey"@5109..5116
+  Text " "@5123..5124
+  Char w@5124..5164 strong="G2316"
+    Text "in"@5155..5157
+  Text " "@5164..5165
+  Char w@5165..5204 strong="G4160"
+    Text "a"@5196..5197
+  Text " "@5204..5205
+  Char w@5205..5246 strong="G4311"
+    Text "way"@5236..5239
+  Text " "@5246..5247
+  Char w@5247..5291 strong="G0516"
+    Text "worthy"@5278..5284
+  Text " "@5291..5292
+  Char w@5292..5332 strong="G2316"
+    Text "of"@5323..5325
+  Text " "@5332..5333
+  Char w@5333..5374 strong="G2316"
+    Text "God"@5364..5367
+  Text ","@5374..5376
+  VerseEnd 6
+  Text " "
+  VerseStart 7@5399..5443
+  Char w@5443..5488 strong="G1063"
+    Text "because"@5474..5481
+  Text " "@5488..5489
+  Char w@5489..5530 strong="G1063"
+    Text "for"@5520..5523
+  Text " "@5530..5531
+  Char w@5531..5572 strong="G3588"
+    Text "the"@5562..5565
+  Text " "@5572..5573
+  Char w@5573..5615 strong="G5228"
+    Text "sake"@5604..5608
+  Text " "@5615..5616
+  Char w@5616..5656 strong="G0575"
+    Text "of"@5647..5649
+  Text " "@5656..5657
+  Char w@5657..5698 strong="G3588"
+    Text "the"@5688..5691
+  Text " "@5698..5699
+  Char w@5699..5741 strong="G3686"
+    Text "Name"@5730..5734
+  Text " "@5741..5742
+  Char w@5742..5784 strong="G2983"
+    Text "they"@5773..5777
+  Text " "@5784..5785
+  Char w@5785..5827 strong="G1831"
+    Text "went"@5816..5820
+  Text " "@5827..5828
+  Char w@5828..5869 strong="G1831"
+    Text "out"@5859..5862
+  Text ", "@5869..5871
+  Char w@5871..5915 strong="G2983"
+    Text "taking"@5902..5908
+  Text " "@5915..5916
+  Char w@5916..5961 strong="G3367"
+    Text "nothing"@5947..5954
+  Text " "@5961..5962
+  Char w@5962..6004 strong="G0575"
+    Text "from"@5993..5997
+  Text " "@6004..6005
+  Char w@6005..6046 strong="G3588"
+    Text "the"@6036..6039
+  Text " "@6046..6047
+  Char w@6047..6093 strong="G1482"
+    Text "Gentiles"@6078..6086
+  Text "."@6093..6095
+  VerseEnd 7
+  Text " "
+  VerseStart 8@6118..6162
+  Char w@6162..6202 strong="G2249"
+    Text "We"@6193..6195
+  Text " "@6202..6203
+  Char w@6203..6250 strong="G3767"
+    Text "therefore"@6234..6243
+  Text " "@6250..6251
+  Char w@6251..6294 strong="G3784"
+    Text "ought"@6282..6287
+  Text " "@6294..6295
+  Char w@6295..6335 strong="G2443"
+    Text "to"@6326..6328
+  Text " receive "@6335..6344
+  Char w@6344..6386 strong="G5108"
+    Text "such"@6375..6379
+  Text ", "@6386..6388
+  Char w@6388..6430 strong="G2443"
+    Text "that"@6419..6423
+  Text " "@6430..6431
+  Char w@6431..6471 strong="G2249"
+    Text "we"@6462..6464
+  Text " "@6471..6472
+  Char w@6472..6513 strong="G2443"
+    Text "may"@6503..6506
+  Text " "@6513..6514
+  Char w@6514..6554 strong="G1096"
+    Text "be"@6545..6547
+  Text " "@6554..6555
+  Char w@6555..6599 strong="G4904"
+    Text "fellow"@6586..6592
+  Text " "@6599..6600
+  Char w@6600..6645 strong="G4904"
+    Text "workers"@6631..6638
+  Text " "@6645..6646
+  Char w@6646..6687 strong="G2443"
+    Text "for"@6677..6680
+  Text " "@6687..6688
+  Char w@6688..6729 strong="G3588"
+    Text "the"@6719..6722
+  Text " "@6729..6730
+  Char w@6730..6773 strong="G0225"
+    Text "truth"@6761..6766
+  Text "."@6773..6774
+  VerseEnd 8
+Para p@6807..9603
+  VerseStart 9@6828..6872
+  Char w@6877..6916 strong="G1473"
+    Text "I"@6908..6909
+  Text " "@6916..6917
+  Char w@6917..6960 strong="G1125"
+    Text "wrote"@6948..6953
+  Text " "@6960..6961
+  Char w@6961..7001 strong="G5100"
+    Text "to"@6992..6994
+  Text " "@7001..7002
+  Char w@7002..7043 strong="G3588"
+    Text "the"@7033..7036
+  Text " "@7043..7044
+  Char w@7044..7090 strong="G1577"
+    Text "assembly"@7075..7083
+  Text ", "@7090..7092
+  Char w@7092..7133 strong="G0235"
+    Text "but"@7123..7126
+  Text " "@7133..7134
+  Char w@7134..7182 strong="G1361"
+    Text "Diotrephes"@7165..7175
+  Text ", "@7182..7184
+  Char w@7184..7225 strong="G3588"
+    Text "who"@7215..7218
+  Text " "@7225..7226
+  Char w@7226..7269 strong="G5383"
+    Text "loves"@7257..7262
+  Text " "@7269..7270
+  Char w@7270..7310 strong="G5100"
+    Text "to"@7301..7303
+  Text " "@7310..7311
+  Char w@7311..7351 strong="G5100"
+    Text "be"@7342..7344
+  Text " "@7351..7352
+  Char w@7352..7395 strong="G5383"
+    Text "first"@7383..7388
+  Text " among "@7395..7402
+  Char w@7402..7444 strong="G0846"
+    Text "them"@7433..7437
+  Text ", "@7444..7446
+  Char w@7446..7493 strong="G3756"
+    Text "doesn’t"@7477..7486
+  Text " "@7493..7494
+  Char w@7494..7538 strong="G1926"
+    Text "accept"@7525..7531
+  Text " "@7538..7539
+  Char w@7539..7581 strong="G3588"
+    Text "what"@7570..7574
+  Text " "@7581..7582
+  Char w@7582..7622 strong="G2249"
+    Text "we"@7613..7615
+  Text " "@7622..7623
+  Char w@7623..7664 strong="G1473"
+    Text "say"@7654..7657
+  Text "."@7664..7666
+  VerseEnd 9
+  Text " "
+  VerseStart 10@7689..7735
+  Char w@7735..7782 strong="G1223"
+    Text "Therefore"@7766..7775
+  Text ", "@7782..7784
+  Char w@7784..7824 strong="G1437"
+    Text "if"@7815..7817
+  Text " "@7824..7825
+  Char w@7825..7864 strong="G1473"
+    Text "I"@7856..7857
+  Text " "@7864..7865
+  Char w@7865..7907 strong="G2064"
+    Text "come"@7896..7900
+  Text ", "@7907..7909
+  Char w@7909..7948 strong="G1473"
+    Text "I"@7940..7941
+  Text " "@7948..7949
+  Char w@7949..7991 strong="G3739"
+    Text "will"@7980..7984
+  Text " "@7991..7992
+  Char w@7992..8034 strong="G4160"
+    Text "call"@8023..8027
+  Text " "@8034..8035
+  Char w@8035..8082 strong="G5279"
+    Text "attention"@8066..8075
+  Text " "@8082..8083
+  Char w@8083..8123 strong="G1909"
+    Text "to"@8114..8116
+  Text " "@8123..8124
+  Char w@8124..8165 strong="G0846"
+    Text "his"@8155..8158
+  Text " "@8165..8166
+  Char w@8166..8209 strong="G2041"
+    Text "deeds"@8197..8202
+  Text " "@8209..8210
+  Char w@8210..8253 strong="G3739"
+    Text "which"@8241..8246
+  Text " "@8253..8254
+  Char w@8254..8294 strong="G2532"
+    Text "he"@8285..8287
+  Text " "@8294..8295
+  Char w@8295..8337 strong="G4160"
+    Text "does"@8326..8330
+  Text ", "@8337..8339
+  Char w@8339..8385 strong="G5396"
+    Text "unjustly"@8370..8378
+  Text " "@8385..8386
+  Char w@8386..8432 strong="G5396"
+    Text "accusing"@8417..8425
+  Text " "@8432..8433
+  Char w@8433..8473 strong="G4160"
+    Text "us"@8464..8466
+  Text " "@8473..8474
+  Char w@8474..8516 strong="G1909"
+    Text "with"@8505..8509
+  Text " "@8516..8517
+  Char w@8517..8561 strong="G4190"
+    Text "wicked"@8548..8554
+  Text " "@8561..8562
+  Char w@8562..8605 strong="G3056"
+    Text "words"@8593..8598
+  Text ". "@8605..8607
+  Char w@8607..8648 strong="G3361"
+    Text "Not"@8638..8641
+  Text " "@8648..8649
+  Char w@8649..8694 strong="G0714"
+    Text "content"@8680..8687
+  Text " "@8694..8695
+  Char w@8695..8737 strong="G1909"
+    Text "with"@8726..8730
+  Text " "@8737..8738
+  Char w@8738..8780 strong="G3778"
+    Text "this"@8769..8773
+  Text ", "@8780..8782
+  Char w@8782..8822 strong="G2532"
+    Text "he"@8813..8815
+  Text " "@8822..8823
+  Char w@8823..8870 strong="G3361"
+    Text "doesn’t"@8854..8863
+  Text " "@8870..8871
+  Char w@8871..8916 strong="G1926"
+    Text "receive"@8902..8909
+  Text " "@8916..8917
+  Char w@8917..8958 strong="G3588"
+    Text "the"@8948..8951
+  Text " "@8958..8959
+  Char w@8959..9005 strong="G0080"
+    Text "brothers"@8990..8998
+  Text " "@9005..9006
+  Char w@9006..9051 strong="G0846"
+    Text "himself"@9037..9044
+  Text ", "@9051..9053
+  Char w@9053..9094 strong="G2532"
+    Text "and"@9084..9087
+  Text " "@9094..9095
+  Char w@9095..9138 strong="G3588"
+    Text "those"@9126..9131
+  Text " "@9138..9139
+  Char w@9139..9180 strong="G3739"
+    Text "who"@9170..9173
+  Text " "@9180..9181
+  Char w@9181..9224 strong="G0846"
+    Text "would"@9212..9217
+  Text ", "@9224..9226
+  Char w@9226..9266 strong="G2532"
+    Text "he"@9257..9259
+  Text " "@9266..9267
+  Char w@9267..9312 strong="G2967"
+    Text "forbids"@9298..9305
+  Text " "@9312..9313
+  Char w@9313..9354 strong="G2532"
+    Text "and"@9344..9347
+  Text " "@9354..9355
+  Char w@9355..9399 strong="G1544"
+    Text "throws"@9386..9392
+  Text " "@9399..9400
+  Char w@9400..9441 strong="G1544"
+    Text "out"@9431..9434
+  Text " "@9441..9442
+  Char w@9442..9482 strong="G3056"
+    Text "of"@9473..9475
+  Text " "@9482..9483
+  Char w@9483..9524 strong="G3588"
+    Text "the"@9514..9517
+  Text " "@9524..9525
+  Char w@9525..9571 strong="G1577"
+    Text "assembly"@9556..9564
+  Text "."@9571..9572
+  VerseEnd 10
+Para p@9606..11897
+  VerseStart 11@9627..9673
+  Char w@9678..9723 strong="G0027"
+    Text "Beloved"@9709..9716
+  Text ", "@9723..9725
+  Char w@9725..9770 strong="G3756"
+    Text "don’t"@9756..9763
+  Text " "@9770..9771
+  Char w@9771..9816 strong="G3401"
+    Text "imitate"@9802..9809
+  Text " "@9816..9817
+  Char w@9817..9859 strong="G3708"
+    Text "that"@9848..9852
+  Text " "@9859..9860
+  Char w@9860..9903 strong="G3588"
+    Text "which"@9891..9896
+  Text " "@9903..9904
+  Char w@9904..9944 strong="G1510"
+    Text "is"@9935..9937
+  Text " "@9944..9945
+  Char w@9945..9987 strong="G2556"
+    Text "evil"@9976..9980
+  Text ", "@9987..9989
+  Char w@9989..10030 strong="G0235"
+    Text "but"@10020..10023
+  Text " "@10030..10031
+  Char w@10031..10073 strong="G3708"
+    Text "that"@10062..10066
+  Text " "@10073..10074
+  Char w@10074..10117 strong="G3588"
+    Text "which"@10105..10110
+  Text " "@10117..10118
+  Char w@10118..10158 strong="G1510"
+    Text "is"@10149..10151
+  Text " "@10158..10159
+  Char w@10159..10201 strong="G0018"
+    Text "good"@10190..10194
+  Text ". "@10201..10203
+  Char w@10203..10243 strong="G1510"
+    Text "He"@10234..10236
+  Text " "@10243..10244
+  Char w@10244..10285 strong="G3588"
+    Text "who"@10275..10278
+  Text " "@10285..10286
+  Char w@10286..10328 strong="G1510"
+    Text "does"@10317..10321
+  Text " "@10328..10329
+  Char w@10329..10371 strong="G0018"
+    Text "good"@10360..10364
+  Text " "@10371..10372
+  Char w@10372..10412 strong="G1510"
+    Text "is"@10403..10405
+  Text " "@10412..10413
+  Char w@10413..10453 strong="G1537"
+    Text "of"@10444..10446
+  Text " "@10453..10454
+  Char w@10454..10495 strong="G2316"
+    Text "God"@10485..10488
+  Text ". "@10495..10497
+  Char w@10497..10537 strong="G1510"
+    Text "He"@10528..10530
+  Text " "@10537..10538
+  Char w@10538..10579 strong="G3588"
+    Text "who"@10569..10572
+  Text " "@10579..10580
+  Char w@10580..10622 strong="G1510"
+    Text "does"@10611..10615
+  Text " "@10622..10623
+  Char w@10623..10665 strong="G2556"
+    Text "evil"@10654..10658
+  Text " "@10665..10666
+  Char w@10666..10712 strong="G3756"
+    Text "hasn’t"@10697..10705
+  Text " "@10712..10713
+  Char w@10713..10755 strong="G3708"
+    Text "seen"@10744..10748
+  Text " "@10755..10756
+  Char w@10756..10797 strong="G2316"
+    Text "God"@10787..10790
+  Text "."@10797..10799
+  VerseEnd 11
+  Text " "
+  VerseStart 12@10823..10869
+  Char w@10869..10916 strong="G1216"
+    Text "Demetrius"@10900..10909
+  Text " "@10916..10917
+  Char w@10917..10958 strong="G3748"
+    Text "has"@10948..10951
+  Text " "@10958..10959
+  Char w@10959..11000 strong="G3956"
+    Text "the"@10990..10993
+  Text " "@11000..11001
+  Char w@11001..11048 strong="G3141"
+    Text "testimony"@11032..11041
+  Text " "@11048..11049
+  Char w@11049..11089 strong="G3956"
+    Text "of"@11080..11082
+  Text " "@11089..11090
+  Char w@11090..11131 strong="G3956"
+    Text "all"@11121..11124
+  Text ", "@11131..11133
+  Char w@11133..11174 strong="G2532"
+    Text "and"@11164..11167
+  Text " "@11174..11175
+  Char w@11175..11215 strong="G3956"
+    Text "of"@11206..11208
+  Text " "@11215..11216
+  Char w@11216..11257 strong="G3956"
+    Text "the"@11247..11250
+  Text " "@11257..11258
+  Char w@11258..11301 strong="G0225"
+    Text "truth"@11289..11294
+  Text " "@11301..11302
+  Char w@11302..11346 strong="G0846"
+    Text "itself"@11333..11339
+  Text "; "@11346..11348
+  Char w@11348..11389 strong="G1161"
+    Text "yes"@11379..11382
+  Text ", "@11389..11391
+  Char w@11391..11431 strong="G2249"
+    Text "we"@11422..11424
+  Text " "@11431..11432
+  Char w@11432..11474 strong="G2532"
+    Text "also"@11463..11467
+  Text " "@11474..11475
+  Char w@11475..11520 strong="G3140"
+    Text "testify"@11506..11513
+  Text ", "@11520..11522
+  Char w@11522..11563 strong="G2532"
+    Text "and"@11553..11556
+  Text " "@11563..11564
+  Char w@11564..11605 strong="G3754"
+    Text "you"@11595..11598
+  Text " "@11605..11606
+  Char w@11606..11648 strong="G1492"
+    Text "know"@11637..11641
+  Text " "@11648..11649
+  Char w@11649..11691 strong="G3754"
+    Text "that"@11680..11684
+  Text " "@11691..11692
+  Char w@11692..11733 strong="G2532"
+    Text "our"@11723..11726
+  Text " "@11733..11734
+  Char w@11734..11781 strong="G3141"
+    Text "testimony"@11765..11774
+  Text " "@11781..11782
+  Char w@11782..11822 strong="G1510"
+    Text "is"@11813..11815
+  Text " "@11822..11823
+  Char w@11823..11865 strong="G0227"
+    Text "true"@11854..11858
+  Text "."@11865..11866
+  VerseEnd 12
+Para p@11900..13413
+  VerseStart 13@11921..11967
+  Char w@11972..12011 strong="G2532"
+    Text "I"@12003..12004
+  Text " "@12011..12012
+  Char w@12012..12053 strong="G2192"
+    Text "had"@12043..12046
+  Text " "@12053..12054
+  Char w@12054..12096 strong="G4183"
+    Text "many"@12085..12089
+  Text " "@12096..12097
+  Char w@12097..12141 strong="G4183"
+    Text "things"@12128..12134
+  Text " "@12141..12142
+  Char w@12142..12182 strong="G2309"
+    Text "to"@12173..12175
+  Text " "@12182..12183
+  Char w@12183..12226 strong="G1125"
+    Text "write"@12214..12219
+  Text " "@12226..12227
+  Char w@12227..12267 strong="G2309"
+    Text "to"@12258..12260
+  Text " "@12267..12268
+  Char w@12268..12309 strong="G4771"
+    Text "you"@12299..12302
+  Text ", "@12309..12311
+  Char w@12311..12352 strong="G0235"
+    Text "but"@12342..12345
+  Text " "@12352..12353
+  Char w@12353..12392 strong="G2532"
+    Text "I"@12384..12385
+  Text " "@12392..12393
+  Char w@12393..12433 strong="G2309"
+    Text "am"@12424..12426
+  Text " unwilling "@12433..12444
+  Char w@12444..12484 strong="G2309"
+    Text "to"@12475..12477
+  Text " "@12484..12485
+  Char w@12485..12528 strong="G1125"
+    Text "write"@12516..12521
+  Text " "@12528..12529
+  Char w@12529..12569 strong="G2309"
+    Text "to"@12560..12562
+  Text " "@12569..12570
+  Char w@12570..12611 strong="G4771"
+    Text "you"@12601..12604
+  Text " "@12611..12612
+  Char w@12612..12654 strong="G1223"
+    Text "with"@12643..12647
+  Text " "@12654..12655
+  Char w@12655..12696 strong="G3188"
+    Text "ink"@12686..12689
+  Text " "@12696..12697
+  Char w@12697..12738 strong="G2532"
+    Text "and"@12728..12731
+  Text " "@12738..12739
+  Char w@12739..12780 strong="G2563"
+    Text "pen"@12770..12773
+  Text ";"@12780..12782
+  VerseEnd 13
+  Text " "
+  VerseStart 14@12806..12852
+  Char w@12852..12893 strong="G1161"
+    Text "but"@12883..12886
+  Text " "@12893..12894
+  Char w@12894..12933 strong="G2532"
+    Text "I"@12925..12926
+  Text " "@12933..12934
+  Char w@12934..12976 strong="G1679"
+    Text "hope"@12965..12969
+  Text " "@12976..12977
+  Char w@12977..13017 strong="G4314"
+    Text "to"@13008..13010
+  Text " "@13017..13018
+  Char w@13018..13059 strong="G3708"
+    Text "see"@13049..13052
+  Text " "@13059..13060
+  Char w@13060..13101 strong="G4771"
+    Text "you"@13091..13094
+  Text " soon. "@13101..13108
+  Char w@13108..13150 strong="G2532"
+    Text "Then"@13139..13143
+  Text " "@13150..13151
+  Char w@13151..13191 strong="G2532"
+    Text "we"@13182..13184
+  Text " "@13191..13192
+  Char w@13192..13234 strong="G2532"
+    Text "will"@13223..13227
+  Text " "@13234..13235
+  Char w@13235..13278 strong="G2980"
+    Text "speak"@13266..13271
+  Text " "@13278..13279
+  Char w@13279..13321 strong="G4750"
+    Text "face"@13310..13314
+  Text " "@13321..13322
+  Char w@13322..13362 strong="G4314"
+    Text "to"@13353..13355
+  Text " "@13362..13363
+  Char w@13363..13405 strong="G4750"
+    Text "face"@13394..13398
+  Text "."@13405..13406
+Para p@13416..13810
+  Text "Peace "@13447..13453
+  Char w@13453..13493 strong="G2532"
+    Text "be"@13484..13486
+  Text " "@13493..13494
+  Char w@13494..13534 strong="G4314"
+    Text "to"@13525..13527
+  Text " "@13534..13535
+  Char w@13535..13576 strong="G4771"
+    Text "you"@13566..13569
+  Text ". "@13576..13578
+  Char w@13578..13619 strong="G2532"
+    Text "The"@13609..13612
+  Text " friends greet "@13619..13634
+  Char w@13634..13675 strong="G4771"
+    Text "you"@13665..13668
+  Text ". Greet "@13675..13683
+  Char w@13683..13724 strong="G2532"
+    Text "the"@13714..13717
+  Text " friends "@13724..13733
+  Char w@13733..13773 strong="G2532"
+    Text "by"@13764..13766
+  Text " name."@13773..13779
+  VerseEnd 14
+ChapterEnd 1

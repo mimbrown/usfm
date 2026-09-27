@@ -25,6 +25,22 @@
 //!    reads as no list, `crates/usfm_usx/tests/reader.rs`).
 //! 4. [`every_read_node_has_a_span_in_its_source`][]: `span_check`'s
 //!    invariants, as they read for XML, over every reference.
+//! 5. [`a_reference_reads_the_same_without_its_eids`][]: USX 2 (ticket 47).
+//!    Every reference with each `<verse eid>` and `<chapter eid>` stripped
+//!    reads to the tree the reference itself reads to, by
+//!    `eq_ignoring_spans`: the ends the reader builds are the ones the file
+//!    had, so a file reads to one tree whichever version it is. It holds for
+//!    every compared case; of the rest, one reference is on
+//!    [`STRIPPED_EIDS_KNOWN`], where the reference's `eid` placement, not the
+//!    reader, is what differs. [`a_usx_2_file_is_the_parse_of_its_usfm`] is
+//!    the same rule against the parser directly, for the shapes the corpus
+//!    has few of.
+//! 6. [`the_web_books_round_trip`][]: machine.py's WEB books, real USX no
+//!    tool of ours wrote (ticket 47), read with no Error and go USX -> USFM
+//!    -> USX: the parse of the written USFM is the read tree, and its USX is
+//!    the file under the harness's comparison. Their trees and diagnostics,
+//!    and the malformed Tes book's, are snapshots in
+//!    `crates/usfm_usx/tests/reader.rs`.
 //!
 //! The gate's `cargo test --workspace` excludes this package (its generated
 //! tests are the harness's own, which `cargo run` already runs), so
@@ -32,7 +48,9 @@
 
 use std::borrow::Cow;
 use std::panic::{self, AssertUnwindSafe};
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
+
+use regex::Regex;
 
 use usfm::ast::visit_mut::VisitMut;
 use usfm::ast::{
@@ -42,9 +60,14 @@ use usfm::ast::{
 use usfm::diagnostics::Severity;
 use usfm::parser::span_check::{NodeSpan, Prefix, nodes};
 use usfm::style::StyleSheet;
-use usfm::usx::{DEFAULT_USX_VERSION, read_usx};
+use usfm::usx::{
+    DEFAULT_USX_VERSION, UsxOptions, read_usx, to_usx_node_with_options, to_usx_string,
+};
 use usfm::{DEFAULT_STYLESHEET, parse_with_options};
-use usfm_tests::{TestCase, ValidationStatus, discover_tests, usx_properties};
+use usfm_tests::{
+    TestCase, ValidationStatus, collapse_whitespace_tree, compare_xml, discover_tests,
+    normalize_tree, usx_properties,
+};
 
 /// The cases the harness compares today and passes: a reference exists and
 /// the parser's output matched it. Property 3 is about exactly these, and so
@@ -129,12 +152,11 @@ fn a_read_reference_is_the_parse_of_its_usfm() {
     let mut failures = Vec::new();
     for case in &cases {
         let usfm = case.read_usfm().unwrap();
-        let mut parsed = parse_with_options(
-            &usfm,
-            &DEFAULT_STYLESHEET,
-            case.expected_has_end_milestones(),
-        )
-        .document;
+        // With verse and chapter ends whether the reference has them or not:
+        // the reader builds the ones a USX 2 file leaves out (ticket 47), so
+        // `advanced/complex`, the one compared reference with none, reads to
+        // the parse that has them.
+        let mut parsed = parse_with_options(&usfm, &DEFAULT_STYLESHEET, true).document;
         let text = case.expected_usx_text().unwrap();
         let mut read = read_usx(&text).document;
         Normalise::apply(&mut parsed);
@@ -215,6 +237,167 @@ fn every_read_node_has_a_span_in_its_source() {
         }
     }
     assert_none("every read node has a span in its source", failures);
+}
+
+/// Every `<verse eid>` and `<chapter eid>` in `usx`, removed: the USX 2 form
+/// of a USX 3 file, which the writer does not write (spec, M7: out of scope).
+/// (`<ms eid>` is a milestone's own attribute, not an end, and stays.)
+fn strip_eids(usx: &str) -> String {
+    END_MILESTONE.replace_all(usx, "").into_owned()
+}
+
+/// A self-closing `<verse>` or `<chapter>` with an `eid`.
+static END_MILESTONE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"<(?:verse|chapter)\s[^>]*\beid="[^"]*"[^>]*/>"#).unwrap());
+
+/// Any `<verse>` or `<chapter>` start tag with an `eid`, self-closing or not:
+/// what [`strip_eids`] must leave none of.
+static ANY_END: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"<(?:verse|chapter)\s[^>]*\beid=").unwrap());
+
+/// The references property 5 does not hold for, each with the reason. A
+/// listed case that holds is a failure too, as in the gate's known lists.
+///
+/// All `fail` cases the harness never compares: what differs is where the
+/// reference put an `eid`, not where the reader builds one.
+const STRIPPED_EIDS_KNOWN: &[(&str, &str)] = &[(
+    "usfmjsTests/invalid",
+    "the reference ends `\\v 11` before `<verse number=\"No\" status=\"invalid\">`, a verse \
+     the reader drops as `malformed-verse-number` as the parser drops `\\v No`; without the \
+     `eid`, verse 11 runs over the dropped verse's text, which is where the parser ends it",
+)];
+
+#[test]
+fn a_reference_reads_the_same_without_its_eids() {
+    let mut failures = Vec::new();
+    let mut stripped_any = 0;
+    for case in &references() {
+        let known = STRIPPED_EIDS_KNOWN
+            .iter()
+            .any(|(name, _)| *name == case.name);
+        let text = case.expected_usx_text().unwrap();
+        let stripped = strip_eids(&text);
+        assert!(
+            !ANY_END.is_match(&stripped),
+            "{}: an eid survived",
+            case.name
+        );
+        if stripped.len() != text.len() {
+            stripped_any += 1;
+        }
+        let with = read_usx(&text).document;
+        let without = read_usx(&stripped).document;
+        let holds = eq_ignoring_spans(&with, &without);
+        if known {
+            if holds {
+                failures.push((case.name.clone(), "listed as known, but holds".into()));
+            }
+            continue;
+        }
+        if !holds {
+            failures.push((
+                case.name.clone(),
+                format!(
+                    "the trees differ\n--- with eids\n{}\n--- without\n{}",
+                    to_usx_string(&with),
+                    to_usx_string(&without)
+                ),
+            ));
+        }
+    }
+    // Every reference but the few with no verse at all, and
+    // `advanced/complex`, which is USX 2 already.
+    assert!(
+        stripped_any >= 260,
+        "only {stripped_any} references had an eid"
+    );
+    assert_none("read(strip_eids(reference)) is read(reference)", failures);
+}
+
+/// A USX 2 file and its USFM: the ends the reader builds are the parser's,
+/// for the placements `crates/usfm_parser/tests/verse_ends.rs` pins — before
+/// the next verse in the paragraph, past a heading, before a character style
+/// a verse starts in, into the previous cell or before a table, around a
+/// sidebar and not inside it, and at a chapter.
+#[test]
+fn a_usx_2_file_is_the_parse_of_its_usfm() {
+    let usx = r#"<usx version="2.6"><book code="GEN" style="id"/><chapter number="1" style="c"/><para style="p"><verse number="1" style="v"/>one <verse number="2" style="v"/>two</para><para style="s">Heading</para><para style="p"><char style="add"><verse number="3" style="v"/>three</char></para><sidebar style="esb"><para style="p"><verse number="9" style="v"/>aside</para></sidebar><para style="q1">still three</para><table><row style="tr"><cell style="tc1"><verse number="4" style="v"/>four</cell><cell style="tc2"><verse number="5" style="v"/>five</cell></row></table><chapter number="2" style="c"/><para style="p"><verse number="1" style="v"/>last</para></usx>"#;
+    let usfm = "\\id GEN\n\\usfm 2.6\n\\c 1\n\\p \\v 1 one \\v 2 two\n\\s Heading\n\\p \\add \\v 3 three\\add*\n\\esb\n\\p \\v 9 aside\n\\esbe\n\\q1 still three\n\\tr \\tc1 \\v 4 four\\tc2 \\v 5 five\n\\c 2\n\\p \\v 1 last\n";
+    let read = read_usx(usx);
+    assert!(read.diagnostics.is_empty(), "{:?}", read.diagnostics);
+    let parsed = usfm::parse(usfm).document;
+    assert!(
+        eq_ignoring_spans(&read.document, &parsed),
+        "--- read\n{}\n--- parsed\n{}",
+        to_usx_string(&read.document),
+        to_usx_string(&parsed)
+    );
+}
+
+/// machine.py's World English Bible books (`fixtures/machine-py/usx/`).
+fn web_books() -> Vec<(String, String)> {
+    ["1JN", "2JN", "3JN"]
+        .iter()
+        .map(|book| {
+            let path = format!(
+                "{}/fixtures/machine-py/usx/WEB-DBL/{book}.usx",
+                env!("CARGO_MANIFEST_DIR")
+            );
+            let text = std::fs::read_to_string(&path)
+                .unwrap_or_else(|err| panic!("reading {path}: {err}"));
+            (format!("WEB-DBL/{book}"), text)
+        })
+        .collect()
+}
+
+#[test]
+fn the_web_books_round_trip() {
+    let mut failures = Vec::new();
+    for (name, text) in web_books() {
+        let read = read_usx(&text);
+        let errors: Vec<String> = read
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.severity == Severity::Error)
+            .map(ToString::to_string)
+            .collect();
+        if !errors.is_empty() {
+            failures.push((name.clone(), errors.join("; ")));
+        }
+        // USX -> USFM -> the tree again, whitespace and all.
+        let usfm = usfm::codegen::to_usfm_string(&read.document);
+        let parsed = usfm::parse(&usfm);
+        if !eq_ignoring_spans(&read.document, &parsed.document) {
+            failures.push((
+                name.clone(),
+                format!("parse(codegen(read)) differs\n{usfm}"),
+            ));
+        }
+        // -> USX, against the file. DBL indents inside mixed content, as
+        // usfm-grammar's generator does, so whitespace is compared the way
+        // the harness compares that root; the tree comparison above is the
+        // exact one.
+        let options = UsxOptions {
+            include_vid: text.contains("vid="),
+        };
+        let mut actual = to_usx_node_with_options(&parsed.document, options);
+        let mut expected = TestCase::parse_usx_text(&text).unwrap();
+        for node in [&mut actual, &mut expected] {
+            normalize_tree(node);
+            collapse_whitespace_tree(node);
+        }
+        if let Err(mismatch) = compare_xml(&actual, &expected) {
+            failures.push((
+                name.clone(),
+                format!("USX -> USFM -> USX differs: {mismatch}"),
+            ));
+        }
+        // And without its `eid`s, the same tree.
+        if !eq_ignoring_spans(&read.document, &read_usx(&strip_eids(&text)).document) {
+            failures.push((name, "reads differently without its eids".into()));
+        }
+    }
+    assert_none("the WEB books", failures);
 }
 
 /// What USX cannot say, applied to both trees before they are compared:

@@ -1,0 +1,19 @@
+---
+source: crates/usfm_usx/tests/reader.rs
+description: "<usx version=\"3.0\"><book code=\"GEN\" style=\"id\"/><chapter number=\"1\" style=\"c\" sid=\"GEN 1\"/><para style=\"p\"><verse number=\"1\" style=\"v\" sid=\"GEN 1:1\"/>one<verse eid=\"GEN 1:1\"/></para><chapter number=\"2\" style=\"c\" sid=\"GEN 2\"/><para style=\"p\">two</para><chapter eid=\"GEN 2\"/></usx>"
+---
+Book GEN "" @19..48
+Para usfm@5..18
+  Text "3.0"@14..17
+ChapterStart 1@48..91
+Para p@91..182
+  VerseStart 1@107..150
+  Text "one"@150..153
+  VerseEnd 1
+ChapterEnd 1
+ChapterStart 2@182..225
+Para p@225..251
+  Text "two"@241..244
+ChapterEnd 2
+--- diagnostics
+warning[usx-verse-end-missing] @48..91: chapter `GEN 1` is never closed by an `eid`; it ends where the parser would end it

@@ -1,0 +1,46 @@
+---
+source: crates/usfm_usx/tests/reader.rs
+description: "<usx version=\"2.6\"><book code=\"GEN\" style=\"id\"/><chapter number=\"1\" style=\"c\"/><para style=\"p\"><verse number=\"1\" style=\"v\"/>one <verse number=\"2\" style=\"v\"/>two</para><para style=\"s\">Heading</para><para style=\"p\"><char style=\"add\"><verse number=\"3\" style=\"v\"/>three</char></para><sidebar style=\"esb\"><para style=\"p\"><verse number=\"9\" style=\"v\"/>aside</para></sidebar><para style=\"q1\">still three</para><table><row style=\"tr\"><cell style=\"tc1\"><verse number=\"4\" style=\"v\"/>four</cell><cell style=\"tc2\"><verse number=\"5\" style=\"v\"/>five</cell></row></table><chapter number=\"2\" style=\"c\"/><para style=\"p\"><verse number=\"1\" style=\"v\"/>last</para></usx>"
+---
+Book GEN "" @19..48
+Para usfm@5..18
+  Text "2.6"@14..17
+ChapterStart 1@48..79
+Para p@79..167
+  VerseStart 1@95..124
+  Text "one"@124..128
+  VerseEnd 1
+  Text " "
+  VerseStart 2@128..157
+  Text "two"@157..160
+  VerseEnd 2
+Para s@167..197
+  Text "Heading"@183..190
+Para p@197..279
+  Char add@213..272
+    VerseStart 3@231..260
+    Text "three"@260..265
+Sidebar esb@279..367
+  Para p@300..357
+    VerseStart 9@316..345
+    Text "aside"@345..350
+Para q1@367..402
+  Text "still three"@384..395
+  VerseEnd 3
+Table@402..555
+  Row@409..547
+    Cell header=false align=start column=1 colspan=1@425..483
+      VerseStart 4@443..472
+      Text "four"@472..476
+      VerseEnd 4
+    Cell header=false align=start column=2 colspan=1@483..541
+      VerseStart 5@501..530
+      Text "five"@530..534
+      VerseEnd 5
+ChapterEnd 1
+ChapterStart 2@555..586
+Para p@586..642
+  VerseStart 1@602..631
+  Text "last"@631..635
+  VerseEnd 1
+ChapterEnd 2

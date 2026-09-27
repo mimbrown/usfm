@@ -1,0 +1,140 @@
+---
+source: crates/usfm_usx/tests/reader.rs
+description: machine-py/usx/Tes/MAT.usx
+---
+Book MAT "- Test" @64..105
+Para usfm@47..60
+  Text "2.6"@56..59
+Para ide@108..156
+  Text "65001 - Unicode (UTF-8)"@126..149
+Para h@159..189
+  Text "Matthew"@175..182
+Para mt@192..223
+  Text "Matthew"@209..216
+Para ip@226..276
+  Text "An introduction to Matthew"@243..269
+ChapterStart 1@279..311
+Para s@314..348
+  Text "Chapter One"@330..341
+Para p@351..510
+  VerseStart 1@351..381
+  Text "Chapter one, verse one."@381..404
+  Note f caller=+@404..510
+    Char fr@431..460
+      Text "1:1: "@448..453
+    Char ft@460..503
+      Text "This is a footnote."@477..496
+  VerseEnd 1
+Para li1@513..585
+  VerseStart 2@536..566
+  Text "Chapter one,"@566..578
+Para li2@588..771
+  Text "verse"@606..611
+  Note f caller=+@611..717
+    Char fr@638..667
+      Text "1:2: "@655..660
+    Char ft@667..710
+      Text "This is a footnote."@684..703
+  Text " two."@717..722
+  VerseEnd 2
+  VerseStart 3@722..752
+  Text "Chapter one,"@752..764
+Para li2@774..853
+  Text "verse three."@792..804
+  VerseEnd 3
+  VerseStart 4@804..834
+  Text "Chapter one,"@834..846
+Para li2@856..934
+  Text "verse four,"@874..885
+  VerseEnd 4
+  VerseStart 5@885..915
+  Text "Chapter one,"@915..927
+Para li2@937..1048
+  Text "verse"@955..960
+  Char fig@960..1036 src="image1.png" size="col" ref="1:5"
+    Text "Figure 1"@1019..1027
+  Text "five."@1036..1041
+  VerseEnd 5
+ChapterEnd 1
+ChapterStart 2@1051..1083
+Para s1@1086..1121
+  Text "Chapter Two"@1103..1114
+Para p@1124..1594
+  VerseStart 1@1145..1189
+  Text "Chapter "@1189..1197
+  Char add@1197..1225
+    Text "two"@1215..1218
+  Text ", verse "@1225..1233
+  Note f caller=+@1233..1339
+    Char fr@1260..1289
+      Text "2:1: "@1277..1282
+    Char ft@1289..1332
+      Text "This is a footnote."@1306..1325
+  Text "one."@1339..1344
+  VerseEnd 1
+  Text " "
+  VerseStart 2-3@1367..1399
+  Text "Chapter two, verse two."@1399..1423
+  VerseEnd 2-3
+  Text " "
+  VerseStart 3-4a@1423..1456
+  Text "Chapter two, verse three."@1456..1482
+  VerseEnd 3-4a
+  Text " "
+  VerseStart 4b@1482..1513
+  Text "Chapter two, "@1513..1526
+  Char add@1526..1556
+    Text "verse"@1544..1549
+  Text " "@1556..1557
+  Char add@1557..1586
+    Text "four"@1575..1579
+  Text "."@1586..1587
+  VerseEnd 4b
+Para p@1597..1905
+  VerseStart 6@1618..1648
+  Text "Chapter two, verse "@1648..1667
+  Char w@1667..1708 strong="12345"
+    Text "six"@1698..1701
+  Text "."@1708..1710
+  VerseEnd 6
+  Text " "
+  VerseStart 6@1710..1740
+  Text "Bad verse."@1740..1751
+  VerseEnd 6
+  Text " "
+  VerseStart 5@1751..1781
+  Text "Chapter two, verse five "@1781..1805
+  Char rq@1805..1838
+    Text "(MAT 3:1)"@1822..1831
+  Text "."@1838..1840
+  VerseEnd 5
+  Text " "
+  VerseStart 7a@1840..1871
+  Text "Chapter two, verse seven A,"@1871..1898
+  VerseEnd 7a
+Para s@1908..1945
+  Text "Section header"@1924..1938
+Para p@1948..2021
+  VerseStart 7b@1969..2000
+  Text "verse seven B."@2000..2014
+  VerseEnd 7b
+Para restore@2024..2072
+  Text "restore information"@2046..2065
+ChapterEnd 2
+--- diagnostics
+warning[usx-verse-end-missing] @279..311: chapter `MAT 1` is never closed by an `eid`; it ends where the parser would end it
+error[content-outside-paragraph] @351..381: content outside a paragraph; kept in an implicit `\p`
+warning[usx-verse-end-missing] @351..381: verse `MAT 1:1` is never closed by an `eid`; it ends where the parser would end it
+warning[usx-verse-end-missing] @536..566: verse `MAT 1:2` is never closed by an `eid`; it ends where the parser would end it
+warning[usx-verse-end-missing] @722..752: verse `MAT 1:3` is never closed by an `eid`; it ends where the parser would end it
+warning[usx-verse-end-missing] @804..834: verse `MAT 1:4` is never closed by an `eid`; it ends where the parser would end it
+warning[usx-verse-end-missing] @885..915: verse `MAT 1:5` is never closed by an `eid`; it ends where the parser would end it
+warning[usx-verse-end-missing] @1051..1083: chapter `MAT 2` is never closed by an `eid`; it ends where the parser would end it
+warning[usx-verse-end-missing] @1367..1399: verse `MAT 2:2-3` is never closed by an `eid`; it ends where the parser would end it
+warning[usx-verse-end-missing] @1423..1456: verse `MAT 2:3-4a` is never closed by an `eid`; it ends where the parser would end it
+warning[usx-verse-end-missing] @1482..1513: verse `MAT 2:4b` is never closed by an `eid`; it ends where the parser would end it
+warning[usx-verse-end-missing] @1618..1648: verse `MAT 2:6` is never closed by an `eid`; it ends where the parser would end it
+warning[usx-verse-end-missing] @1710..1740: verse `MAT 2:6` is never closed by an `eid`; it ends where the parser would end it
+warning[usx-verse-end-missing] @1751..1781: verse `MAT 2:5` is never closed by an `eid`; it ends where the parser would end it
+warning[usx-verse-end-missing] @1840..1871: verse `MAT 2:7a` is never closed by an `eid`; it ends where the parser would end it
+warning[usx-verse-end-missing] @1969..2000: verse `MAT 2:7b` is never closed by an `eid`; it ends where the parser would end it

@@ -105,6 +105,7 @@
 //! | `usx-unmatched` | E | drops the `<unmatched>` | **USX** (45): the AST has no node for it, so only a reader sees it |
 //! | `usx-verse-end-mismatch` | E | closes the open verse or chapter, or drops the end | **USX** (45): USFM has no verse ends to get wrong |
 //! | `usx-reference-mismatch` | W | nothing: `sid` and `vid` are derived | **USX** (45): as above |
+//! | `usx-verse-end-missing` | W | builds the end where the parser would | **USX** (47): as above |
 //! | `internal` | E | stops parsing | parser: it is the parser's own invariant |
 //!
 //! The executable form of the last column is [`Code::origin`], which all
@@ -599,6 +600,16 @@ pub enum Code {
     /// **Severity:** Warning.
     /// **Reported by:** `usfm_usx`'s reader, on the attribute.
     UsxReferenceMismatch,
+    /// **Trigger:** in a file that closes verses or chapters with `eid`
+    /// milestones (USX 3), a verse or chapter that has none: the next one
+    /// starts, or the file ends, while it is still open. A USX 2 file, which
+    /// has no `eid` at all, is not reported: its ends are built silently.
+    /// **Recovery:** the end is built where the parser would put it (plan
+    /// D4), which is where it goes in a USX 2 file too.
+    /// **Severity:** Warning.
+    /// **Reported by:** `usfm_usx`'s reader, on the `<verse>` or `<chapter>`
+    /// that started what was never ended.
+    UsxVerseEndMissing,
     /// **Trigger:** the parser reached a state its own invariants say is
     /// impossible. Parsing stops at this point.
     /// **Recovery:** none; the document is whatever was parsed so far.
@@ -672,6 +683,7 @@ impl Code {
         Code::UsxUnmatched,
         Code::UsxVerseEndMismatch,
         Code::UsxReferenceMismatch,
+        Code::UsxVerseEndMissing,
         Code::Internal,
     ];
 
@@ -741,6 +753,7 @@ impl Code {
             Code::UsxUnmatched => "usx-unmatched",
             Code::UsxVerseEndMismatch => "usx-verse-end-mismatch",
             Code::UsxReferenceMismatch => "usx-reference-mismatch",
+            Code::UsxVerseEndMissing => "usx-verse-end-missing",
             Code::Internal => "internal",
         }
     }
@@ -760,7 +773,8 @@ impl Code {
             | Code::DuplicateChapterNumber
             | Code::ChapterOutOfOrder
             | Code::UsxUnknownElement
-            | Code::UsxReferenceMismatch => Severity::Warning,
+            | Code::UsxReferenceMismatch
+            | Code::UsxVerseEndMissing => Severity::Warning,
             Code::CharacterStyleImplicitlyClosed
             | Code::CharacterStyleNestedWithoutPlus
             | Code::MarkerNotListedHere
@@ -821,7 +835,8 @@ impl Code {
             | Code::UsxUnknownElement
             | Code::UsxUnmatched
             | Code::UsxVerseEndMismatch
-            | Code::UsxReferenceMismatch => Origin::Usx,
+            | Code::UsxReferenceMismatch
+            | Code::UsxVerseEndMissing => Origin::Usx,
             _ => Origin::Parser,
         }
     }
@@ -1173,7 +1188,8 @@ mod tests {
             Code::UsxUnknownElement => Code::UsxUnmatched,
             Code::UsxUnmatched => Code::UsxVerseEndMismatch,
             Code::UsxVerseEndMismatch => Code::UsxReferenceMismatch,
-            Code::UsxReferenceMismatch => Code::Internal,
+            Code::UsxReferenceMismatch => Code::UsxVerseEndMissing,
+            Code::UsxVerseEndMissing => Code::Internal,
             Code::Internal => return None,
         })
     }
