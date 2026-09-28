@@ -92,6 +92,11 @@ impl fmt::Display for StyleId {
 /// extended sheet would be meaningless to a caller holding only the base
 /// sheet. Any serializer leaving the process writes the marker name, never
 /// the index.
+///
+/// A clone shares the stylesheet (the `Arc`) and, for a borrowed parse, the
+/// source; everything else is copied (ticket 58). A pipeline that feeds
+/// several outputs should borrow one document rather than clone it.
+#[derive(Clone)]
 pub struct Document<'a> {
     pub blocks: Vec<Block<'a>>,
     /// The source this document was parsed from, as a range: `0..len`, or
@@ -207,7 +212,7 @@ impl<'a> IntoIterator for Document<'a> {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Block<'a> {
     Book(Book<'a>),
     ChapterStart(ChapterStart<'a>),
@@ -247,7 +252,7 @@ pub enum Block<'a> {
     Periph(Periph<'a>),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Inline<'a> {
     Text(Text<'a>),
     VerseStart(VerseStart<'a>),
@@ -376,7 +381,7 @@ impl fmt::Display for Text<'_> {
 /// may break the line if it needs to. USX `<optbreak/>`. The whitespace on
 /// either side stays in the neighbouring text (`Man // Who` is `"Man "`,
 /// the break, `" Who"`); `//` inside a word splits it.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct OptBreak {
     /// Source range of the two slashes.
     pub span: Span,
@@ -384,7 +389,7 @@ pub struct OptBreak {
 
 /// A milestone marker - self-closing markers that denote spans without nesting.
 /// Examples: \qt-s (quotation start), \qt-e (quotation end), \ts (translator section)
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Milestone<'a> {
     /// The milestone's style, resolved against the document's stylesheet.
     pub style: StyleId,
@@ -410,7 +415,7 @@ impl<'a> Milestone<'a> {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Para<'a> {
     pub style: StyleId,
     pub children: Vec<Inline<'a>>,
@@ -426,7 +431,7 @@ impl Para<'_> {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Char<'a> {
     pub style: StyleId,
     pub children: Vec<Inline<'a>>,
@@ -466,7 +471,7 @@ pub struct Attribute<'a> {
     pub span: Span,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Note<'a> {
     pub style: StyleId,
     pub caller: Caller<'a>,
@@ -479,7 +484,7 @@ pub struct Note<'a> {
     pub span: Span,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Caller<'a> {
     Plus,
     Minus,

@@ -1,20 +1,20 @@
 use super::{Inline, Span};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Table<'a> {
     pub rows: Vec<TableRow<'a>>,
     /// Source range from the first `\tr` to the end of the last cell.
     pub span: Span,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TableRow<'a> {
     pub cells: Vec<TableCell<'a>>,
     /// Source range of the `\tr` marker and the row's cells.
     pub span: Span,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TableCell<'a> {
     pub header: bool,
     pub alignment: Alignment,
@@ -28,7 +28,7 @@ pub struct TableCell<'a> {
     pub span: Span,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Alignment {
     Start,
     Center,

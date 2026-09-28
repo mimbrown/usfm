@@ -1,6 +1,6 @@
 # 57. A publishing layer: volumes, output models, scoped edits, media
 
-Status: ready-for-human
+Status: resolved (2026-09-28)
 Milestone: after M7 (render gaps)
 
 Found by mapping Shahkar-Urdu-Apps/render (gaps 5, 7, 8, 9). What render does
@@ -33,3 +33,17 @@ variants — with volumes as a collection of documents plus chapter selection,
 and edits scoped by a small selector (style, ancestor, medium). That needs a
 spec section and Michael's view of which outputs matter, before any ticket
 under it is ready for an agent.
+
+## Answer
+
+Michael, 2026-09-28. usfm is a foundation to build on, not a new home for
+render. render has five layers: the base USFM; edits shared by every
+output; the split into print and digital; the book pipeline; and the
+digital pipeline. Output-only structure, such as a cartouche over several
+`\m#` paragraphs, lives in render's own model (`RenderBlock`) over usfm's
+`Block`s. Doing that must not mean re-implementing the writers.
+
+render moves to Rust end to end. The design is the spec's "Publishing
+foundation" section: no AST variants; writers you drive one block at a time,
+keeping their state between blocks, with hooks to override one node kind.
+It is split into tickets 58–64.

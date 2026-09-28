@@ -272,7 +272,15 @@ Recent progress:
   stale when the text changes, so it only orders and breaks ties — after
   SIL's interlinearizer extension, whose four invented MIT test projects
   are the fixtures (`tests/fixtures/pt9/`, `NOTICE.md`). 57, a publishing
-  layer, waits on a spec
+  layer, is specified as the spec's "Publishing foundation" (2026-09-28):
+  render moves to Rust end to end and keeps its own model (`RenderBlock`,
+  a cartouche over several `\m#` paragraphs) over our `Block`s — no AST
+  variants — and usfm offers writers driven block by block with hooks
+  (tickets 59–61), scoped edits (62) and chapter selection (63); a parser
+  in WASM driven from JS, as oxc does, is ticket 64. Ticket 58 is done:
+  `Document` and every AST node are `Clone`, as a convenience only: the
+  print and digital pipelines *borrow* one edited document and each builds
+  its own model from it, so the design never needs a copy
 - **Markers delimited by a line break or the next `\` (hardening plan,
   Phase 2).** Nothing changed in the parser: fourteen such spellings already
   parsed with no diagnostic to the tree of their one-space spelling, and
