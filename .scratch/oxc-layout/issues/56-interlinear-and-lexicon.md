@@ -66,3 +66,23 @@ verse's plain text, and render's literal-translation pairing (a second
 project verse by verse, which `ReferenceIndex` over each already allows).
 Checked against render's real `Interlinear_ur_*.xml` only once Michael can
 share one.
+
+### Checked against a real file (2026-09-28)
+
+Michael shared `Interlinear_ur_3JN.xml` from the ALEPH project (Sinaiticus,
+Urdu glosses; 16 verses, 218 word clusters, no lexicon) with the book's
+USFM. It is not committed. What it showed:
+
+- Every range was exact: over an unedited verse, `Index` counts UTF-16 code
+  units of `\v N ` followed by the verse's text, combining marks included
+  (`αδελφω̅` is 7). Verse `1:0` is the text before `\v 1`: its one cluster
+  glosses a word of the `\id` line, which `ReferenceIndex` has no verse for.
+- The clusters are stored in no order; the reader and `anchor` already sort.
+- 216 of the 217 verse clusters landed. The one that did not was the second
+  of `ϋπερ γαρ γαρ` (1:7): the proportional prior chose the second `γαρ` for
+  the first cluster. `anchor` now never takes a place a later cluster of the
+  same form needs, and measures "nearest" by the offset most once-written
+  words agree the ranges are shifted by (the marker, here), counted in
+  UTF-16, falling back to proportion only when no word settles it. All 217
+  land on the word their range names; with words written into 1:7 and 1:11
+  since, they still land on the right ones.

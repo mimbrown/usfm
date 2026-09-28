@@ -15,9 +15,13 @@
 //! - a phrase lands on the first run of consecutive words that spells its
 //!   form, at or after the previous phrase's first word (so phrases may
 //!   overlap, as `zim zam` and `zam zim` do over `zim zam zim`);
-//! - where several words or runs match, the one whose position in the text is
-//!   proportionally nearest the range's position in the verse wins, and the
-//!   anchor is marked ambiguous;
+//! - where several words or runs match, the range chooses and the anchor is
+//!   marked ambiguous: never a place a later cluster of the same form needs
+//!   (so `γαρ γαρ` takes one each), and otherwise the one nearest the range,
+//!   counted in UTF-16 as Paratext counts. Nearest is by the offset most
+//!   uniquely spelled words agree the ranges are shifted by (the verse
+//!   marker, in a real project, when the verse is unedited), or, when no
+//!   word settles it, by proportion;
 //! - a cluster that lands nowhere, or has no place to land, is dropped with
 //!   its reason rather than lost.
 //!
@@ -143,26 +147,29 @@ fn fold(s: &str) -> String {
 pub fn anchor(text: &str, clusters: &[Cluster]) -> Anchoring {
     let words = words(text);
     let folded: Vec<String> = words.iter().map(|w| fold(&text[w.clone()])).collect();
-    let char_len = text.chars().count().max(1);
-    let char_starts: Vec<usize> = words
+    // Where each word starts, in UTF-16 code units: what a range counts.
+    let starts: Vec<usize> = words
         .iter()
-        .map(|w| text[..w.start].chars().count())
+        .map(|w| text[..w.start].encode_utf16().count())
         .collect();
+    let text_len = text.encode_utf16().count().max(1);
     let extent = clusters
         .iter()
         .map(|c| c.range.index + c.range.length)
         .max()
         .unwrap_or(0)
         .max(1);
-    // Among several candidates, the one proportionally nearest the range.
+    let shift = shift(clusters, &folded, &starts);
+    // Among several candidates, the one nearest the range: by the offset
+    // the text is shifted by when one is known, proportionally otherwise.
     let nearest = |candidates: &[usize], range: TextRange| -> usize {
-        let target = range.index as f64 / extent as f64;
+        let distance = |w: usize| match shift {
+            Some(shift) => (starts[w] as f64 + shift as f64 - range.index as f64).abs(),
+            None => (starts[w] as f64 / text_len as f64 - range.index as f64 / extent as f64).abs(),
+        };
         *candidates
             .iter()
-            .min_by(|&&a, &&b| {
-                let distance = |w: usize| (char_starts[w] as f64 / char_len as f64 - target).abs();
-                distance(a).total_cmp(&distance(b))
-            })
+            .min_by(|&&a, &&b| distance(a).total_cmp(&distance(b)))
             .expect("candidates is not empty")
     };
 
@@ -199,12 +206,18 @@ pub fn anchor(text: &str, clusters: &[Cluster]) -> Anchoring {
     }
 
     groups.sort_by_key(|g| (g.0.index, g.0.length));
+    let surfaces: Vec<String> = groups
+        .iter()
+        .map(|&(_, gloss, parse)| {
+            let first = gloss.or(parse).expect("a group has a cluster");
+            fold(&clusters[first].surface().unwrap_or_default())
+        })
+        .collect();
     let mut cursor = 0;
-    for (range, gloss, parse) in groups {
-        let first = gloss.or(parse).expect("a group has a cluster");
-        let expected = fold(&clusters[first].surface().unwrap_or_default());
-        let candidates: Vec<usize> = (cursor..words.len())
-            .filter(|&w| folded[w] == expected)
+    for (at, (range, gloss, parse)) in groups.into_iter().enumerate() {
+        let expected = &surfaces[at];
+        let mut candidates: Vec<usize> = (cursor..words.len())
+            .filter(|&w| folded[w] == *expected)
             .collect();
         if candidates.is_empty() {
             for cluster in [gloss, parse].into_iter().flatten() {
@@ -213,7 +226,11 @@ pub fn anchor(text: &str, clusters: &[Cluster]) -> Anchoring {
             continue;
         }
         let ambiguous = candidates.len() > 1;
-        let word = if ambiguous {
+        reserve(
+            &mut candidates,
+            surfaces[at + 1..].iter().filter(|s| *s == expected).count(),
+        );
+        let word = if candidates.len() > 1 {
             nearest(&candidates, range)
         } else {
             candidates[0]
@@ -228,26 +245,34 @@ pub fn anchor(text: &str, clusters: &[Cluster]) -> Anchoring {
     }
 
     phrases.sort_by_key(|&p| clusters[p].range.index);
+    let forms: Vec<String> = phrases
+        .iter()
+        .map(|&p| fold(&clusters[p].surface().unwrap_or_default()))
+        .collect();
     let mut cursor = 0;
-    for cluster in phrases {
-        let form = fold(&clusters[cluster].surface().unwrap_or_default());
+    for (at, &cluster) in phrases.iter().enumerate() {
+        let form = &forms[at];
         let parts: Vec<&str> = form.split_whitespace().collect();
-        let starts: Vec<usize> = if parts.is_empty() {
+        let mut runs: Vec<usize> = if parts.is_empty() {
             Vec::new()
         } else {
             (cursor..(words.len() + 1).saturating_sub(parts.len()))
                 .filter(|&s| parts.iter().enumerate().all(|(i, p)| folded[s + i] == *p))
                 .collect()
         };
-        if starts.is_empty() {
+        if runs.is_empty() {
             anchoring.dropped.push((cluster, DropReason::FormMismatch));
             continue;
         }
-        let ambiguous = starts.len() > 1;
-        let start = if ambiguous {
-            nearest(&starts, clusters[cluster].range)
+        let ambiguous = runs.len() > 1;
+        reserve(
+            &mut runs,
+            forms[at + 1..].iter().filter(|f| *f == form).count(),
+        );
+        let start = if runs.len() > 1 {
+            nearest(&runs, clusters[cluster].range)
         } else {
-            starts[0]
+            runs[0]
         };
         anchoring.phrases.push(AnchoredPhrase {
             words: start..start + parts.len(),
@@ -261,6 +286,45 @@ pub fn anchor(text: &str, clusters: &[Cluster]) -> Anchoring {
     anchoring.dropped.sort_by_key(|&(cluster, _)| cluster);
     anchoring.words = words;
     anchoring
+}
+
+/// The offset between the text and the ranges, when the clusters agree on
+/// one: for each word cluster whose form is written once in the text, its
+/// range's start less the word's, and the value most of them give. Paratext
+/// counts its own verse string, which begins with the verse marker (`\v 7 `),
+/// so over an unedited verse this is that marker's length and every range
+/// is exact; an edit shifts only the words after it, which the majority
+/// outvotes.
+fn shift(clusters: &[Cluster], folded: &[String], starts: &[usize]) -> Option<i64> {
+    let mut votes: Vec<(i64, usize)> = Vec::new();
+    for cluster in clusters {
+        if cluster.kind() != ClusterKind::Word {
+            continue;
+        }
+        let surface = fold(&cluster.surface().unwrap_or_default());
+        let mut matches = folded.iter().enumerate().filter(|(_, w)| **w == surface);
+        let (Some((word, _)), None) = (matches.next(), matches.next()) else {
+            continue;
+        };
+        let delta = cluster.range.index as i64 - starts[word] as i64;
+        match votes.iter_mut().find(|(d, _)| *d == delta) {
+            Some(vote) => vote.1 += 1,
+            None => votes.push((delta, 1)),
+        }
+    }
+    // Most votes; among equals, the smallest offset.
+    votes
+        .into_iter()
+        .max_by(|a, b| a.1.cmp(&b.1).then(b.0.cmp(&a.0)))
+        .map(|(delta, _)| delta)
+}
+
+/// Keep, of the matching places, only those that leave one for each later
+/// cluster of the same form, so a repeated word (`γαρ γαρ`) is not taken
+/// by the first cluster and lost to the second.
+fn reserve(candidates: &mut Vec<usize>, later: usize) {
+    let keep = candidates.len().saturating_sub(later).max(1);
+    candidates.truncate(keep);
 }
 
 #[cfg(test)]
@@ -279,5 +343,58 @@ mod tests {
         assert_eq!(spelled("λόγος"), ["λόγος"]);
         assert_eq!(spelled("כָּל־הָאָרֶץ"), ["כָּל", "הָאָרֶץ"]);
         assert_eq!(spelled("کی\u{200C}ا خدا۔"), ["کی\u{200C}ا", "خدا"]);
+    }
+
+    fn word(index: usize, form: &str) -> Cluster {
+        Cluster {
+            range: TextRange {
+                index,
+                length: form.encode_utf16().count(),
+            },
+            lexemes: vec![crate::interlinear::ClusterLexeme {
+                id: Some(format!("Word:{form}")),
+                sense: None,
+            }],
+            excluded: false,
+        }
+    }
+
+    fn landed(text: &str, clusters: &[Cluster]) -> Vec<(usize, usize)> {
+        let anchoring = anchor(text, clusters);
+        assert!(anchoring.dropped.is_empty(), "{:?}", anchoring.dropped);
+        let mut out: Vec<_> = anchoring
+            .anchored_words
+            .iter()
+            .map(|w| (w.gloss.unwrap(), w.word))
+            .collect();
+        out.sort();
+        out
+    }
+
+    /// 3JN 1:7 of a real Paratext project (Sinaiticus): the ranges count
+    /// `\v 7 ` too, and the clusters come in no particular order. The first
+    /// `γαρ` had taken the second word, as proportionally nearer, and the
+    /// second `γαρ` was dropped.
+    #[test]
+    fn a_repeated_word_takes_one_each_by_the_markers_offset() {
+        let text = "ϋπερ γαρ γαρ του ονοματοϲ";
+        let clusters = [
+            word(14, "γαρ"),
+            word(10, "γαρ"),
+            word(22, "ονοματοϲ"),
+            word(5, "ϋπερ"),
+            word(18, "του"),
+        ];
+        assert_eq!(
+            landed(text, &clusters),
+            [(0, 2), (1, 1), (2, 4), (3, 0), (4, 3)]
+        );
+        // A word written in since the glosses were made shifts the words
+        // after it; the ranges still pick their own `γαρ`.
+        let edited = "ϋπερ λογοϲ γαρ γαρ του ονοματοϲ";
+        assert_eq!(
+            landed(edited, &clusters),
+            [(0, 3), (1, 2), (2, 5), (3, 0), (4, 4)]
+        );
     }
 }
