@@ -20,7 +20,7 @@
 //! | [`json`] | `usfm_json` | AST to JSON (feature `json`) |
 //! | [`codegen`] | `usfm_codegen` | AST back to USFM (feature `codegen`) |
 //! | [`pipeline`] | `usfm_pipeline` | text replacements, sectioning, diglot, output dispatch (feature `pipeline`) |
-//! | [`paratext`] | `usfm_paratext` | a Paratext project folder: settings, book names, book files, its stylesheet (feature `paratext`) |
+//! | [`paratext`] | `usfm_paratext` | a Paratext project folder: settings, book names, book files, its stylesheet, its interlinear glosses and lexicon (feature `paratext`) |
 //!
 //! The five output features and `paratext` are on by default; turning them
 //! off leaves a parser-only build. `semantic` has no feature of its own: [`parse`] is a

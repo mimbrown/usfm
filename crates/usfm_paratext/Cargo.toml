@@ -20,3 +20,7 @@ usfm_semantic = { path = "../usfm_semantic" }
 usfm_style = { path = "../usfm_style" }
 # `Settings.xml` and `BookNames.xml`. Already the USX reader's XML parser.
 roxmltree = { workspace = true }
+
+[dev-dependencies]
+# The interlinear tests place clusters on a parsed book's verse text.
+usfm_parser = { path = "../usfm_parser" }

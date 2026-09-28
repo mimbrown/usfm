@@ -511,8 +511,10 @@ became seven tickets, 51–57: the ones with an obvious shape are
   Paratext project reader, `usfm_paratext`), 54 (`usfm_semantic::citation`,
   the `\xt` reference parser in the project's punctuation), 55
   (`usfm_semantic::GlossaryIndex`).
-- **Waiting on Michael:** 52 (keep an unknown marker as a derived style, and
-  which ones), 56 (interlinear and lexicon: aligned USFM or a side table;
-  needs real project files), 57 (a publishing layer — volumes, output
+- **Answered 2026-09-28:** 52 needs nothing (the markers are in the
+  project's `custom.sty`, which 51 and 53 load); 56 is a reader for
+  Paratext 9's interlinear and lexicon files in `usfm_paratext`, placed on
+  the verse text by form, tested on SIL's open test projects.
+- **Waiting on Michael:** 57 (a publishing layer — volumes, output
   models, scoped and per-medium edits, render's SILE shape — which needs a
   spec section before any ticket under it is ready).

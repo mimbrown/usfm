@@ -11,7 +11,8 @@ pub enum Error {
         path: PathBuf,
         source: std::io::Error,
     },
-    /// `Settings.xml` or `BookNames.xml` is not the XML it should be.
+    /// `Settings.xml`, `BookNames.xml`, `Lexicon.xml` or an interlinear file
+    /// is not the XML it should be.
     Xml { path: PathBuf, message: String },
     /// A stylesheet could not be parsed.
     Stylesheet { path: PathBuf, message: String },

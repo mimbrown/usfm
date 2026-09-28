@@ -1,6 +1,6 @@
-# 56. Paratext interlinear glosses and lexicon, as aligned USFM?
+# 56. Paratext interlinear glosses and lexicon
 
-Status: ready-for-human
+Status: resolved (2026-09-28)
 Milestone: after M7 (render gaps)
 
 Found by mapping Shahkar-Urdu-Apps/render (gap 4). render prints and shows
@@ -29,3 +29,40 @@ Recommendation: (a), with alignment by Paratext's character ranges
 interlinear and lexicon files to test against, which only Michael can
 supply (they are not in render's repository; its CI syncs them from the
 Paratext server).
+
+## Answer
+
+Michael, 2026-09-28: "we do need to handle interlinear", and asked for
+open-source samples. SIL's interlinearizer extension (MIT) has four
+invented Paratext 9 projects with every file and a written spec of the
+format (`src/parsers/pt9/pt9-xml.md`); they are vendored as
+`crates/usfm_paratext/tests/fixtures/pt9/` (`NOTICE.md`). No openly
+licensed real-language interlinear exists that we found.
+
+The spec settles the representation, and it is **not** (a): a cluster's
+`Range` counts characters of Paratext's own verse string (which carries the
+verse marker), Paratext never rewrites ranges when the text changes, and it
+matches an analysis to a word by the lexeme's *form*. So a range cannot be
+written into the tree as an alignment; it is ordering and a tie-breaker. The
+answer is (b), a side structure, placed on the text by form:
+
+- `usfm_paratext::InterlinearBook` reads `Interlinear_{lang}_{book}.xml`
+  (verses, clusters, lexemes with their chosen sense, `Excluded`, the
+  approval hash, punctuation changes), `Lexicon` reads `Lexicon.xml`
+  (entries, senses, glosses per language, the legacy analyses), and
+  `Project::interlinear` / `interlinear_languages` / `lexicon` find them
+  (the Paratext 9 folder first, the older top-level file second).
+- `usfm_paratext::anchor::anchor(text, clusters)` places a verse's clusters
+  on the words of the verse's text (`ReferenceIndex`'s `VerseRef::text()`,
+  notes left out — render skipped footnote words by counting), following
+  the extension's `clusterAnchoring.ts`: word and parse clusters by their
+  surface form, phrases by a run of words, the range choosing between
+  repeats; what cannot land is reported with its reason.
+
+Left for later, when a consumer needs them: `WordAnalyses.xml` and
+`InterlinearSetup.xml` (not read), Unicode normalisation of forms (compared
+lower-cased only), attaching glosses to tree nodes rather than to the
+verse's plain text, and render's literal-translation pairing (a second
+project verse by verse, which `ReferenceIndex` over each already allows).
+Checked against render's real `Interlinear_ur_*.xml` only once Michael can
+share one.
