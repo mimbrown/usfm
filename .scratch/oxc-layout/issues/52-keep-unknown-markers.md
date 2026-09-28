@@ -1,6 +1,6 @@
 # 52. Keep an unknown marker instead of dropping it?
 
-Status: ready-for-human
+Status: resolved (2026-09-28, no code)
 Milestone: after M7 (render gaps)
 
 Found by mapping Shahkar-Urdu-Apps/render (gap 1). With no stylesheet entry
@@ -34,3 +34,12 @@ Options: (a) keep every unknown marker as a derived style (Paratext's rule);
 (b) keep only `\z…` markers, which USFM reserves for extensions, and drop
 the rest; (c) leave it as is and rely on ticket 51 / 53 to load the sheet.
 Recommendation: (b) first, since `\z` is the spec's own extension space.
+
+## Answer
+
+Michael, 2026-09-28: in the real project these markers are in `custom.sty`,
+so they are not unknown. With the project's sheet loaded — `usfm parse
+--custom-stylesheet` (ticket 51), or `usfm_paratext::Project::style_sheet`
+(ticket 53) — they parse as their own styles, which is option (c). Nothing
+changes in the parser; reopen if a real input needs a marker kept that no
+sheet names.

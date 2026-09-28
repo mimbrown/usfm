@@ -261,9 +261,18 @@ Recent progress:
   `usfm_semantic::GlossaryIndex` (`usfm::GlossaryIndex`): every `\k` of
   the documents it is built from (the glossary is usually its own book),
   and for each `\w` of a document the entry its lemma or text names,
-  compared whitespace-collapsed and lower-cased. 52, 56 and 57 wait on
-  Michael: whether to keep unknown markers, how to represent interlinear
-  glosses, and a publishing layer
+  compared whitespace-collapsed and lower-cased. Michael answered 52 and 56
+  on 2026-09-28: 52 needs no code (render's `\z…` and `\app-…` markers are
+  in its `custom.sty`, which 51 and 53 load). 56 is `usfm_paratext`'s
+  reader for Paratext 9's interlinear glosses: `InterlinearBook`
+  (`Interlinear_{lang}_{book}.xml`), `Lexicon` (`Lexicon.xml`),
+  `Project::interlinear` / `lexicon`, and `anchor::anchor(text, clusters)`,
+  which places a verse's clusters on the words of `VerseRef::text()` **by
+  form** — a cluster's `Range` counts Paratext's own verse string and goes
+  stale when the text changes, so it only orders and breaks ties — after
+  SIL's interlinearizer extension, whose four invented MIT test projects
+  are the fixtures (`tests/fixtures/pt9/`, `NOTICE.md`). 57, a publishing
+  layer, waits on a spec
 - **Markers delimited by a line break or the next `\` (hardening plan,
   Phase 2).** Nothing changed in the parser: fourteen such spellings already
   parsed with no diagnostic to the tree of their one-space spelling, and
@@ -910,7 +919,8 @@ usfm-tools/
 │   ├── usfm_html/         # AST -> HTML: ToHtml, SerializeHtml, Context
 │   ├── usfm_json/         # AST -> JSON: the tree as it is, one object per node
 │   ├── usfm_paratext/     # A Paratext project folder: Settings.xml,
-│   │                      #   BookNames.xml, book files, its stylesheet
+│   │                      #   BookNames.xml, book files, its stylesheet,
+│   │                      #   and its interlinear glosses and Lexicon.xml
 │   ├── usfm_codegen/      # AST -> USFM: one canonical spelling per construct,
 │   │                      #   `to_usfm_string`. Round-trips the tcdocs corpus
 │   ├── usfm_pipeline/     # Document -> Document/text: replacements, sections,

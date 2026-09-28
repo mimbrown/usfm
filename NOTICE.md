@@ -42,6 +42,14 @@ derives from the following, which keep their own terms.
   publishers; the three `WEB-DBL` books are the World English Bible, whose
   text is in the **public domain** (the bundle's own `metadata.xml` says so,
   naming eBible.org as rights holder).
+- **Paratext 9 interlinear test projects**
+  (`crates/usfm_paratext/tests/fixtures/pt9/`, from
+  https://github.com/sillsdev/interlinearizer-extension at commit
+  `75201e10d6ccadb9b19cdafa73d064d56c0eed35`, fetched 2026-09-28). Copyright ©
+  2026 SIL Global, MIT; the licence text is copied verbatim to
+  `crates/usfm_paratext/tests/fixtures/pt9/LICENSE`. Its
+  `test-data/pt9-projects/` directory (the four projects `PIA` to `PID`) is
+  vendored unchanged. Their text is invented, not Scripture.
 - **World English Bible** (`tasks/benchmark/corpus/web/`), the benchmark
   corpus. The WEB is in the **public domain**: no copyright, no attribution
   requirement, no restriction on redistribution. It is eBible.org's edition,

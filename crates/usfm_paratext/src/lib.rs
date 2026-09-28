@@ -12,6 +12,12 @@
 //! Nothing here parses USFM: hand the text and the sheet to
 //! `usfm::parse_with`.
 //!
+//! A project's interlinear glosses (ticket 56) are two more files:
+//! [`Project::interlinear`] reads a book's `Interlinear_{language}_{book}.xml`
+//! ([`InterlinearBook`]), [`Project::lexicon`] its `Lexicon.xml`
+//! ([`Lexicon`]), and [`anchor::anchor`] places a verse's clusters on the
+//! words of the verse's text, which is the part a range cannot do alone.
+//!
 //! ```no_run
 //! use usfm_paratext::Project;
 //! use usfm_ast::BookCode;
@@ -25,8 +31,11 @@
 //! # Ok::<(), usfm_paratext::Error>(())
 //! ```
 
+pub mod anchor;
 pub mod canon;
 mod error;
+pub mod interlinear;
+mod lexicon;
 mod names;
 mod settings;
 
@@ -38,6 +47,11 @@ use usfm_ast::BookCode;
 use usfm_style::{DEFAULT_STYLESHEET, StyleSheet};
 
 pub use error::Error;
+pub use interlinear::{
+    Cluster, ClusterKind, ClusterLexeme, InterlinearBook, InterlinearVerse, LexemeKey, LexemeType,
+    Punctuation, TextRange,
+};
+pub use lexicon::{Gloss, Lexicon, LexiconEntry, Sense, WordAnalysis};
 pub use names::{BookName, BookNames};
 pub use settings::{BookNameForm, Naming, Settings};
 
@@ -47,6 +61,8 @@ pub const SETTINGS_FILE: &str = "Settings.xml";
 pub const BOOK_NAMES_FILE: &str = "BookNames.xml";
 /// The project's own stylesheet, read over the one `Settings.xml` names.
 pub const CUSTOM_STYLESHEET_FILE: &str = "custom.sty";
+/// The project's lexicon, which its interlinear glosses point into.
+pub const LEXICON_FILE: &str = "Lexicon.xml";
 
 /// One Paratext project, read from its folder.
 #[derive(Debug, Clone)]
@@ -159,6 +175,68 @@ impl Project {
         Ok(Arc::new(sheet))
     }
 
+    /// The gloss languages the project has interlinear files for: each
+    /// `Interlinear_{language}` folder, sorted.
+    pub fn interlinear_languages(&self) -> Result<Vec<String>, Error> {
+        let entries = std::fs::read_dir(&self.dir).map_err(|source| Error::Io {
+            path: self.dir.clone(),
+            source,
+        })?;
+        let mut languages: Vec<String> = entries
+            .filter_map(Result::ok)
+            .filter(|entry| entry.path().is_dir())
+            .filter_map(|entry| {
+                let name = entry.file_name().into_string().ok()?;
+                let language = name.strip_prefix(INTERLINEAR_PREFIX)?;
+                (!language.is_empty()).then(|| language.to_string())
+            })
+            .collect();
+        languages.sort();
+        Ok(languages)
+    }
+
+    /// Where the book's interlinear file for `language` is: Paratext 9's
+    /// `Interlinear_{language}/Interlinear_{language}_{book}.xml`, or, when
+    /// only that exists, the same name at the project's top level, where
+    /// older projects keep it. `None` when there is neither.
+    pub fn interlinear_path(&self, language: &str, code: BookCode) -> Option<PathBuf> {
+        let name = format!("{INTERLINEAR_PREFIX}{language}_{code}.xml");
+        [
+            self.dir
+                .join(format!("{INTERLINEAR_PREFIX}{language}"))
+                .join(&name),
+            self.dir.join(&name),
+        ]
+        .into_iter()
+        .find(|path| path.is_file())
+    }
+
+    /// The book's interlinear glosses in `language`; `None` when the project
+    /// has none.
+    pub fn interlinear(
+        &self,
+        language: &str,
+        code: BookCode,
+    ) -> Result<Option<InterlinearBook>, Error> {
+        let Some(path) = self.interlinear_path(language, code) else {
+            return Ok(None);
+        };
+        InterlinearBook::from_xml(&read_text(&path)?)
+            .map(Some)
+            .map_err(|message| Error::Xml { path, message })
+    }
+
+    /// The project's `Lexicon.xml`; `None` when it has none.
+    pub fn lexicon(&self) -> Result<Option<Lexicon>, Error> {
+        let path = self.dir.join(LEXICON_FILE);
+        if !path.is_file() {
+            return Ok(None);
+        }
+        Lexicon::from_xml(&read_text(&path)?)
+            .map(Some)
+            .map_err(|message| Error::Xml { path, message })
+    }
+
     /// The project's own base sheet, if it names one other than Paratext's
     /// and ships it.
     fn own_style_sheet_path(&self) -> Option<PathBuf> {
@@ -173,6 +251,9 @@ impl Project {
         path.is_file().then_some(path)
     }
 }
+
+/// The start of an interlinear folder's and file's name.
+const INTERLINEAR_PREFIX: &str = "Interlinear_";
 
 /// `Settings.xml`'s `Encoding` for UTF-8 (a Windows code page number).
 const UTF8_CODE_PAGE: &str = "65001";
