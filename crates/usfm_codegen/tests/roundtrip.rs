@@ -26,6 +26,8 @@
 //! reaches. Last comes a fifth, smaller corpus:
 //! [`the_fuzz_findings_round_trip`], the minimised inputs ticket 27's fuzz
 //! target found, so a regression in any of them is a failing `cargo test`.
+//! [`every_parse_clones_to_an_equal_tree`] rides along on the same corpus:
+//! ticket 58's `Clone`, which is about the tree rather than the writer.
 
 use usfm_benchmark::FileClass;
 use usfm_tests::roundtrip::check;
@@ -269,4 +271,29 @@ fn the_fuzz_findings_round_trip() {
     let count = cases.len();
     let failures = run(cases);
     report("fuzz findings", count, failures);
+}
+
+/// A clone is the same tree, spans included, sharing the original's
+/// stylesheet (ticket 58). Every
+/// case of both conformance roots, `fail` ones too, since a clone must copy
+/// a repaired tree as faithfully as a valid one.
+#[test]
+fn every_parse_clones_to_an_equal_tree() {
+    let mut count = 0;
+    for test in discover_tests().into_iter().filter(|test| test.has_usfm()) {
+        let source = test
+            .read_usfm()
+            .unwrap_or_else(|err| panic!("reading {}: {err}", test.name));
+        let document = usfm::parse(&source).document;
+        let copy = document.clone();
+        assert_eq!(copy, document, "{}", test.name);
+        assert_eq!(copy.span, document.span, "{}", test.name);
+        assert!(
+            std::sync::Arc::ptr_eq(copy.style_sheet(), document.style_sheet()),
+            "{}: a clone should share the stylesheet",
+            test.name
+        );
+        count += 1;
+    }
+    assert!(count > 0, "no conformance cases found");
 }

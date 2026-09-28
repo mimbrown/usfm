@@ -515,6 +515,144 @@ became seven tickets, 51–57: the ones with an obvious shape are
   project's `custom.sty`, which 51 and 53 load); 56 is a reader for
   Paratext 9's interlinear and lexicon files in `usfm_paratext`, placed on
   the verse text by form, tested on SIL's open test projects.
-- **Waiting on Michael:** 57 (a publishing layer — volumes, output
+- **Specified 2026-09-28:** 57, as "Publishing foundation" below.
+- **Was waiting on Michael:** 57 (a publishing layer — volumes, output
   models, scoped and per-medium edits, render's SILE shape — which needs a
   spec section before any ticket under it is ready).
+
+## Publishing foundation (ticket 57)
+
+Recorded 2026-09-28, from Michael's description of render's layers. usfm is
+the foundation a publishing pipeline like render builds on; it does not
+absorb render. render keeps its own model and edits; usfm makes sure that
+building them never means re-implementing parsing, indexing or printing.
+
+### render's layers, and which side owns each
+
+| Layer | Owner | What usfm provides |
+|---|---|---|
+| 1. The base USFM | usfm | `usfm_paratext::Project` + `usfm::parse_with`: a `Document` per book, parsed against the project's sheet |
+| 2. Edits shared by every output | render | `VisitMut` / `Fold` over the `Document`, plus helpers where an edit is awkward (below) |
+| 3. The split into print and digital | render | nothing new: both pipelines borrow the one edited `Document` and each builds its own model from it |
+| 4. Print: its own edits, XML for SILE | render | a USX writer render drives block by block, with its own elements between |
+| 5. Digital: its own edits, JSON / HTML | render | the same, for the JSON and HTML writers |
+
+### Output-only structure lives in render's model, not the AST
+
+A cartouche (several `\m#` paragraphs drawn as one unit), the bismillah, the
+title group and the timeline are not USFM and do not go into `usfm_ast`.
+render defines its own model over blocks it takes out of the `Document`:
+
+```rust
+enum RenderBlock<'a> {
+    Usfm(Block<'a>),
+    Cartouche(Vec<Block<'a>>),
+    Bismillah,
+}
+```
+
+No generic `Block::Custom(T)` variant: it would reach every `Visit`
+implementation, the parser, the round trip and every writer, for structure
+only one consumer has.
+
+### Writers you drive
+
+Printing is where "lean on the defaults" matters. Each writer becomes an
+object that keeps its state between blocks, so render calls it once per
+`Usfm` block and writes its own markup for everything else:
+
+```rust
+let mut usx = UsxWriter::new(document.style_sheet(), options);
+for block in &render_document.blocks {
+    match block {
+        RenderBlock::Usfm(block) => usx.block(block),
+        RenderBlock::Cartouche(blocks) => {
+            usx.open("cartouche", &[]);
+            for block in blocks {
+                usx.block(block);
+            }
+            usx.close();
+        }
+        RenderBlock::Bismillah => usx.empty("bismillah", &[]),
+    }
+}
+let xml = usx.finish();
+```
+
+The state has to be kept by the writer, not by per-block functions, because
+it runs across blocks. It includes the book and chapter, the open verse (for
+USX's `vid` and verse ends), and the note counter (for HTML's callers). A
+cartouche in the middle of a chapter must not reset any of these.
+
+To change how one kind of node is written without taking over the rest,
+each writer has a hooks trait. Its default methods write what the writer
+writes today; render overrides only the ones it needs, as `usfm_html`'s
+`SerializeHtml` already allows.
+
+Where each writer stands today (2026-09-28):
+
+- **HTML:** already works. `ToHtml` is implemented per block, `Context` is
+  public and carries the running state, and `SerializeHtml` has 14
+  overridable methods. At most, the API needs tidying.
+- **USX:** its `UsxWriter` is private, and the state it would need to carry
+  (book, chapter, open verse, `vid`) is already in it. It builds an
+  `XmlNode` tree, so custom elements are just more `XmlElement`s. The work
+  is to make it public with `block`, `open`, `close`, `empty` and `finish`,
+  plus a hooks trait.
+- **JSON:** a pure recursion with no state. The work is to make
+  `block_value` / `inline_value` public, and to decide how a custom node
+  sits in render's `[tag, attrs, children]` shape.
+- **SILE:** render's typesetter expects its own shape: `<vs start end>`,
+  separate streams per chapter, and the introduction split from the main
+  text. That belongs in render, built on the public USX writer. Our
+  `usfm_pipeline::sile` is not a starting point for it.
+
+### Edits
+
+Edits over the tree are possible today, but each one is hand-written `Vec`
+surgery. Helpers worth adding, each as its own ticket once render's port
+needs it:
+
+- a **scoped text edit**: `TextReplacement` limited by a selector, i.e.
+  inside or outside given styles, inside or outside notes, or after the
+  first `\c`;
+- **insertion next to a node**: text before a verse end or a note, which
+  render does today with regexes over its serialised JSON;
+- sibling operations (hoist, move, remove) on block and inline lists.
+
+A **medium** (print or digital) does not need to be a concept in usfm.
+It is simply which of render's two copies an edit runs on.
+
+### Volumes
+
+Volumes mean several projects' books, chapters picked and renumbered, and
+links resolved across books. That is a collection over `Document`s:
+`Vec<(Project, BookCode, chapter selection)>` plus `ReferenceIndex` and
+`GlossaryIndex` over the whole set. It belongs with render until a second
+consumer wants it. The one usfm piece it needs is chapter selection: take
+chapters N, M, … of a `Document` and renumber them. That can be a small
+function over the tree.
+
+### Tickets
+
+Michael, 2026-09-28: render moves to Rust end to end for its content
+pipeline, so every API below is a Rust API. Driving the parser from JS over
+WASM, with a shared binary tree and JS plugins as oxc does, is a later and
+larger project (ticket 64).
+
+- 58: `Clone` for `Document` and every AST node. Resolved 2026-09-28, as a
+  convenience only. Michael asked whether a full copy is necessary, and it
+  isn't: the split is two readers of one `&Document`. Each medium's own
+  edits happen while it builds its `RenderDocument`, not by changing the
+  tree. Parsing and running the shared edits once per medium is the
+  fallback, since a book parses in milliseconds.
+- 59: `usfm_usx`: a public `UsxWriter` driven block by block, with custom
+  elements between blocks and a hooks trait. `ready-for-agent`.
+- 60: `usfm_json`: public per-node values, and a way to put a custom node
+  between them. `ready-for-agent`.
+- 61: `usfm_html`: pin per-block writing with a shared `Context` with a test,
+  and tidy the API where it falls short. `ready-for-agent`.
+- 62: scoped text edits and inserting next to a node. `needs-triage`, until
+  render's port says which scopes it needs.
+- 63: chapter selection and renumbering. `needs-triage`, likewise.
+- 64: the parser in WASM, driven from JS. `needs-triage`.

@@ -7,7 +7,7 @@ use super::{Block, Span, StyleId, Text};
 /// is faithful where nesting chapters or verses would not be (plan D4). The
 /// scripture text flow stops before a sidebar and resumes after it, which is
 /// why an open verse ends before it.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Sidebar<'a> {
     /// The `\esb` style, resolved against the document's stylesheet.
     pub style: StyleId,
