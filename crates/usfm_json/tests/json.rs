@@ -6,7 +6,7 @@
 //! for source it actually has.
 
 use serde_json::Value;
-use usfm_json::{to_json_string, to_json_string_pretty, to_json_value};
+use usfm_json::{JsonWriter, to_json_string, to_json_string_pretty, to_json_value};
 use usfm_parser::DEFAULT_STYLESHEET;
 use usfm_parser::parser::Parser;
 
@@ -106,4 +106,21 @@ fn a_whole_book_keeps_every_note() {
         assert!(map.contains_key("type"), "{map:?}");
         assert!(map.contains_key("span"), "{map:?}");
     }
+}
+
+/// A block's value on its own is the value the whole document holds for it
+/// (ticket 60): nothing is carried between nodes, so a caller that writes
+/// block by block, with objects of its own between, loses nothing.
+#[test]
+fn a_block_written_alone_is_the_documents_child() {
+    let source = "\\id GEN\n\\c 1\n\\p \\v 1 In \\nd the\\nd* beginning\\f + \\ft x\\f*\n\\m more\n\\c 2\n\\p \\v 1 end\n";
+    let document = Parser::new(source).parse(&DEFAULT_STYLESHEET).document;
+    let whole = to_json_value(&document);
+    let json = JsonWriter::new(document.style_sheet());
+    let alone: Vec<Value> = document
+        .blocks
+        .iter()
+        .map(|block| json.block(block))
+        .collect();
+    assert_eq!(Value::Array(alone), whole["children"]);
 }

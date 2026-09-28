@@ -133,7 +133,7 @@ Conformance status (276 tests across two roots, 2026-09-27):
   (`recovery`, `snapshot`, `spans`, `whitespace`, `attributes`, `verse_ends`, `usx_text`,
   `usfm_html`'s `footnotes`, `usfm_json`'s `json` and `coverage`,
   `usfm_semantic`'s `checks`, `usfm_codegen`'s lib and `roundtrip`,
-  `usfm_usx`'s `reader`,
+  `usfm_usx`'s `reader` and `writer`,
   `usfm_language_server`'s unit tests and its `lsp` conversation with the
   built binary, parser lib),
   gates lint with
@@ -275,8 +275,12 @@ Recent progress:
   layer, is specified as the spec's "Publishing foundation" (2026-09-28):
   render moves to Rust end to end and keeps its own model (`RenderBlock`,
   a cartouche over several `\m#` paragraphs) over our `Block`s — no AST
-  variants — and usfm offers writers driven block by block with hooks
-  (tickets 59–61), scoped edits (62) and chapter selection (63); a parser
+  variants — and usfm offers writers driven block by block (tickets
+  59–61, done: `usfm_usx::UsxWriter` with `block`, `open`/`close`/`empty`
+  and `UsxHooks`, one associated function per node kind with the writer's
+  `write_*` as its default; `usfm_json::JsonWriter`'s per-node values; and
+  HTML's `ToHtml` per block with one shared `Context`, pinned by a test),
+  scoped edits (62) and chapter selection (63); a parser
   in WASM driven from JS, as oxc does, is ticket 64. Ticket 58 is done:
   `Document` and every AST node are `Clone`, as a convenience only: the
   print and digital pipelines *borrow* one edited document and each builds

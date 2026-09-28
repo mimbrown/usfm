@@ -37,6 +37,7 @@ pub mod xml_document;
 
 pub use read::{read_usx, read_usx_with};
 pub use usx::{
-    DEFAULT_USX_VERSION, UsxOptions, to_usx_node, to_usx_node_with_options, to_usx_string,
+    DEFAULT_USX_VERSION, UsxHooks, UsxOptions, UsxWriter, to_usx_node, to_usx_node_with_options,
+    to_usx_string,
 };
 pub use xml_document::{XmlDocument, XmlElement, XmlNode};
