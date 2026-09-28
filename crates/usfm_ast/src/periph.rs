@@ -6,7 +6,7 @@ use super::{Attributes, Block, Span, StyleId, Text};
 /// Like [`Sidebar`](super::Sidebar) it is a block container: front and back
 /// matter (title page, preface, glossary) is divided into these, and USX
 /// writes each as `<periph alt="Title" id="x">` around its paragraphs.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Periph<'a> {
     /// The `\periph` style, resolved against the document's stylesheet.
     pub style: StyleId,
