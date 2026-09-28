@@ -116,10 +116,7 @@ pub const TYPES: [&str; 17] = [
 /// The document as a JSON value, resolved against the document's own
 /// stylesheet.
 pub fn to_json_value(document: &Document) -> Value {
-    JsonWriter {
-        style_sheet: document.style_sheet(),
-    }
-    .document(document)
+    JsonWriter::new(document.style_sheet()).document(document)
 }
 
 /// The document as compact JSON, on one line and with no trailing newline.
@@ -136,7 +133,33 @@ pub fn to_json_string_pretty(document: &Document) -> String {
 /// The walk, and the one thing it has to remember: the sheet the document
 /// owns, which is the base sheet plus every style the parser derived
 /// (hardening plan D3).
-struct JsonWriter<'a> {
+///
+/// Public since ticket 60, so a caller with structure of its own between
+/// blocks (a cartouche around several paragraphs) can build its own array
+/// from our values and its objects:
+///
+/// ```
+/// use serde_json::{Value, json};
+/// use usfm_json::JsonWriter;
+/// # let document = usfm_parser::parser::Parser::new("\\id GEN\n\\m a\n\\mi b\n")
+/// #     .parse(&usfm_parser::DEFAULT_STYLESHEET)
+/// #     .document;
+///
+/// let json = JsonWriter::new(document.style_sheet());
+/// let (head, rest) = document.blocks.split_at(1);
+/// let mut children: Vec<Value> = head.iter().map(|block| json.block(block)).collect();
+/// children.push(json!({
+///     "type": "cartouche",
+///     "children": rest.iter().map(|block| json.block(block)).collect::<Vec<_>>(),
+/// }));
+/// assert_eq!(children[1]["children"][1]["style"], "mi");
+/// ```
+///
+/// Nothing is carried between nodes, so the values are the same whichever
+/// order they are asked for in. A caller's own objects are its business: it
+/// should not reuse a `"type"` from [`TYPES`], so a consumer can still tell
+/// them apart from ours.
+pub struct JsonWriter<'a> {
     style_sheet: &'a StyleSheet,
 }
 
@@ -202,13 +225,21 @@ fn caller_str<'a>(caller: &'a Caller<'a>) -> &'a str {
     }
 }
 
+impl<'a> JsonWriter<'a> {
+    /// A writer resolving styles against `style_sheet`, which must be the
+    /// sheet the document owns: `document.style_sheet()`.
+    pub fn new(style_sheet: &'a StyleSheet) -> Self {
+        Self { style_sheet }
+    }
+}
+
 impl JsonWriter<'_> {
     /// The marker name for a node's style, e.g. `"p"`.
-    fn marker(&self, style: StyleId) -> &str {
+    pub fn marker(&self, style: StyleId) -> &str {
         &self.style_sheet.get_rule(style.index()).marker
     }
 
-    fn document(&self, document: &Document<'_>) -> Value {
+    pub fn document(&self, document: &Document<'_>) -> Value {
         // The span reported here is the range the blocks cover, from the start
         // to wherever the last one ended. `Document::span` (ticket 21) is the
         // whole source instead, trailing whitespace and all, which is what
@@ -226,15 +257,15 @@ impl JsonWriter<'_> {
         Value::Object(map)
     }
 
-    fn blocks(&self, blocks: &[Block<'_>]) -> Value {
+    pub fn blocks(&self, blocks: &[Block<'_>]) -> Value {
         Value::Array(blocks.iter().map(|block| self.block(block)).collect())
     }
 
-    fn inlines(&self, inlines: &[Inline<'_>]) -> Value {
+    pub fn inlines(&self, inlines: &[Inline<'_>]) -> Value {
         Value::Array(inlines.iter().map(|inline| self.inline(inline)).collect())
     }
 
-    fn block(&self, block: &Block<'_>) -> Value {
+    pub fn block(&self, block: &Block<'_>) -> Value {
         match block {
             Block::Book(book) => self.book(book),
             Block::ChapterStart(chapter) => self.chapter_start(chapter),
@@ -247,7 +278,7 @@ impl JsonWriter<'_> {
         }
     }
 
-    fn inline(&self, inline: &Inline<'_>) -> Value {
+    pub fn inline(&self, inline: &Inline<'_>) -> Value {
         match inline {
             Inline::Text(text) => self.text(text),
             Inline::VerseStart(verse) => self.verse_start(verse),

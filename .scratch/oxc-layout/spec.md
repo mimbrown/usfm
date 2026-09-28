@@ -647,11 +647,11 @@ larger project (ticket 64).
   tree. Parsing and running the shared edits once per medium is the
   fallback, since a book parses in milliseconds.
 - 59: `usfm_usx`: a public `UsxWriter` driven block by block, with custom
-  elements between blocks and a hooks trait. `ready-for-agent`.
+  elements between blocks and a hooks trait. Resolved 2026-09-28.
 - 60: `usfm_json`: public per-node values, and a way to put a custom node
-  between them. `ready-for-agent`.
+  between them. Resolved 2026-09-28.
 - 61: `usfm_html`: pin per-block writing with a shared `Context` with a test,
-  and tidy the API where it falls short. `ready-for-agent`.
+  and tidy the API where it falls short. Resolved 2026-09-28.
 - 62: scoped text edits and inserting next to a node. `needs-triage`, until
   render's port says which scopes it needs.
 - 63: chapter selection and renumbering. `needs-triage`, likewise.
