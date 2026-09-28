@@ -20,4 +20,4 @@
 
 pub mod json;
 
-pub use json::{TYPES, to_json_string, to_json_string_pretty, to_json_value};
+pub use json::{JsonWriter, TYPES, to_json_string, to_json_string_pretty, to_json_value};

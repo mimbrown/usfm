@@ -97,3 +97,47 @@ fn a_custom_caller_does_not_consume_a_plus_number() {
         ]
     );
 }
+
+/// Written one block at a time with one `Context`, and two of the blocks
+/// wrapped in markup of the caller's own, a book comes out as the whole
+/// document does, wrapper aside (ticket 61): the note numbers carry across
+/// the wrapper because they live in the `Context`, not in the walk.
+#[test]
+fn blocks_written_one_at_a_time_share_the_note_numbers() {
+    use usfm_ast::Block;
+    use usfm_html::{Context, ToHtml};
+
+    let source = "\\id GEN\n\\c 1\n\\p \\v 1 a\\f + \\ft one\\f*\n\\m \\v 2 b\\f + \\ft two\\f*\n\\m c\\f + \\ft three\\f*\n\\p \\v 3 d\\f + \\ft four\\f*\n";
+    let document = Parser::new(source).parse(&DEFAULT_STYLESHEET).document;
+    let whole = to_html_string(&document, document.style_sheet());
+
+    let mut context = Context::new(document.style_sheet());
+    let mut piecewise = String::new();
+    let mut in_cartouche = false;
+    for block in &document.blocks {
+        let m = matches!(block, Block::Para(para) if context.rule(para.style).marker == "m");
+        if m != in_cartouche {
+            piecewise.push_str(if m {
+                "<section class=\"cartouche\">"
+            } else {
+                "</section>"
+            });
+            in_cartouche = m;
+        }
+        block.to_html(&mut piecewise, &mut context).unwrap();
+    }
+
+    assert!(
+        piecewise.contains("<section class=\"cartouche\">"),
+        "{piecewise}"
+    );
+    let numbers: Vec<String> = note_buttons(&piecewise)
+        .into_iter()
+        .map(|(_, n)| n)
+        .collect();
+    assert_eq!(numbers, ["1", "2", "3", "4"]);
+    let unwrapped = piecewise
+        .replace("<section class=\"cartouche\">", "")
+        .replace("</section>", "");
+    assert_eq!(unwrapped, whole);
+}
