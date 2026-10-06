@@ -238,6 +238,19 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **Direction marks in a verse number (2026-10-06).** Found by running the
+  toolchain over seven real Paratext projects (231 books; every one parsed,
+  ten failed the round trip, all on this). `NumberRange` keeps a `guard`
+  (the mark before the `-`, `1<RLM>-3`, Paratext's bridge spelling) and a
+  `trailing_guard` (after the range: `4<RLM>`, `1-3<RLM>,5`), each an
+  `Option<char>` holding U+200F or U+200E (`usfm_ast::is_direction_mark`),
+  written back exactly where it was read. They replace the two `guard_rtl`
+  bools, which remembered a trailing mark only as "write one before every
+  comma": `\v 4<RLM>` came back as `\v 4`, silently. U+200E was not read at
+  all — `\v 4<LRM>` was `malformed-verse-number` and the verse dropped. One
+  mark per place; anywhere else (before the number, doubled, any other
+  invisible character) is still malformed. The mark is part of the number,
+  so it is in USX's `number`, `sid` and `eid`, as a bridge's always was
 - **What render needs (tickets 51–57, 2026-09-27).** Michael's older
   publishing project, Shahkar-Urdu-Apps/render, was mapped against this
   toolchain (`reports/render-gap-map.md` in the project files; the spec's
