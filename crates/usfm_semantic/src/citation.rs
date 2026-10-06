@@ -49,6 +49,11 @@
 //! (`\xt 45|MAT 5:45\xt*`), [`xt_citations`] believes the attribute:
 //! [`XtCitations::link`].
 //!
+//! A `C:V` alone in an `\xt` that has no `link-href` is the current book's.
+//! That is the convention, and it is not a guess: if the author meant
+//! another book and named it outside the `\xt`, the source text is what
+//! needs fixing.
+//!
 //! Nothing here checks that the verse exists: that needs the other books.
 
 use std::ops::Range;

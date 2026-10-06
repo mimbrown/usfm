@@ -258,9 +258,10 @@ Recent progress:
   project names its Gospels that way, and 945 references to them were
   being read as the current book. A bare number in an `\xt` stays unread:
   in this data it is a verse 18 times and a chapter 23, told apart only by
-  the word beside it. Still open: a `C:V` alone in an `\xt` takes the
-  current book, and where a `link-href` was there to check, it was a
-  different book 77 times (the name stands outside the `\xt`)
+  the word beside it. Decided, not open: a `C:V` alone in an `\xt`
+  with no `link-href` is the current book (Michael, 2026-10-06). Where a
+  `link-href` was there to check, it named a different book 77 times, the
+  name standing outside the `\xt` — that is the source text's to fix
 - **`content-outside-paragraph` is a Warning (2026-10-06, Michael's
   call).** It was an Error, and the same run over real Paratext projects
   reported it 1 300 times in 54 books, every sampled one a `\c N` followed
