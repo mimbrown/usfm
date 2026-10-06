@@ -43,7 +43,7 @@
 //!   does: `"attributes"` is an array of `{"name", "value"}` objects. The
 //!   default (unnamed) attribute has `"name": ""`, exactly as
 //!   `usfm_ast::Attribute` holds it — this writer does not apply
-//!   `default_attribute_name`, which is an output convention of USX, not a
+//!   `StyleRule::default_attribute`, which is an output convention of USX, not a
 //!   fact about the tree. A consumer that wants the name resolves it itself.
 //!
 //! Two notes on the document object. `"usfm_version"` is

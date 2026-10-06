@@ -249,3 +249,19 @@ fn chapters_inside_a_periph_division_are_closed() {
     let close = output.find(r#"<chapter eid="FRT 2" />"#).unwrap();
     assert!(close < output.find("</periph>").unwrap(), "{output}");
 }
+
+/// The name of an unnamed value comes from the document's sheet, so a
+/// project's own marker declared with `\Attributes` is written with it.
+#[test]
+fn a_sheets_declared_default_attribute_is_written() {
+    let mut sheet = (**DEFAULT_STYLESHEET).clone();
+    sheet
+        .extend_from_str("\\Marker zlink\n\\StyleType Milestone\n\\Attributes target\n")
+        .unwrap();
+    let source = "\\id GEN\n\\c 1\n\\p \\v 1 text \\zlink |intro\\*\n";
+    let output = to_usx_string(&Parser::new(source).parse(&std::sync::Arc::new(sheet)).document);
+    assert!(
+        output.contains(r#"<ms style="zlink" target="intro" />"#),
+        "{output}"
+    );
+}

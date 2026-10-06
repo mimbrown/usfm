@@ -151,11 +151,45 @@ pub struct StyleRuleBuilder {
     text_properties: Option<TextProperties>,
     nest: bool,
     occurs_under: Vec<String>,
+    attributes: Vec<StyleAttribute>,
 }
 
 impl StyleRuleBuilder {
     pub fn new() -> Self {
         Self::default()
+    }
+}
+
+/// One name of a rule's `\\Attributes` line.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StyleAttribute {
+    pub name: String,
+    /// Written without a leading `?`.
+    pub required: bool,
+}
+
+/// The default (unnamed) attribute of the markers the USFM 3 spec gives one
+/// and a sheet may not: `usfm.sty` declares `\\Attributes` for `\\w`, `\\rb`,
+/// `\\xt`, `\\jmp` and the `\\qt-s` milestones, and has no entry for the rest.
+/// The list follows the `usfm:propval` annotations in tcdocs'
+/// `grammar/usx.rnc`, except for `xt`/`jmp`, where the reference files write
+/// `link-href` and the annotation says `href`. A rule that declares its
+/// attributes is never looked up here: see [`StyleRule::default_attribute`].
+pub fn builtin_default_attribute(marker: &str) -> Option<&'static str> {
+    match marker {
+        "w" => Some("lemma"),
+        "rb" => Some("gloss"),
+        "xt" | "jmp" => Some("link-href"),
+        "ref" => Some("loc"),
+        "periph" => Some("id"),
+        // USFM 3.1.2 gave the transliteration and foreign-word styles a
+        // default `lang`, and the `\\vid|<reference>\\*` milestone a default
+        // `ref` (`usfm:propval` on `tl`, `wl` and `vid` in `usx.rnc`).
+        "tl" | "wl" => Some("lang"),
+        "vid" => Some("ref"),
+        // Quotation milestones: `\\qt-s |Speaker\\*`, also `\\qt1-s` … `\\qt5-s`.
+        m if m.starts_with("qt") && (m.ends_with("-s") || m.ends_with("-e")) => Some("who"),
+        _ => None,
     }
 }
 
@@ -179,9 +213,28 @@ pub struct StyleRule {
     /// The markers this one may occur under (`\OccursUnder`, minus `NEST`).
     /// Empty means unrestricted.
     pub occurs_under: Vec<String>,
+    /// `\Attributes`: the attributes the marker takes, in the sheet's order,
+    /// a leading `?` marking an optional one. Empty for a rule whose sheet
+    /// does not say. This is how a project declares that its own marker
+    /// takes attributes (`\Marker zlink` … `\Attributes target`).
+    pub attributes: Vec<StyleAttribute>,
 }
 
 impl StyleRule {
+    /// The name an unnamed attribute value has: `\w word|grace\w*` is
+    /// `lemma="grace"`. For a rule that declares its `\Attributes` it is the
+    /// first of them unless more than one is required — Paratext's rule, so
+    /// `\fig` (`src size ref ?alt …`) has none. A rule that declares nothing
+    /// has the spec's default for its marker, if the spec gives it one
+    /// ([`builtin_default_attribute`]).
+    pub fn default_attribute(&self) -> Option<&str> {
+        if self.attributes.is_empty() {
+            return builtin_default_attribute(&self.marker);
+        }
+        let required = self.attributes.iter().filter(|a| a.required).count();
+        (required <= 1).then(|| self.attributes[0].name.as_str())
+    }
+
     fn from_builder(
         marker: String,
         builder: &mut StyleRuleBuilder,
@@ -198,6 +251,7 @@ impl StyleRule {
             text_properties: builder.text_properties.take().unwrap_or_default(),
             nest: builder.nest,
             occurs_under: std::mem::take(&mut builder.occurs_under),
+            attributes: std::mem::take(&mut builder.attributes),
         })
     }
 
@@ -220,6 +274,9 @@ impl StyleRule {
         if !builder.occurs_under.is_empty() {
             self.occurs_under = std::mem::take(&mut builder.occurs_under);
             self.nest = builder.nest;
+        }
+        if !builder.attributes.is_empty() {
+            self.attributes = std::mem::take(&mut builder.attributes);
         }
     }
 
@@ -391,6 +448,18 @@ impl StyleSheetBuilder {
                             .map(String::from)
                             .collect();
                     }
+                    // `?name` is optional, `name` required. Nothing here is
+                    // refused: a sheet is read as far as it can be.
+                    "Attributes" => {
+                        builder.current_marker_builder.attributes = value
+                            .split_whitespace()
+                            .map(|name| StyleAttribute {
+                                name: name.trim_start_matches('?').to_string(),
+                                required: !name.starts_with('?'),
+                            })
+                            .filter(|attribute| !attribute.name.is_empty())
+                            .collect();
+                    }
                     _ => {}
                 }
             }
@@ -446,6 +515,15 @@ impl StyleSheet {
             .map(|index| &self.rules[*index])
     }
 
+    /// [`StyleRule::default_attribute`] for a marker by name; a marker the
+    /// sheet has no rule for has the spec's default, if any.
+    pub fn default_attribute(&self, marker: &str) -> Option<&str> {
+        match self.get_rule_by_marker(marker) {
+            Some(rule) => rule.default_attribute(),
+            None => builtin_default_attribute(marker),
+        }
+    }
+
     pub fn get_rule(&self, marker: usize) -> &StyleRule {
         &self.rules[marker]
     }
@@ -487,6 +565,52 @@ impl FromStr for StyleSheet {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// `\Attributes` is how a sheet says a marker takes attributes, and the
+    /// default one is the first unless more than one is required (Paratext's
+    /// rule). A rule that says nothing has the spec's default for its marker.
+    #[test]
+    fn the_default_attribute_is_the_sheets() {
+        let mut sheet = StyleSheet::from_str(
+            "\\Marker zlink\n\\StyleType Milestone\n\\Attributes target ?note\n\
+             \\Marker zpic\n\\StyleType Character\n#!\\Attributes src size ?alt\n\
+             \\Marker zopt\n\\StyleType Character\n\\Attributes ?a ?b\n\
+             \\Marker znone\n\\StyleType Character\n\
+             \\Marker w\n\\StyleType Character\n",
+        )
+        .unwrap();
+        let zlink = sheet.get_rule_by_marker("zlink").unwrap();
+        assert_eq!(
+            zlink.attributes,
+            [
+                StyleAttribute {
+                    name: "target".into(),
+                    required: true
+                },
+                StyleAttribute {
+                    name: "note".into(),
+                    required: false
+                },
+            ]
+        );
+        assert_eq!(sheet.default_attribute("zlink"), Some("target"));
+        // Two required attributes: an unnamed value could be either.
+        assert_eq!(sheet.default_attribute("zpic"), None);
+        assert_eq!(sheet.default_attribute("zopt"), Some("a"));
+        assert_eq!(sheet.default_attribute("znone"), None);
+        // An older sheet with no `\Attributes` keeps the spec's defaults,
+        // and so does a marker with no rule at all.
+        assert_eq!(sheet.default_attribute("w"), Some("lemma"));
+        assert_eq!(sheet.default_attribute("periph"), Some("id"));
+
+        // A later entry amends the list like any other field, and one that
+        // does not mention it leaves it alone.
+        sheet
+            .extend_from_str("\\Marker znone\n\\Attributes ?id\n\\Marker zlink\n\\Name x\n")
+            .unwrap();
+        assert_eq!(sheet.default_attribute("znone"), Some("id"));
+        assert_eq!(sheet.default_attribute("zlink"), Some("target"));
+    }
 
     /// `\Name` and `\Description` are kept as the sheet writes them, and a
     /// repeated `\Marker` amends them like every other field (which is how

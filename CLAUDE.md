@@ -238,6 +238,26 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **The stylesheet's `\Attributes` (2026-10-06).** A real project writes
+  its own milestone with an unnamed value and got `no-default-attribute`,
+  and nothing it could put in its `custom.sty` would have helped: the sheet
+  parser dropped `\Attributes` and the default attribute was a table keyed
+  by marker name in `usfm_ast`. `StyleRule::attributes` now keeps the line
+  (`?name` optional, `name` required; `usfm.sty` writes it `#!\Attributes`,
+  which the reader already unwrapped), and
+  `StyleRule::default_attribute()` / `StyleSheet::default_attribute(marker)`
+  answer by Paratext's rule, checked against sillsdev/machine.py: the first
+  attribute listed, unless more than one is required (`\fig` has none). A
+  rule that declares nothing falls back to the old table, now
+  `usfm_style::builtin_default_attribute` — `ref`, `periph`, `tl`, `wl`,
+  `vid` have no `\Attributes` in the sheet, and a replaced sheet may
+  predate the line. `usfm_ast::default_attribute_name` is gone; the USX
+  writer, `usfm_usx::testing::normalise` and the `no-default-attribute`
+  check ask the document's sheet. One default is new: `\ts-s` declares
+  `?sid ?eid`, so `\ts-s |x\*` is `sid="x"` where it was an Error. A rule
+  the parser derives (`\k-s` from `\k`) inherits no attributes. A marker
+  a project uses and does not declare still has no default — that is the
+  project's to declare, and nothing is guessed
 - **`usfm fix`, and the fixes in one place (2026-10-06).** Michael's shape
   for a linter with auto-fix: a dry run by default, every fixable
   diagnostic fixed unless specific codes are named, and the editor a

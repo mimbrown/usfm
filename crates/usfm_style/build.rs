@@ -23,6 +23,7 @@ const REF_STYLE: &str = r#"        StyleRule {
             text_properties: TextProperties::from_bits(1168).unwrap(),
             nest: true,
             occurs_under: vec![],
+            attributes: vec![],
         },"#;
 
 /// An `Option<String>` as the Rust expression that rebuilds it.
@@ -60,6 +61,7 @@ fn main() -> std::io::Result<()> {
         text_type: sheet::TextType::Other,
         nest: true,
         occurs_under: vec![],
+        attributes: vec![],
     });
 
     // Generated into OUT_DIR and pulled in with `include!` from `lib.rs`, so
@@ -72,7 +74,7 @@ fn main() -> std::io::Result<()> {
     writeln!(writer, "use std::sync::{{Arc, LazyLock}};")?;
     writeln!(
         writer,
-        "use crate::{{StyleSheet, StyleRule, StyleType, TextType, TextProperties}};"
+        "use crate::{{StyleAttribute, StyleRule, StyleSheet, StyleType, TextProperties, TextType}};"
     )?;
     writeln!(writer)?;
     // The stylesheet is handed out as an `Arc` so a `Document` can own it
@@ -115,6 +117,15 @@ fn main() -> std::io::Result<()> {
             "            occurs_under: {:?}.iter().map(|s: &&str| s.to_string()).collect(),",
             rule.occurs_under
         )?;
+        writeln!(writer, "            attributes: vec![")?;
+        for attribute in &rule.attributes {
+            writeln!(
+                writer,
+                "                StyleAttribute {{ name: {:?}.into(), required: {} }},",
+                attribute.name, attribute.required
+            )?;
+        }
+        writeln!(writer, "            ],")?;
         writeln!(writer, "        }},")?;
     }
     writeln!(writer, "{}", REF_STYLE)?;
