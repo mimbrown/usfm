@@ -8,4 +8,4 @@ Para p@8..14
   Text "a"@13..14
   VerseEnd 1
 --- diagnostics
-error[content-outside-paragraph] @8..10: content outside a paragraph; an implicit `\p` was opened
+warning[content-outside-paragraph] @8..10: content outside a paragraph; an implicit `\p` was opened

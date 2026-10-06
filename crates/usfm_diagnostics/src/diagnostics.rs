@@ -86,7 +86,7 @@
 //! | `empty-book` | E | nothing | **semantic** (21): the document's only block is a `Book` |
 //! | `sidebar-not-closed` | E | closes the sidebar at `\c`, the next `\esb` or EOF | parser: it decides where the node ends |
 //! | `unmatched-sidebar-end` | E | keeps the `\esbe` as an empty paragraph | parser: that paragraph is the repair, not anything the author wrote |
-//! | `content-outside-paragraph` | E | opens an implicit `\p` | parser: it invents the node |
+//! | `content-outside-paragraph` | W | opens an implicit `\p` | parser: it invents the node |
 //! | `content-dropped` | E | drops the content | parser: the content is gone |
 //! | `expected-table-cell` | E | opens an implicit `\tc1` | parser: it invents the node |
 //! | `unexpected-table-column` | E | keeps the column the marker named | **semantic** (21): `TableCell::column` in row order |
@@ -469,7 +469,9 @@ pub enum Code {
     /// appearing where a paragraph marker is required (before the first
     /// paragraph, or directly after `\c` or `\id`).
     /// **Recovery:** an implicit `\p` paragraph is opened to hold the content.
-    /// **Severity:** Error.
+    /// **Severity:** Warning. Nothing is lost and the tree is the one
+    /// the author meant; `\c 1` followed directly by `\v 1` is how a great
+    /// many real projects are written.
     ContentOutsideParagraph,
     /// **Trigger:** content outside a paragraph when the stylesheet has no
     /// `p` marker to use for the implicit paragraph.
@@ -779,6 +781,7 @@ impl Code {
             | Code::NestedMarkerNotNested
             | Code::CharacterStyleNotClosed
             | Code::Usfm2Figure
+            | Code::ContentOutsideParagraph
             | Code::VerseInCharacterStyle
             | Code::EmptyMilestoneAttributeList
             | Code::UnlistedBookCode

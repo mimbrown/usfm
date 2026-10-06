@@ -16,4 +16,4 @@ Para p@168..207
   VerseEnd 1
 ChapterEnd 1
 --- diagnostics
-error[content-outside-paragraph] @91..134: content outside a paragraph; kept in an implicit `\p`
+warning[content-outside-paragraph] @91..134: content outside a paragraph; kept in an implicit `\p`

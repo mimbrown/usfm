@@ -1,5 +1,5 @@
 ---
-source: usfm_parser/tests/recovery.rs
+source: crates/usfm_parser/tests/recovery.rs
 description: "\\id GEN\n\\c 1\n\\esb\n\\ms Title\n\\p inside\n\\esbe\n\\v 1 a \\w three|lemma\\w*."
 ---
 Book GEN "" @0..7
@@ -18,4 +18,4 @@ Para p@38..69
   VerseEnd 1
 ChapterEnd 1
 --- diagnostics
-error[content-outside-paragraph] @38..69: content after `\esbe` is outside a paragraph; an implicit `\p` was opened
+warning[content-outside-paragraph] @38..69: content after `\esbe` is outside a paragraph; an implicit `\p` was opened
