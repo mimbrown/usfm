@@ -7,5 +7,5 @@ Para p@0..30
   Text "text"@25..30
   VerseEnd 1
 --- diagnostics
-error[content-outside-paragraph] @0..2: content outside a paragraph; an implicit `\p` was opened
+warning[content-outside-paragraph] @0..2: content outside a paragraph; an implicit `\p` was opened
 error[missing-verse-number] @4..6: `\v` must be followed by a verse number

@@ -8,4 +8,4 @@ Para p@7..14
 ChapterEnd 3
 --- diagnostics
 error[missing-chapter-number] @4..6: `\c` must be followed by a chapter number
-error[content-outside-paragraph] @7..14: content after `\cp` is outside a paragraph; an implicit `\p` was opened
+warning[content-outside-paragraph] @7..14: content after `\cp` is outside a paragraph; an implicit `\p` was opened

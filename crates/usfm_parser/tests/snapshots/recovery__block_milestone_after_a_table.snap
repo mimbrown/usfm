@@ -13,4 +13,4 @@ Para p@19..28
 --- diagnostics
 error[missing-chapter-number] @16..18: `\c` must be followed by a chapter number
 info[unknown-custom-milestone] @19..26: custom milestone `\zaln-s` is not in the stylesheet
-error[content-outside-paragraph] @19..28: content after `\tr` is outside a paragraph; an implicit `\p` was opened
+warning[content-outside-paragraph] @19..28: content after `\tr` is outside a paragraph; an implicit `\p` was opened

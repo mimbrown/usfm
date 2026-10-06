@@ -1,5 +1,5 @@
 ---
-source: usfm_parser/tests/recovery.rs
+source: crates/usfm_parser/tests/recovery.rs
 description: "\\id GEN genesis Some desc\n\\c 1\n\\v 1 test verse\n\\s5\nsome more text\n\\v 2 more verse\n\\c 2\n\\v 1 next chapter\t\n\\c 3 \\ca 4 \\ca*\n\\cp Three\n\\v 1 text"
 ---
 Book GEN "genesis Some desc" @0..25
@@ -27,6 +27,6 @@ Para p@132..141
   VerseEnd 1
 ChapterEnd 3
 --- diagnostics
-error[content-outside-paragraph] @31..33: content outside a paragraph; an implicit `\p` was opened
-error[content-outside-paragraph] @87..89: content outside a paragraph; an implicit `\p` was opened
-error[content-outside-paragraph] @132..134: content outside a paragraph; an implicit `\p` was opened
+warning[content-outside-paragraph] @31..33: content outside a paragraph; an implicit `\p` was opened
+warning[content-outside-paragraph] @87..89: content outside a paragraph; an implicit `\p` was opened
+warning[content-outside-paragraph] @132..134: content outside a paragraph; an implicit `\p` was opened

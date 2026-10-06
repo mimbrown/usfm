@@ -238,6 +238,17 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **`content-outside-paragraph` is a Warning (2026-10-06, Michael's
+  call).** It was an Error, and the same run over real Paratext projects
+  reported it 1 300 times in 54 books, every sampled one a `\c N` followed
+  directly by `\v 1`: nothing is lost and the implicit `\p` is the tree the
+  author meant. Only `Code::severity` changed — no tree, message or span, and
+  no conformance case moved. What follows from it: `--strict`,
+  `usfm format --write` and the server's formatting no longer refuse a file
+  for this alone (`--deny-warnings` still does), and machine.py's
+  `Tes/MAT.usx` now reports no Error at all. A lint configuration file, when
+  there is one, must be able to turn the code off (spec, "Work with no plan
+  yet")
 - **Direction marks in a verse number (2026-10-06).** Found by running the
   toolchain over seven real Paratext projects (231 books; every one parsed,
   ten failed the round trip, all on this). `NumberRange` keeps a `guard`
@@ -379,8 +390,8 @@ Recent progress:
   files parse to exactly the committed files' trees with 19 140 and 156
   Errors (`recovery.rs`'s
   `the_old_format_aligned_books_read_as_their_closed_spelling`). The
-  closed files report no parser finding: 28 `content-outside-paragraph`
-  (the ULT never writes a `\p` after `\c`) and Infos. The class is **`aligned`**,
+  closed files report no Error: 28 `content-outside-paragraph`
+  (the ULT never writes a `\p` after `\c`; a Warning since 2026-10-06) and Infos. The class is **`aligned`**,
   replacing the synthetic `alignment-heavy` Luke, which is no longer committed
   (`synthesize.py --class alignment-heavy` still writes it byte for byte;
   `attributes-heavy` is unchanged); `whole-corpus` is now 91 files, 14.36 MiB,

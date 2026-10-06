@@ -278,6 +278,11 @@ regression" in `docs/benchmarks.md`).
 **Work with no plan yet**, which needs a spec section before a loop could
 run it: output formats beyond USX, HTML, JSON and SILE, which CLAUDE.md's "Output
 Generation" stream names and this spec never scheduled.
+Also here since 2026-10-06: **a lint configuration file**. Michael, on
+making `content-outside-paragraph` a Warning: "if we get around to a custom
+lint file, I would expect that it could be turned off." So when one is
+specified, a project must be able to switch a code off (and that code is the
+first one named); nothing else about the file is decided.
 
 ## M7. USX reader
 

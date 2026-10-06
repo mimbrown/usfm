@@ -9,4 +9,4 @@ Periph periph@8..39 title="T"@16..18
   Para p@35..39
     Text "a"@38..39
 --- diagnostics
-error[content-outside-paragraph] @18..34: content after `\periph` is outside a paragraph; an implicit `\p` was opened
+warning[content-outside-paragraph] @18..34: content after `\periph` is outside a paragraph; an implicit `\p` was opened

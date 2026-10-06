@@ -9,4 +9,4 @@ Periph periph@8..35 title="Title more"@16..35
       Text "a"@25..26
 --- diagnostics
 info[character-style-nested-without-plus] @22..24: `\w` is nested without `+`; treated as `\+w`
-error[content-outside-paragraph] @22..29: content after `\periph` is outside a paragraph; an implicit `\p` was opened
+warning[content-outside-paragraph] @22..29: content after `\periph` is outside a paragraph; an implicit `\p` was opened

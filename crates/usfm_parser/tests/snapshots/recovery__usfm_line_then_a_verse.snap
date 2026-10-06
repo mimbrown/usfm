@@ -12,4 +12,4 @@ Para p@18..25
 ChapterStart 1@25..29
 ChapterEnd 1
 --- diagnostics
-error[content-outside-paragraph] @18..20: content outside a paragraph; an implicit `\p` was opened
+warning[content-outside-paragraph] @18..20: content outside a paragraph; an implicit `\p` was opened

@@ -9,4 +9,4 @@ Para p@6..11
 error[sidebar-not-closed] @0..4: `\esb` is not closed by `\esbe` before `\c`
 error[missing-chapter-number] @4..6: `\c` must be followed by a chapter number
 warning[unknown-milestone] @6..9: milestone `\sh` is not in the stylesheet
-error[content-outside-paragraph] @6..11: content after `\esbe` is outside a paragraph; an implicit `\p` was opened
+warning[content-outside-paragraph] @6..11: content after `\esbe` is outside a paragraph; an implicit `\p` was opened

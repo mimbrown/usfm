@@ -123,7 +123,7 @@ Para restore@2024..2072
 ChapterEnd 2
 --- diagnostics
 warning[usx-verse-end-missing] @279..311: chapter `MAT 1` is never closed by an `eid`; it ends where the parser would end it
-error[content-outside-paragraph] @351..381: content outside a paragraph; kept in an implicit `\p`
+warning[content-outside-paragraph] @351..381: content outside a paragraph; kept in an implicit `\p`
 warning[usx-verse-end-missing] @351..381: verse `MAT 1:1` is never closed by an `eid`; it ends where the parser would end it
 warning[usx-verse-end-missing] @536..566: verse `MAT 1:2` is never closed by an `eid`; it ends where the parser would end it
 warning[usx-verse-end-missing] @722..752: verse `MAT 1:3` is never closed by an `eid`; it ends where the parser would end it

@@ -557,9 +557,9 @@ fn usfm_to_usx_reads_back_to_the_same_usx() {
 
 /// A USX file's diagnostics are the reader's and the semantic pass's, filed
 /// under the file's own path with positions in the XML, in both renderings;
-/// and `--strict` refuses it like a USFM file. machine.py's `Tes/MAT.usx` is
-/// malformed on purpose: a verse outside a paragraph (an Error), and a
-/// repeated verse.
+/// and `--deny-warnings` refuses it like a USFM file. machine.py's
+/// `Tes/MAT.usx` is malformed on purpose: a verse outside a paragraph and a
+/// repeated verse, both Warnings, so `--strict` lets it through.
 #[test]
 fn usx_diagnostics_point_into_the_usx_file() {
     let path = machine_py_usx("Tes/MAT.usx");
@@ -576,7 +576,7 @@ fn usx_diagnostics_point_into_the_usx_file() {
     assert!(!stdout(&output).is_empty());
     let text = stderr(&output);
     assert!(
-        text.contains("MAT.usx:10:3: error[content-outside-paragraph]"),
+        text.contains("MAT.usx:10:3: warning[content-outside-paragraph]"),
         "{text}"
     );
     assert!(text.contains("warning[duplicate-verse-number]"), "{text}");
@@ -590,15 +590,19 @@ fn usx_diagnostics_point_into_the_usx_file() {
     );
     assert_eq!(json.lines().count(), text.lines().count(), "{json}");
     assert!(
-        json.contains(r#""line":10,"col":3,"severity":"error","code":"content-outside-paragraph""#),
+        json.contains(r#""line":10,"col":3,"severity":"warning","code":"content-outside-paragraph""#),
         "{json}"
     );
 
     let output = args(&["--strict"]);
+    assert!(output.status.success(), "{}", stderr(&output));
+    assert!(!stdout(&output).is_empty());
+
+    let output = args(&["--deny-warnings"]);
     assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
     assert!(stdout(&output).is_empty());
     assert!(
-        stderr(&output).contains("(--strict)"),
+        stderr(&output).contains("(--deny-warnings)"),
         "{}",
         stderr(&output)
     );
