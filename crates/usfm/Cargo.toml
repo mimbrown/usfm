@@ -19,6 +19,9 @@ usfm_parser = { path = "../usfm_parser" }
 usfm_semantic = { path = "../usfm_semantic" }
 usfm_span = { path = "../usfm_span" }
 usfm_style = { path = "../usfm_style" }
+# The fixes for what those two report, with no feature either: it depends on
+# nothing the parser-only build does not already have.
+usfm_fix = { path = "../usfm_fix" }
 
 # The output and pipeline crates, each behind the feature named after it. All
 # five are on by default, so `usfm = { path = "…" }` is the whole toolchain and

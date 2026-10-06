@@ -35,6 +35,7 @@ use std::sync::Arc;
 
 pub use usfm_ast as ast;
 pub use usfm_diagnostics as diagnostics;
+pub use usfm_fix as fix;
 pub use usfm_parser as parser;
 pub use usfm_semantic as semantic;
 pub use usfm_span as span;

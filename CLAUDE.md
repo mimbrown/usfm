@@ -238,6 +238,27 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **`usfm fix`, and the fixes in one place (2026-10-06).** Michael's shape
+  for a linter with auto-fix: a dry run by default, every fixable
+  diagnostic fixed unless specific codes are named, and the editor a
+  pass-through. `crates/usfm_fix` (`usfm::fix`, no feature: it needs only
+  the AST, diagnostics and spans, and does not parse) now holds the five
+  fixes ticket 32 wrote in the language server — `fix(document, source,
+  diagnostic) -> Option<Fix>`, `FIXABLE` / `is_fixable`, `fixes(…, only)`
+  for a whole parse, and `apply(source, &fixes)`, which writes them in one
+  pass and leaves out any whose edits touch one already taken. A `Fix`
+  carries its diagnostic's `code` and `span`. The server's `actions.rs` is
+  a re-export; its tests moved to `crates/usfm_fix/tests/fixes.rs`.
+  `usfm fix <files> [--code CODE]… [--write]` (`apps/usfm_cli/src/fix.rs`)
+  is per file like `format`: it lists `file:line:col: fix[code]: title` on
+  stdout and a count on stderr, writes nothing without `--write`, parses
+  and asks again until no fix is left (a fix can uncover another; 16 passes
+  at most, and a file that does not settle is left alone), and refuses a
+  `--code` that is unknown or has no fix. Exit 0 whether or not fixes were
+  available. **A new fix is a `Code` in `FIXABLE`, an arm in `fix`, and a
+  test in `fixes.rs` that applies it and re-parses** — the server and the
+  CLI get it for nothing. Next: the interlinear repair as a fixer of its
+  own (it is not a USFM diagnostic, so it will not go through `fix`)
 - **`\xt` citations: read what is unambiguous, guess nothing (2026-10-06).**
   Michael's rule, from the run over real Paratext projects: wrong parsing
   is worse than no parsing. Four changes, all in or under
@@ -966,6 +987,9 @@ usfm-tools/
 │   ├── usfm_ast/          # AST nodes, Visit / VisitMut / Fold, Cursor, PlainText
 │   ├── usfm_diagnostics/  # Diagnostic, Code, Severity, ParseResult, rendering
 │   ├── usfm_parser/       # Lexer + parser. A library, no binary
+│   ├── usfm_fix/          # Fixes for diagnostics: fix(&Document, source,
+│   │                      #   &Diagnostic) -> Option<Fix>, and apply. Does
+│   │                      #   not parse; `usfm fix` and the server call it
 │   ├── usfm_semantic/     # Checks over a finished tree: analyze(&Document)
 │   │                      #   -> Vec<Diagnostic>. Reports, never repairs.
 │   │                      #   Also ReferenceIndex, the chapter/verse index,
@@ -994,7 +1018,8 @@ usfm-tools/
 │                          #   the pieces
 ├── apps/
 │   ├── usfm_cli/          # The `usfm` binary: clap, watch mode, diagnostics;
-│   │                      #   `usfm parse --from usx` reads USX (ticket 48)
+│   │                      #   `usfm parse --from usx` reads USX (ticket 48);
+│   │                      #   `usfm format`; `usfm fix` (dry run by default)
 │   └── usfm_language_server/ # The `usfm-language-server` binary (M6): LSP
 │                          #   over stdio on tower-lsp-server + tokio. Keeps
 │                          #   the open text, publishes `usfm::parse_with`'s
@@ -1067,7 +1092,7 @@ To fetch or update docs: `python3 .claude/import_docs.py`
 ## Context
 
 - Custom lexer/parser (not tree-sitter)
-- A Cargo workspace: thirteen `crates/`, two `apps/`, and the `tasks/` packages (`tasks/fuzz` has its own workspace)
+- A Cargo workspace: fourteen `crates/`, two `apps/`, and the `tasks/` packages (`tasks/fuzz` has its own workspace)
 - Test suite from usfm-bible/tcdocs (git submodule)
 - Tests validate USFM → USX (XML) conversion
 - USFM spec: https://ubsicap.github.io/usfm/

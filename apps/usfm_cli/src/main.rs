@@ -1,8 +1,9 @@
 //! `usfm`: the command line over the `usfm` facade.
 //!
-//! Five modules and nothing else: [`args`] is the command line as a clap
+//! Six modules and nothing else: [`args`] is the command line as a clap
 //! struct, [`driver`] reads the files and writes `parse`'s output, [`format`]
-//! is the `format` subcommand, [`watch`] is `--watch`, and [`error`] is what
+//! is the `format` subcommand, [`fix`] the `fix` one, [`watch`] is `--watch`,
+//! and [`error`] is what
 //! is printed before the exit code. Every transformation of a document lives
 //! in `usfm_pipeline`.
 //!
@@ -13,6 +14,7 @@
 mod args;
 mod driver;
 mod error;
+mod fix;
 mod format;
 mod watch;
 
@@ -34,6 +36,7 @@ fn run(cli: Cli) -> Result<(), Error> {
     match cli.command {
         Command::Parse(args) => parse(args),
         Command::Format(args) => format::run(&args),
+        Command::Fix(args) => fix::run(&args),
     }
 }
 

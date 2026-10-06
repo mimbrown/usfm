@@ -7,6 +7,7 @@ members = [
   "crates/usfm_ast",
   "crates/usfm_codegen",
   "crates/usfm_diagnostics",
+  "crates/usfm_fix",
   "crates/usfm_html",
   "crates/usfm_json",
   "crates/usfm_paratext",

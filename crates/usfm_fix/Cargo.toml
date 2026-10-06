@@ -1,0 +1,21 @@
+[package]
+name = "usfm_fix"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+# Fixes for diagnostics: the edit to the source that answers one. Beside
+# `usfm_semantic` in the dependency order — a fix is a function of a
+# `Document`, its source and a `Diagnostic`, whoever produced them — so it
+# does not depend on `usfm_parser`. `usfm fix` and the language server's code
+# actions are its two callers, through the facade.
+[dependencies]
+usfm_ast = { path = "../usfm_ast" }
+usfm_diagnostics = { path = "../usfm_diagnostics" }
+usfm_span = { path = "../usfm_span" }
+
+[dev-dependencies]
+# The tests parse through the facade: a fix is proved by parsing what it
+# wrote. A dev-dependency cycle (`usfm` depends on this crate), as in
+# `usfm_semantic`, with the default features off.
+usfm = { path = "../usfm", default-features = false }
