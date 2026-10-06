@@ -59,6 +59,11 @@ impl BookNames {
 
     /// The names to recognise in a reference: every book's abbreviation,
     /// short and long name, and the three-letter codes.
+    ///
+    /// A `~` in a name is USFM's no-break space, as it is in the text: a
+    /// project that writes `\xt خلیفۃُ~اللہ 5:3` names the book `خلیفۃُ~اللہ`
+    /// here, and the parser has made the text's `~` a U+00A0 by the time a
+    /// reference is read from it. The fields themselves keep the `~`.
     pub fn table(&self) -> BookNameTable {
         let mut table = BookNameTable::new().with_codes();
         for name in &self.names {
@@ -66,7 +71,7 @@ impl BookNames {
                 .into_iter()
                 .flatten()
             {
-                table.add(text, name.code);
+                table.add(&text.replace('~', "\u{00A0}"), name.code);
             }
         }
         table
@@ -99,5 +104,32 @@ mod tests {
         assert_eq!(mrk.abbreviation, None);
         assert_eq!(mrk.short.as_deref(), Some("مرقس"));
         assert_eq!(names.iter().count(), 2);
+    }
+
+    /// Found in a real project (2026-10-06): its four Gospels are named with
+    /// a `~`, so none of their names matched the text, and every reference
+    /// to one of them was read as a reference to the book it stood in.
+    #[test]
+    fn a_tilde_in_a_name_is_the_texts_no_break_space() {
+        use usfm_semantic::citation::{CitationFormat, Piece, parse_citations};
+        let names = BookNames::from_xml(
+            r#"<BookNames><book code="MAT" abbr="@خلیفۃُ~اللہ" short="" long="" /></BookNames>"#,
+        )
+        .unwrap();
+        let mat = names.get("MAT".parse().unwrap()).unwrap();
+        assert_eq!(mat.abbreviation.as_deref(), Some("@خلیفۃُ~اللہ"));
+
+        let text = "@خلیفۃُ\u{00A0}اللہ 5\u{200F}:3";
+        let pieces = parse_citations(
+            text,
+            &CitationFormat::default(),
+            &names.table(),
+            Some("JHN".parse().unwrap()),
+        );
+        let [Piece::Citation(citation)] = pieces.as_slice() else {
+            panic!("{pieces:?}");
+        };
+        assert_eq!(citation.book.as_str(), "MAT");
+        assert_eq!((citation.start.chapter, citation.start.verse), (5, Some(3)));
     }
 }
