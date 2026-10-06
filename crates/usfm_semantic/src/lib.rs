@@ -82,7 +82,7 @@ use usfm_ast::visit::{Visit, walk_note, walk_para, walk_table_cell};
 use usfm_ast::{
     Attributes, Block, Book, BookCode, ChapterStart, Char, Document, Milestone, Note, NumberList,
     NumberRange, Para, Periph, Sidebar, StyleId, Table, TableCell, VerseStart,
-    default_attribute_name, is_valid_attribute_name,
+    is_valid_attribute_name,
 };
 use usfm_diagnostics::{Code, Diagnostic};
 use usfm_span::Span;
@@ -657,8 +657,9 @@ impl<'a> Analyzer<'a> {
         }
         // `rule` is borrowed from the sheet, not from `self`, so it survives
         // the `emit` calls without a clone.
-        let marker = &self.style_sheet.get_rule(style.index()).marker;
-        if default_attribute_name(marker).is_none() {
+        let rule = self.style_sheet.get_rule(style.index());
+        let marker = &rule.marker;
+        if rule.default_attribute().is_none() {
             self.emit(
                 Code::NoDefaultAttribute,
                 attributes.pipe,

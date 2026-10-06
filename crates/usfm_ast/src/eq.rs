@@ -252,6 +252,7 @@ mod tests {
             text_properties: TextProperties::default(),
             nest: false,
             occurs_under: vec![],
+            attributes: Vec::new(),
         }
     }
 

@@ -263,31 +263,6 @@ pub enum Inline<'a> {
     OptBreak(OptBreak),
 }
 
-/// The default (unnamed) attribute for a marker, as the USFM 3 spec assigns
-/// them: `\w word|lemma\w*` means `lemma="lemma"`. `None` for markers without
-/// one (`\fig` has several required attributes and no default).
-///
-/// The list follows the `usfm:propval` annotations in tcdocs' `grammar/usx.rnc`,
-/// except for `xt`/`jmp`, where the reference files write `link-href` and the
-/// annotation says `href`.
-pub fn default_attribute_name(marker: &str) -> Option<&'static str> {
-    match marker {
-        "w" => Some("lemma"),
-        "rb" => Some("gloss"),
-        "xt" | "jmp" => Some("link-href"),
-        "ref" => Some("loc"),
-        "periph" => Some("id"),
-        // USFM 3.1.2 gave the transliteration and foreign-word styles a
-        // default `lang`, and the `\vid|<reference>\*` milestone a default
-        // `ref` (`usfm:propval` on `tl`, `wl` and `vid` in `usx.rnc`).
-        "tl" | "wl" => Some("lang"),
-        "vid" => Some("ref"),
-        // Quotation milestones: `\qt-s |Speaker\*`, also `\qt1-s` … `\qt5-s`.
-        m if m.starts_with("qt") && (m.ends_with("-s") || m.ends_with("-e")) => Some("who"),
-        _ => None,
-    }
-}
-
 /// Whether `name` can be written as an XML attribute name, which is what a
 /// USFM attribute becomes in USX. USFM attribute names are identifiers: an
 /// ASCII letter or `_`, then ASCII letters, digits, `-`, `_` or `.`. Anything

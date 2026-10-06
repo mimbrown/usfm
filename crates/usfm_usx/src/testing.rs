@@ -24,7 +24,7 @@ use std::sync::Arc;
 use usfm_ast::visit_mut::VisitMut;
 use usfm_ast::{
     Attributes, Block, Book, Caller, ChapterStart, Char, Document, Inline, Milestone, Note, Para,
-    Periph, SPAN, Sidebar, StyleId, Text, VerseStart, default_attribute_name,
+    Periph, SPAN, Sidebar, StyleId, Text, VerseStart,
     is_valid_attribute_name,
 };
 use usfm_style::StyleSheet;
@@ -81,8 +81,8 @@ impl Normalise {
         let mut kept: Vec<String> = Vec::new();
         list.pairs.retain_mut(|pair| {
             if pair.name.is_empty() {
-                match default_attribute_name(marker) {
-                    Some(name) => pair.name = Cow::Borrowed(name),
+                match self.style_sheet.default_attribute(marker) {
+                    Some(name) => pair.name = Cow::Owned(name.to_string()),
                     None => return false,
                 }
             }

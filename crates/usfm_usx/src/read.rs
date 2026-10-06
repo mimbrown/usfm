@@ -502,6 +502,7 @@ impl<'a> Reader<'a> {
             text_properties: TextProperties::default(),
             nest: false,
             occurs_under: vec![],
+            attributes: Vec::new(),
         };
         let index = Arc::make_mut(&mut self.style_sheet).add_rule(rule);
         if kind != StyleType::Milestone {

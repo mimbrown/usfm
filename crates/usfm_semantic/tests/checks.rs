@@ -238,6 +238,28 @@ fn no_default_attribute() {
     );
 }
 
+/// A project declares that its own marker takes attributes with an
+/// `\Attributes` line in its `custom.sty`; without one the unnamed value has
+/// no name, and none is guessed.
+#[test]
+fn a_declared_custom_marker_has_its_default_attribute() {
+    let source = "\\id GEN\n\\c 1\n\\p \\v 1 text \\zlink |intro\\*\n";
+    let undeclared = usfm::parse(source);
+    assert!(
+        undeclared
+            .diagnostics
+            .iter()
+            .any(|d| d.code == Code::NoDefaultAttribute)
+    );
+
+    let mut sheet = (**usfm::DEFAULT_STYLESHEET).clone();
+    sheet
+        .extend_from_str("\\Marker zlink\n\\StyleType Milestone\n\\Attributes target\n")
+        .unwrap();
+    let declared = usfm::parse_with(source, &std::sync::Arc::new(sheet));
+    assert_eq!(declared.diagnostics, []);
+}
+
 #[test]
 fn default_attribute_with_others() {
     check(

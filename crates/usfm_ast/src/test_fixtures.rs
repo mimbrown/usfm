@@ -18,6 +18,7 @@ fn rule(marker: &str, style_type: StyleType, text_type: TextType) -> StyleRule {
         text_properties: TextProperties::default(),
         nest: false,
         occurs_under: Vec::new(),
+        attributes: Vec::new(),
     }
 }
 
