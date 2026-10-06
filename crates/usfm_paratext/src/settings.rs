@@ -97,23 +97,71 @@ impl Settings {
     /// `usfm_semantic::citation`: Paratext's reference settings, each split on
     /// `|` where a project lists several spellings, and the default for a
     /// setting the file leaves out.
+    ///
+    /// A setting the file does give also keeps its **standard spelling**
+    /// (`:` between chapter and verse, `-`, `,`, `;`) unless the project
+    /// declares that spelling for a *different* setting. A real project sets
+    /// its chapter–verse separator to `.` and writes `:` in every reference;
+    /// nothing else in its settings claims `:`, so `3:16` there has one
+    /// reading. A project that writes `3,16` and declares `,` for it does not
+    /// get `,` back as a sequence mark. This is silent today; a settings
+    /// mismatch like that is worth a warning once there is somewhere to
+    /// report one (the spec's "Work with no plan yet").
     pub fn citation_format(&self) -> CitationFormat {
+        const KEYS: [&str; 6] = [
+            "ChapterVerseSeparator",
+            "RangeIndicator",
+            "ChapterRangeSeparator",
+            "SequenceIndicator",
+            "ChapterNumberSeparator",
+            "BookSequenceSeparator",
+        ];
         let default = CitationFormat::default();
-        let read = |key: &str, fallback: Vec<String>| match self.get(key) {
-            Some(value) if !value.trim().is_empty() => value
+        let standard = [
+            default.chapter_verse,
+            default.range,
+            default.chapter_range,
+            default.sequence,
+            default.chapter_number,
+            default.book_sequence,
+        ];
+        let declared = KEYS.map(|key| {
+            let spellings: Vec<String> = self
+                .get(key)
+                .unwrap_or("")
                 .split('|')
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty())
-                .collect(),
-            _ => fallback,
-        };
+                .collect();
+            (!spellings.is_empty()).then_some(spellings)
+        });
+        let mut roles = declared
+            .iter()
+            .zip(standard)
+            .enumerate()
+            .map(|(role, (own, standard))| {
+                let Some(own) = own else {
+                    return standard;
+                };
+                let mut spellings = own.clone();
+                for spelling in standard {
+                    let claimed = declared.iter().enumerate().any(|(other, list)| {
+                        other != role && list.iter().flatten().any(|s| *s == spelling)
+                    });
+                    if !claimed && !spellings.contains(&spelling) {
+                        spellings.push(spelling);
+                    }
+                }
+                spellings
+            });
+        let mut next = || roles.next().unwrap_or_default();
         CitationFormat {
-            chapter_verse: read("ChapterVerseSeparator", default.chapter_verse),
-            range: read("RangeIndicator", default.range),
-            chapter_range: read("ChapterRangeSeparator", default.chapter_range),
-            sequence: read("SequenceIndicator", default.sequence),
-            chapter_number: read("ChapterNumberSeparator", default.chapter_number),
-            book_sequence: read("BookSequenceSeparator", default.book_sequence),
+            chapter_verse: next(),
+            range: next(),
+            chapter_range: next(),
+            sequence: next(),
+            chapter_number: next(),
+            book_sequence: next(),
         }
     }
 
@@ -267,9 +315,43 @@ mod tests {
         )
         .unwrap();
         let format = settings.citation_format();
-        assert_eq!(format.sequence, ["،"]);
+        // `,` is nobody else's, so it is still a sequence mark.
+        assert_eq!(format.sequence, ["،", ","]);
         assert_eq!(format.chapter_number, ["؛", ";"]);
         assert_eq!(format.chapter_verse, [":"]);
+    }
+
+    /// A declared setting keeps its standard spelling unless another setting
+    /// claims it: `.` declared for chapter and verse still reads `3:16`, and
+    /// a project that writes `3,16; 4,1.5` gets neither `,` nor `:` wrong.
+    #[test]
+    fn a_standard_spelling_is_kept_unless_another_setting_claims_it() {
+        let format = Settings::from_xml(
+            "<ScriptureText><ChapterVerseSeparator>.</ChapterVerseSeparator></ScriptureText>",
+        )
+        .unwrap()
+        .citation_format();
+        assert_eq!(format.chapter_verse, [".", ":"]);
+        assert_eq!(
+            format,
+            CitationFormat {
+                chapter_verse: vec![".".into(), ":".into()],
+                ..CitationFormat::default()
+            }
+        );
+
+        let format = Settings::from_xml(
+            "<ScriptureText><ChapterVerseSeparator>,</ChapterVerseSeparator>\
+             <SequenceIndicator>.</SequenceIndicator>\
+             <RangeIndicator>-</RangeIndicator>\
+             <ChapterRangeSeparator>—</ChapterRangeSeparator></ScriptureText>",
+        )
+        .unwrap()
+        .citation_format();
+        assert_eq!(format.chapter_verse, [",", ":"]);
+        assert_eq!(format.sequence, ["."]);
+        // `-` is the project's verse range, so it is not its chapter range.
+        assert_eq!(format.chapter_range, ["—"]);
     }
 
     #[test]
