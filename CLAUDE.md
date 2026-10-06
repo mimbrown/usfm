@@ -238,6 +238,30 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **`\xt` citations: read what is unambiguous, guess nothing (2026-10-06).**
+  Michael's rule, from the run over real Paratext projects: wrong parsing
+  is worse than no parsing. Four changes, all in or under
+  `usfm_semantic::citation`. (1) `xt_citations` believes a `link-href`:
+  `XtCitations::link` is `Some(LinkHref { value, citations })` when the
+  `\xt`'s default or `link-href` attribute is references and nothing else
+  (`parse_link_href`: codes in any case, direction marks skipped; a URL or
+  `prj:` link is `None`), and `XtCitations::citations()` answers with the
+  link's when there is one and the text's otherwise. `pieces` stays the
+  text's own reading. (2) A `C:V` with no book name is no longer given the
+  default book when an unread word stands directly before it — that word
+  may be a book the table lacks, and was in about 470 `\xt` of the
+  projects, each read as the book it stood in. `see 3:16` goes unread with
+  it; `(3:16)` and `cf. 3:16` do not. (3) Whitespace may follow the
+  chapter–verse separator (`23: 5-6` read as chapter 23 alone).
+  (4) `usfm_paratext`'s `BookNames::table()` reads a `~` in a name as
+  U+00A0, which is what the parser has made of the text's `~`: one
+  project names its Gospels that way, and 945 references to them were
+  being read as the current book. A bare number in an `\xt` stays unread:
+  in this data it is a verse 18 times and a chapter 23, told apart only by
+  the word beside it. Decided, not open: a `C:V` alone in an `\xt`
+  with no `link-href` is the current book (Michael, 2026-10-06). Where a
+  `link-href` was there to check, it named a different book 77 times, the
+  name standing outside the `\xt` — that is the source text's to fix
 - **`content-outside-paragraph` is a Warning (2026-10-06, Michael's
   call).** It was an Error, and the same run over real Paratext projects
   reported it 1 300 times in 54 books, every sampled one a `\c N` followed

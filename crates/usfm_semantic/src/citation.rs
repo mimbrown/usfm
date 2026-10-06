@@ -32,8 +32,27 @@
 //! * a number with no book name before it and no reference before it is not
 //!   read as a reference — outside `\xt` that is just a number — unless it has
 //!   a chapter–verse separator (`3:16`) and there is a default book;
+//! * and not then either if an unread word stands directly before it:
+//!   `1 Chronicles 3:11`, where the table has no such name, would otherwise
+//!   be 3:11 of the default book, and nothing tells that word from the
+//!   `see` of `see 3:11`. Punctuation before it is fine (`(3:16)`,
+//!   `cf. 3:16`);
+//! * whitespace may follow the chapter–verse separator (`23: 5-6`);
 //! * directional marks (U+200E, U+200F, U+061C) inside a reference are
 //!   skipped, since right-to-left projects write them around digits.
+//!
+//! The reader does not guess: a wrong reference is worse than none, so
+//! whatever is ambiguous stays [`Piece::Text`]. A bare number in an `\xt`
+//! (`\xt 5\xt*`) is the plain case — a verse of this chapter as often as a
+//! chapter of this book in real projects, with only the word beside it to
+//! say which. Where the author settled it with a `link-href`
+//! (`\xt 45|MAT 5:45\xt*`), [`xt_citations`] believes the attribute:
+//! [`XtCitations::link`].
+//!
+//! A `C:V` alone in an `\xt` that has no `link-href` is the current book's.
+//! That is the convention, and it is not a guess: if the author meant
+//! another book and named it outside the `\xt`, the source text is what
+//! needs fixing.
 //!
 //! Nothing here checks that the verse exists: that needs the other books.
 
@@ -121,6 +140,9 @@ pub struct BookNameTable {
     /// Whether a listed book's three-letter code (`MAT`), in capitals, is a
     /// name too.
     codes: bool,
+    /// Whether a code is one in any case (`Mat`), as people write a
+    /// `link-href` by hand.
+    codes_any_case: bool,
 }
 
 impl BookNameTable {
@@ -137,6 +159,13 @@ impl BookNameTable {
     /// Recognise the listed books' three-letter codes as well as the names.
     pub fn with_codes(mut self) -> Self {
         self.codes = true;
+        self
+    }
+
+    /// Recognise the codes however they are capitalised: `Mat`, `mat`.
+    pub fn with_codes_in_any_case(mut self) -> Self {
+        self.codes = true;
+        self.codes_any_case = true;
         self
     }
 
@@ -164,6 +193,13 @@ impl BookNameTable {
             return named;
         }
         let candidate = text.get(..3)?;
+        let upper;
+        let candidate = if self.codes_any_case && candidate.is_ascii() {
+            upper = candidate.to_ascii_uppercase();
+            upper.as_str()
+        } else {
+            candidate
+        };
         if !candidate
             .bytes()
             .all(|b| b.is_ascii_uppercase() || b.is_ascii_digit())
@@ -261,10 +297,12 @@ impl Scanner<'_> {
                 }
             }
 
-            // A location with the book from before.
+            // A location with the book from before — unless an unread word
+            // stands before it, which may be the name of another book.
             if at_boundary
                 && digit_value(self.text[i..].chars().next().unwrap()).is_some()
                 && let Some(book) = self.book
+                && !(bare == Bare::Nothing && self.follows_a_word(i))
             {
                 let meaning = match bare {
                     Bare::Verse if !last_had_verse => Bare::Chapter,
@@ -414,11 +452,22 @@ impl Scanner<'_> {
         Some((start, end, next))
     }
 
-    /// `:V` at `i`, marks skipped.
+    /// `:V` at `i`, marks skipped, and whitespace after the separator too
+    /// (`23: 5`); none before it.
     fn chapter_verse(&self, i: usize) -> Option<(usize, Option<char>, usize)> {
         let i = self.skip_marks(i);
         let len = starts_with_any_exact(&self.text[i..], &self.format.chapter_verse)?;
-        self.number(self.skip_marks(i + len))
+        self.number(self.skip_space(i + len))
+    }
+
+    /// Whether the last thing before `i`, whitespace and marks aside, is a
+    /// letter or a digit of text nothing has read.
+    fn follows_a_word(&self, i: usize) -> bool {
+        self.text[self.text_start..i]
+            .chars()
+            .rev()
+            .find(|c| !(c.is_whitespace() || is_directional_mark(*c)))
+            .is_some_and(char::is_alphanumeric)
     }
 
     /// A number at `i` and its segment letter, and where they end. The number
@@ -528,7 +577,64 @@ pub struct XtCitations {
     pub span: Span,
     /// Its text, as [`PlainText`] reads it; the pieces' ranges are into this.
     pub text: String,
+    /// What the text reads to. When [`Self::link`] is `Some` this is still
+    /// the text's own reading, for a caller that wants to see both; the
+    /// link is the one to believe.
     pub pieces: Vec<Piece>,
+    /// The `\xt`'s `link-href`, when it has one that is references and
+    /// nothing else.
+    pub link: Option<LinkHref>,
+}
+
+/// A `link-href` value that names Scripture: `MAT 5:45`, `1SA 21:1-15`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LinkHref {
+    /// The attribute's value; the citations' ranges are into this.
+    pub value: String,
+    pub citations: Vec<Citation>,
+}
+
+impl XtCitations {
+    /// The references the `\xt` points at: its `link-href`'s when it has
+    /// one, since that is the author saying so, and otherwise the ones read
+    /// from its text.
+    pub fn citations(&self) -> Vec<&Citation> {
+        match &self.link {
+            Some(link) => link.citations.iter().collect(),
+            None => self
+                .pieces
+                .iter()
+                .filter_map(|piece| match piece {
+                    Piece::Citation(citation) => Some(citation),
+                    Piece::Text(_) => None,
+                })
+                .collect(),
+        }
+    }
+}
+
+/// Read a `link-href` value as references: book codes in any case, USFM's
+/// own punctuation, direction marks skipped. `None` unless the whole value is
+/// references and the separators between them — a URL, a `prj:` link or
+/// anything else with a word in it is not one.
+pub fn parse_link_href(value: &str) -> Option<Vec<Citation>> {
+    let names = BookNameTable::new().with_codes_in_any_case();
+    let pieces = parse_citations(value, &CitationFormat::link_href(), &names, None);
+    let mut citations = Vec::new();
+    for piece in pieces {
+        match piece {
+            Piece::Citation(citation) => citations.push(citation),
+            Piece::Text(range) => {
+                let only_separators = value[range]
+                    .chars()
+                    .all(|c| c.is_whitespace() || is_directional_mark(c) || matches!(c, ',' | ';'));
+                if !only_separators {
+                    return None;
+                }
+            }
+        }
+    }
+    (!citations.is_empty()).then_some(citations)
 }
 
 /// Read the text of every `\xt` in `document`, in document order, with the
@@ -567,10 +673,23 @@ impl Visit for XtWalk<'_, '_> {
         if sheet.get_rule(char.style.index()).marker == "xt" {
             let text = PlainText::new(sheet).of_node(NodeRef::Char(char));
             let pieces = parse_citations(&text, self.format, self.names, self.book);
+            // The default attribute of `\xt` is `link-href`, and its name is
+            // empty in the tree.
+            let link = char.attributes.as_ref().and_then(|attributes| {
+                let href = attributes
+                    .pairs
+                    .iter()
+                    .find(|pair| pair.name.is_empty() || pair.name == "link-href")?;
+                Some(LinkHref {
+                    citations: parse_link_href(&href.value)?,
+                    value: href.value.to_string(),
+                })
+            });
             self.found.push(XtCitations {
                 span: char.span,
                 text,
                 pieces,
+                link,
             });
             return;
         }
@@ -683,6 +802,63 @@ mod tests {
             read("3:16 and 5", &CitationFormat::default(), Some("JHN")),
             ["JHN 3:16"]
         );
+    }
+
+    /// A wrong reference is worse than none. With John as the default book,
+    /// `1 Chronicles 3:11` — a name the table does not have — was read as
+    /// John 3:11: found in a real project whose `BookNames.xml` has no entry
+    /// for 1 Chronicles (2026-10-06). Nothing tells that word from `see`, so
+    /// neither is read; punctuation before the number is no word.
+    #[test]
+    fn a_reference_after_an_unread_word_is_not_given_the_default_book() {
+        let john = |text| read(text, &CitationFormat::default(), Some("JHN"));
+        assert_eq!(john("1 Chronicles 3:11-12"), Vec::<String>::new());
+        assert_eq!(john("see 3:11"), Vec::<String>::new());
+        assert_eq!(john("Mt 5:3; Chronicles 3:4"), ["MAT 5:3"]);
+        assert_eq!(john("3:11"), ["JHN 3:11"]);
+        assert_eq!(john("(3:11)"), ["JHN 3:11"]);
+        assert_eq!(john("cf. 3:11; 4:2"), ["JHN 3:11", "JHN 4:2"]);
+        assert_eq!(john("\u{200F}3:11"), ["JHN 3:11"]);
+    }
+
+    /// `23: 5-6`, as one project writes every reference: the verses were
+    /// dropped and the chapter read alone.
+    #[test]
+    fn whitespace_may_follow_the_chapter_verse_separator() {
+        assert_eq!(english("Ps 23: 5-6"), ["PSA 23:5-23:6"]);
+        assert_eq!(english("Ps 23:\u{200F} 5\u{200F}-6"), ["PSA 23:5-23:6"]);
+        // Not before it: `23 :5` is chapter 23 and something else.
+        assert_eq!(english("Ps 23 :5"), ["PSA 23"]);
+    }
+
+    #[test]
+    fn a_link_href_is_references_and_nothing_else() {
+        let read = |value| {
+            parse_link_href(value).map(|found| found.iter().map(describe).collect::<Vec<_>>())
+        };
+        assert_eq!(read("MAT 5:45"), Some(vec!["MAT 5:45".to_string()]));
+        assert_eq!(
+            read("Mat 5\u{200F}:45 "),
+            Some(vec!["MAT 5:45".to_string()])
+        );
+        assert_eq!(
+            read("1SA 21\u{200F}:1\u{200F}-15"),
+            Some(vec!["1SA 21:1-21:15".to_string()])
+        );
+        assert_eq!(
+            read("GEN 1:1; EXO 2:3"),
+            Some(vec!["GEN 1:1".to_string(), "EXO 2:3".to_string()])
+        );
+        for not_scripture in [
+            "",
+            "https://example.org/1:2",
+            "prj:GEN 1:1",
+            "5:45",
+            "MAT 5:45 note",
+            "Matthew 5:45",
+        ] {
+            assert_eq!(read(not_scripture), None, "{not_scripture:?}");
+        }
     }
 
     #[test]
