@@ -165,7 +165,7 @@ closed (see `aligned/README.md`):
 
 | Code | Severity | `45-ACT.ult.usfm` | `45-ACT.ugnt.usfm` |
 | --- | --- | ---: | ---: |
-| `content-outside-paragraph` | Error | 28 | 0 |
+| `content-outside-paragraph` | Warning | 28 | 0 |
 | `marker-not-listed-here` | Info | 17077 | 0 |
 | `unknown-custom-milestone` | Info | 2 | 0 |
 | `character-style-nested-without-plus` | Info | 0 | 59 |

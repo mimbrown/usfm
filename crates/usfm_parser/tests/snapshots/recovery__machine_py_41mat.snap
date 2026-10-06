@@ -239,5 +239,5 @@ ChapterEnd 4
 --- diagnostics
 error[unknown-marker] @214..235: unknown marker `\weirdtaglookingthing`
 error[unmatched-closing-marker] @500..503: closing marker `\w*` has no matching `\w`
-error[content-outside-paragraph] @1060..1146: content after `\esbe` is outside a paragraph; an implicit `\p` was opened
-error[content-outside-paragraph] @1790..1792: content outside a paragraph; an implicit `\p` was opened
+warning[content-outside-paragraph] @1060..1146: content after `\esbe` is outside a paragraph; an implicit `\p` was opened
+warning[content-outside-paragraph] @1790..1792: content outside a paragraph; an implicit `\p` was opened

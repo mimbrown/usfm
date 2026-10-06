@@ -7,4 +7,4 @@ Para p@0..23
 Para p@23..27
   Text "a"@26..27
 --- diagnostics
-error[content-outside-paragraph] @0..4: content outside a paragraph; an implicit `\p` was opened
+warning[content-outside-paragraph] @0..4: content outside a paragraph; an implicit `\p` was opened

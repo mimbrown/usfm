@@ -8,4 +8,4 @@ Periph periph@0..14
 --- diagnostics
 error[missing-book-code] @7..10: `\id` must be followed by a book code
 warning[unknown-milestone] @10..12: milestone `\e` is not in the stylesheet
-error[content-outside-paragraph] @10..14: content after `\periph` is outside a paragraph; an implicit `\p` was opened
+warning[content-outside-paragraph] @10..14: content after `\periph` is outside a paragraph; an implicit `\p` was opened
