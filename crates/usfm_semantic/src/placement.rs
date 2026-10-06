@@ -116,6 +116,7 @@ mod tests {
             text_properties: usfm_style::TextProperties::default(),
             nest: false,
             occurs_under: Vec::new(),
+            attributes: Vec::new(),
         };
         assert_eq!(
             check(&DEFAULT_STYLESHEET, &unrestricted, "p"),

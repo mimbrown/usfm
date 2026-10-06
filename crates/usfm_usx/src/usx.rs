@@ -31,7 +31,7 @@ use usfm_ast::visit::{
 use usfm_ast::{
     Alignment, Block, Book, ChapterEnd, ChapterStart, Char, Document, Inline, Milestone, Note,
     NumberList, OptBreak, Para, Periph, Sidebar, StyleId, Table, TableCell, TableRow, Text,
-    VerseEnd, VerseStart, default_attribute_name, is_valid_attribute_name,
+    VerseEnd, VerseStart, is_valid_attribute_name,
 };
 use usfm_style::{StyleRule, StyleSheet};
 use xml::attribute::OwnedAttribute;
@@ -390,7 +390,7 @@ impl<'a, H: UsxHooks> UsxWriter<'a, H> {
     ) {
         for attr in pairs {
             let name = if attr.name.is_empty() {
-                default_attribute_name(marker)
+                self.style_sheet.default_attribute(marker)
             } else {
                 Some(attr.name.as_ref())
             };
@@ -683,7 +683,8 @@ impl<H: UsxHooks> UsxWriter<'_, H> {
                 let name = if attr.name.is_empty() {
                     // The marker's default attribute, if it has one; `\fig`
                     // has none, so an unnamed value there is dropped.
-                    default_attribute_name(style_name)
+                    self.style_sheet
+                        .default_attribute(style_name)
                         .unwrap_or_default()
                         .to_string()
                 } else if attr.name == "src" && style_name == "fig" {

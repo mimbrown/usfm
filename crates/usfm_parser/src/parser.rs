@@ -2574,6 +2574,7 @@ impl<'a> ParserImpl<'a> {
             text_properties: TextProperties::default(),
             nest: false,
             occurs_under: vec![],
+            attributes: Vec::new(),
         };
         Arc::make_mut(&mut self.style_sheet).add_rule(rule)
     }
