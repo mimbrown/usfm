@@ -238,6 +238,24 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **Standard reference punctuation is kept unless claimed (2026-10-06).**
+  A real project sets `ChapterVerseSeparator` to `.`, sets no other
+  reference punctuation, and writes `:` in every reference, so not one of
+  its `\xt` was read from text. `usfm_paratext`'s
+  `Settings::citation_format` now gives each setting the file declares its
+  standard spelling as well (`:` chapter–verse, `-` range, `—`/`-` chapter
+  range, `,` sequence, `;` chapter and book) **unless the project declares
+  that spelling for a different setting** — so `3,16` with `.` as the
+  sequence mark gains `:` and never `,`, and a project that keeps `-` for
+  verse ranges and `—` for chapter ranges keeps them apart. A setting the
+  file leaves out is the default, as before. Over the real projects: that
+  one went from 0 citations to 74, and no other project's count moved.
+  Whether Paratext itself does this is not known (Michael's hunch); the
+  rule stands on having one reading. It is silent, and Michael wants it a
+  Warning once the citation reader has somewhere to report (spec, "Work
+  with no plan yet"). Most of that project's references stay unread for
+  another reason — its `BookNames.xml` names three books — which is the
+  project's to fix
 - **The stylesheet's `\Attributes` (2026-10-06).** A real project writes
   its own milestone with an unnamed value and got `no-default-attribute`,
   and nothing it could put in its `custom.sty` would have helped: the sheet

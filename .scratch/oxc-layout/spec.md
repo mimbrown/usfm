@@ -283,6 +283,13 @@ making `content-outside-paragraph` a Warning: "if we get around to a custom
 lint file, I would expect that it could be turned off." So when one is
 specified, a project must be able to switch a code off (and that code is the
 first one named); nothing else about the file is decided.
+And **a warning for reference settings the text contradicts**. Since
+2026-10-06 `Settings::citation_format` keeps a setting's standard spelling
+(`:`, `-`, `,`, `;`) beside the declared one unless another setting claims
+it, so a project whose `ChapterVerseSeparator` is `.` and whose text writes
+`3:16` is read. That is silent. Michael: "we would probably want to report
+that as a warning in the future." The citation reader returns no diagnostics
+today, so this needs a place to report from first.
 
 ## M7. USX reader
 
