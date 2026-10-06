@@ -590,7 +590,9 @@ fn usx_diagnostics_point_into_the_usx_file() {
     );
     assert_eq!(json.lines().count(), text.lines().count(), "{json}");
     assert!(
-        json.contains(r#""line":10,"col":3,"severity":"warning","code":"content-outside-paragraph""#),
+        json.contains(
+            r#""line":10,"col":3,"severity":"warning","code":"content-outside-paragraph""#
+        ),
         "{json}"
     );
 
@@ -759,4 +761,70 @@ fn format_refuses_a_missing_custom_stylesheet() {
         "{}",
         stderr(&output)
     );
+}
+
+/// `usfm fix` is a dry run unless `--write`: it lists the fixes on stdout,
+/// says nothing was written, and leaves the file as it was. With `--write`
+/// the file is fixed in place and parses with none of the fixed codes; with
+/// `--code` only the named ones are.
+#[test]
+fn fix_lists_by_default_and_writes_when_told() {
+    let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join("fix-me.usfm");
+    let source = "\\id GEN\n\\c 1\n\\p \\v 1 a \\foo b\\f \\ft note\\f* \\w word|lemma=grace\\w*\n";
+    std::fs::write(&path, source).expect("writing the input");
+
+    let output = usfm(["fix".as_ref(), path.as_os_str()]);
+    assert!(output.status.success(), "{}", stderr(&output));
+    let listed = stdout(&output);
+    assert_eq!(listed.lines().count(), 3, "{listed}");
+    assert!(
+        listed.contains("fix-me.usfm:3:11: fix[unknown-marker]: Delete `\\foo`"),
+        "{listed}"
+    );
+    assert!(stderr(&output).contains("3 fixes available in 1 file; nothing written"));
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), source);
+
+    let output = usfm([
+        "fix".as_ref(),
+        "--write".as_ref(),
+        "--code".as_ref(),
+        "missing-note-caller".as_ref(),
+        path.as_os_str(),
+    ]);
+    assert!(output.status.success(), "{}", stderr(&output));
+    assert!(
+        stderr(&output).contains("applied 1 fix in 1 file"),
+        "{}",
+        stderr(&output)
+    );
+    assert_eq!(
+        std::fs::read_to_string(&path).unwrap(),
+        "\\id GEN\n\\c 1\n\\p \\v 1 a \\foo b\\f + \\ft note\\f* \\w word|lemma=grace\\w*\n"
+    );
+
+    let output = usfm(["fix".as_ref(), "--write".as_ref(), path.as_os_str()]);
+    assert!(output.status.success(), "{}", stderr(&output));
+    assert_eq!(
+        std::fs::read_to_string(&path).unwrap(),
+        "\\id GEN\n\\c 1\n\\p \\v 1 a b\\f + \\ft note\\f* \\w word|lemma=\"grace\"\\w*\n"
+    );
+    let output = usfm(["fix".as_ref(), path.as_os_str()]);
+    assert!(stdout(&output).is_empty());
+    assert!(stderr(&output).contains("nothing to fix"));
+
+    // A code with no fix, and a file that is not there.
+    let output = usfm([
+        "fix".as_ref(),
+        "--code".as_ref(),
+        "missing-id".as_ref(),
+        path.as_os_str(),
+    ]);
+    assert_eq!(output.status.code(), Some(1));
+    assert!(
+        stderr(&output).contains("has no fix"),
+        "{}",
+        stderr(&output)
+    );
+    let output = usfm(["fix", "no-such-file.usfm"]);
+    assert_eq!(output.status.code(), Some(1));
 }

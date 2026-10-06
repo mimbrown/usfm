@@ -1012,6 +1012,7 @@ dependencies = [
  "usfm_ast",
  "usfm_codegen",
  "usfm_diagnostics",
+ "usfm_fix",
  "usfm_html",
  "usfm_json",
  "usfm_paratext",
@@ -1065,6 +1066,16 @@ name = "usfm_diagnostics"
 version = "0.1.0"
 dependencies = [
  "usfm_ast",
+ "usfm_span",
+]
+
+[[package]]
+name = "usfm_fix"
+version = "0.1.0"
+dependencies = [
+ "usfm",
+ "usfm_ast",
+ "usfm_diagnostics",
  "usfm_span",
 ]
 
