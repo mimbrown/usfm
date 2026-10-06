@@ -31,6 +31,9 @@ pub enum Command {
     Parse(ParseArgs),
     /// Rewrite USFM files in the writer's canonical shape.
     Format(FormatArgs),
+    /// Show the fixes available for what `parse` reports, or apply them
+    /// with --write.
+    Fix(FixArgs),
 }
 
 #[derive(Debug, Args)]
@@ -163,6 +166,38 @@ pub struct FormatArgs {
     /// How diagnostics are written to standard error.
     #[arg(long, value_enum, default_value_t = DiagnosticFormat::Text)]
     pub diagnostics: DiagnosticFormat,
+}
+
+/// `usfm fix`: the fixes for what the toolchain reports.
+///
+/// A dry run unless `--write` is given: the command is the first here that
+/// edits a file for a reason other than its spelling, so it shows what it
+/// would do before it does it. Every diagnostic that has a fix is fixed
+/// unless `--code` narrows it. Per file, like `format`.
+#[derive(Debug, Args)]
+pub struct FixArgs {
+    /// The USFM files to fix. Each is parsed and fixed on its own.
+    #[arg(required = true, value_name = "FILES")]
+    pub files: Vec<PathBuf>,
+
+    /// A Paratext stylesheet to parse against, in place of the built-in one.
+    #[arg(short = 's', long, value_name = "FILE")]
+    pub stylesheet: Option<PathBuf>,
+
+    /// A project's `custom.sty`, read over the stylesheet above (or the
+    /// built-in one) the way Paratext reads it.
+    #[arg(long, value_name = "FILE")]
+    pub custom_stylesheet: Option<PathBuf>,
+
+    /// Fix only this diagnostic code (`unknown-marker`); may be given more
+    /// than once. Without it, everything that has a fix is fixed.
+    #[arg(long, value_name = "CODE")]
+    pub code: Vec<String>,
+
+    /// Apply the fixes to each file in place. Without it nothing is written:
+    /// the fixes are listed and counted.
+    #[arg(long)]
+    pub write: bool,
 }
 
 /// `--from` (ticket 48).
@@ -313,6 +348,34 @@ mod tests {
         assert_eq!(args.from, InputFormat::Usx);
         assert_eq!(args.format, Format::Usfm);
         assert!(Cli::try_parse_from(["usfm", "parse", "--from", "xml", "book.usx"]).is_err());
+    }
+
+    /// `fix` is a dry run unless told to write, and `--code` repeats.
+    #[test]
+    fn fix_takes_its_files_and_codes() {
+        let Command::Fix(args) = Cli::parse_from(["usfm", "fix", "one.usfm"]).command else {
+            panic!("expected a fix command");
+        };
+        assert!(!args.write && args.code.is_empty());
+
+        let Command::Fix(args) = Cli::parse_from([
+            "usfm",
+            "fix",
+            "--write",
+            "--code",
+            "unknown-marker",
+            "--code",
+            "missing-note-caller",
+            "one.usfm",
+            "two.usfm",
+        ])
+        .command
+        else {
+            panic!("expected a fix command");
+        };
+        assert!(args.write);
+        assert_eq!(args.code, ["unknown-marker", "missing-note-caller"]);
+        assert_eq!(args.files.len(), 2);
     }
 
     /// `format` takes its files and its three modes, and `--write --check`
