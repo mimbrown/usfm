@@ -273,6 +273,33 @@ fn the_fuzz_findings_round_trip() {
     report("fuzz findings", count, failures);
 }
 
+/// A verse number keeps its direction mark. Right-to-left projects write
+/// U+200F after a number (`\\v 4\u{200F}`) as readily as inside a bridge
+/// (`\\v 1\u{200F}-3`, Paratext's own spelling), and the first came back
+/// without it: ten books of the Paratext projects the toolchain was run over
+/// on 2026-10-06 failed the round trip on exactly this. U+200E is the same
+/// mark for the other direction.
+#[test]
+fn verse_numbers_with_direction_marks_round_trip() {
+    let numbers = ["4M", "4aM", "1M-3", "1-3M", "4M-4", "1,3M", "1M,3M-5M,7M"];
+    let mut cases = Vec::new();
+    for (mark, name) in [('\u{200F}', "rlm"), ('\u{200E}', "lrm")] {
+        for number in numbers {
+            let number = number.replace('M', &mark.to_string());
+            for (shape, source) in [
+                ("alone", format!("\\v {number}")),
+                ("in_a_book", format!("\\id GEN\n\\c 1\n\\p\n\\v {number} text\n")),
+                ("alternate", format!("\\p \\v 1 \\va {number}\\va* text")),
+            ] {
+                cases.push((format!("{name}_{shape}_{}", number.escape_unicode()), source));
+            }
+        }
+    }
+    let count = cases.len();
+    let failures = run(cases);
+    report("verse numbers with direction marks", count, failures);
+}
+
 /// A clone is the same tree, spans included, sharing the original's
 /// stylesheet (ticket 58). Every
 /// case of both conformance roots, `fail` ones too, since a clone must copy
