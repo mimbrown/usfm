@@ -122,6 +122,15 @@ fn marker_not_listed_here() {
     );
 }
 
+/// Where usfm.sty's list is narrower than the USX schema, the schema's is
+/// the list (`usfm-extra.sty`): a note in any introduction paragraph, and
+/// `\no` in any paragraph a character style may stand in.
+#[test]
+fn the_schema_s_placements_are_listed() {
+    let source = "\\id GEN\n\\iq a\\f + \\ft note\\f* b \\x - \\xt Gen 1\\x*\n\\is Title\\f + \\ft note\\f*\n\\c 1\n\\p \\v 1 a \\no normal\\no* b";
+    assert_eq!(common::codes(source), Vec::<Code>::new());
+}
+
 /// A note's parent is its paragraph, whatever character style is open
 /// around it, and note text markers occur under the note: all silent.
 #[test]
