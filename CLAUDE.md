@@ -238,6 +238,18 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **Book names compared as Unicode compares them (2026-10-07).** One
+  real project's name list stores a doubling mark and a vowel on a letter
+  in one order and its text stores them in the other: the same text by
+  canonical equivalence, identical on the page, and 21 `\xt` unread for
+  it. `BookNameTable::match_at` now compares a name and the text
+  canonically decomposed (`unicode-normalization`, a new dependency of
+  `usfm_semantic`) when the bytes differ, with the no-break space folded
+  in the same pass; a name ends only where a character and all its marks
+  end. Silent. It is *not* a loosening of letters: an Arabic kaf for an
+  Urdu one, or a mark more or fewer, is a different name and the
+  project's to fix (Michael, 2026-10-07). That project went from 42
+  unread `\xt` to 21, and no project lost a citation
 - **Extra material in references, and either space in a book name
   (2026-10-07).** Two more unambiguous cases for `usfm_semantic::citation`,
   both silent. `CitationFormat::extra_material` (Paratext's

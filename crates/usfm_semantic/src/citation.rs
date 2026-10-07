@@ -40,7 +40,9 @@
 //! * whitespace may follow the chapter–verse separator (`23: 5-6`);
 //! * directional marks (U+200E, U+200F, U+061C) inside a reference are
 //!   skipped, since right-to-left projects write them around digits.
-//! * a space in a book name matches a no-break space and the reverse;
+//! * a book name matches any spelling Unicode calls the same text (marks
+//!   stored in another order, a letter precomposed or not), and a space in
+//!   it matches a no-break space and the reverse;
 //! * the words a project declares as extra material
 //!   ([`CitationFormat::extra_material`]: `ch.` in `Mt ch. 5`) are passed
 //!   over like whitespace where they stand as whole words.
@@ -61,6 +63,9 @@
 //! Nothing here checks that the verse exists: that needs the other books.
 
 use std::ops::Range;
+
+use unicode_normalization::UnicodeNormalization;
+use unicode_normalization::char::{canonical_combining_class, is_combining_mark};
 
 use usfm_ast::text::PlainText;
 use usfm_ast::visit::{self, Visit};
@@ -147,6 +152,9 @@ impl CitationFormat {
 pub struct BookNameTable {
     /// Longest name first, so `1 Cor` is tried before `1`.
     names: Vec<(String, BookCode)>,
+    /// The most characters any name has once [`fold`]ed, which is as far
+    /// into a text as a name can reach.
+    longest: usize,
     /// Whether a listed book's three-letter code (`MAT`), in capitals, is a
     /// name too.
     codes: bool,
@@ -190,17 +198,24 @@ impl BookNameTable {
             .names
             .partition_point(|(existing, _)| existing.len() >= name.len());
         self.names.insert(at, (name.to_string(), code));
+        self.longest = self.longest.max(fold(name).count());
     }
 
     /// The longest name that `text` starts with, and the length in bytes of
-    /// its spelling there. A space in either is a no-break space in the
-    /// other: which of the two a name is typed with shows nowhere, and no
-    /// two names differ by it.
+    /// its spelling there. Two spellings Unicode calls the same text are the
+    /// same name — a vowel mark and a doubling mark stored in either order, a
+    /// letter precomposed or not — and a space in either is a no-break space
+    /// in the other: none of it shows on the page, and no two names differ
+    /// by it.
     fn match_at(&self, text: &str) -> Option<(BookCode, usize)> {
-        let named = self
-            .names
-            .iter()
-            .find_map(|(name, code)| Some((*code, name_len_at(text, name)?)));
+        let mut folded = None;
+        let named = self.names.iter().find_map(|(name, code)| {
+            if text.starts_with(name.as_str()) {
+                return Some((*code, name.len()));
+            }
+            let folded = folded.get_or_insert_with(|| Folded::prefix(text, self.longest));
+            Some((*code, folded.len_of(name)?))
+        });
         if named.is_some() || !self.codes {
             return named;
         }
@@ -226,23 +241,59 @@ impl BookNameTable {
     }
 }
 
-/// The length of `name` as `text` starts with it, a space and a no-break
-/// space taken as the same character.
-fn name_len_at(text: &str, name: &str) -> Option<usize> {
-    if text.starts_with(name) {
-        return Some(name.len());
-    }
-    let space = |c: char| if c == '\u{00A0}' { ' ' } else { c };
-    let mut rest = text.chars();
-    let mut len = 0;
-    for expected in name.chars() {
-        let found = rest.next()?;
-        if space(found) != space(expected) {
-            return None;
+/// `text` as book names are compared: canonically decomposed, which puts
+/// the marks on a letter in one order however they were typed, and with a
+/// no-break space as a space.
+fn fold(text: &str) -> impl Iterator<Item = char> + '_ {
+    text.nfd().map(|c| if c == '\u{00A0}' { ' ' } else { c })
+}
+
+/// The start of a text, [`fold`]ed, with the places in it where a name
+/// may end.
+struct Folded {
+    chars: Vec<char>,
+    /// For each count of folded characters that ends where a character of
+    /// the text and all its marks end, the bytes of text it took.
+    ends: Vec<(usize, usize)>,
+}
+
+impl Folded {
+    /// Enough of `text` to hold a name of `longest` folded characters.
+    fn prefix(text: &str, longest: usize) -> Self {
+        let mut chars = Vec::new();
+        let mut ends = Vec::new();
+        let mut start = 0;
+        for (at, c) in text.char_indices() {
+            // A mark belongs with the character before it, and may change
+            // places with the marks around it: no name ends in front of it.
+            if canonical_combining_class(c) == 0 && !is_combining_mark(c) {
+                chars.extend(fold(&text[start..at]));
+                ends.push((chars.len(), at));
+                start = at;
+                if chars.len() >= longest {
+                    return Self { chars, ends };
+                }
+            }
         }
-        len += found.len_utf8();
+        chars.extend(fold(&text[start..]));
+        ends.push((chars.len(), text.len()));
+        Self { chars, ends }
     }
-    Some(len)
+
+    /// The length in bytes of `name` at the start of the text.
+    fn len_of(&self, name: &str) -> Option<usize> {
+        let mut count = 0;
+        for c in fold(name) {
+            if self.chars.get(count) != Some(&c) {
+                return None;
+            }
+            count += 1;
+        }
+        self.ends
+            .iter()
+            .find(|(chars, _)| *chars == count)
+            .map(|(_, bytes)| *bytes)
+    }
 }
 
 /// Read the references in `text`. `default_book` is the book a reference
@@ -873,6 +924,43 @@ mod tests {
         };
         assert_eq!(describe(citation), "1CO 5:3");
         assert_eq!(&text[citation.range.clone()], "1 Cor 5:3");
+    }
+
+    /// The same marks on a letter in a different stored order are the same
+    /// text (canonical equivalence), and so is a letter typed precomposed
+    /// or as a base and its mark. A different mark is a different name.
+    #[test]
+    fn a_name_matches_however_its_marks_are_stored() {
+        // A doubling mark and a vowel on one letter, in each order.
+        let (one, other) = ("مح\u{0651}\u{064E}د", "مح\u{064E}\u{0651}د");
+        for (listed, written) in [(one, other), (other, one)] {
+            let mut names = BookNameTable::new();
+            names.add(listed, code("MAT"));
+            let text = format!("{written} 5:3");
+            let pieces = parse_citations(&text, &CitationFormat::default(), &names, None);
+            let [Piece::Citation(citation)] = pieces.as_slice() else {
+                panic!("{pieces:?}");
+            };
+            assert_eq!(describe(citation), "MAT 5:3");
+            assert_eq!(citation.range, 0..text.len());
+        }
+        let mut names = BookNameTable::new();
+        names.add("Jos\u{00E9}", code("LUK"));
+        let read = |text: &str| parse_citations(text, &CitationFormat::default(), &names, None);
+        assert!(matches!(
+            read("Jose\u{0301} 6:20").as_slice(),
+            [Piece::Citation(_)]
+        ));
+        // Another mark, a mark more, and a mark fewer are other words.
+        assert!(matches!(
+            read("Jose\u{0300} 6:20").as_slice(),
+            [Piece::Text(_)]
+        ));
+        assert!(matches!(
+            read("Jose\u{0301}\u{0323} 6:20").as_slice(),
+            [Piece::Text(_)]
+        ));
+        assert!(matches!(read("Jose 6:20").as_slice(), [Piece::Text(_)]));
     }
 
     /// A project's extra material is passed over like whitespace, as a whole

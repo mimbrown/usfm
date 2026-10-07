@@ -18,6 +18,9 @@ usfm_diagnostics = { path = "../usfm_diagnostics" }
 # `Span`, on every diagnostic this crate reports.
 usfm_span = { path = "../usfm_span" }
 usfm_style = { path = "../usfm_style" }
+# Canonical decomposition, for comparing a book name with the text of a
+# reference: the two may store the same marks in a different order.
+unicode-normalization = "0.1"
 
 [dev-dependencies]
 insta = "1"
