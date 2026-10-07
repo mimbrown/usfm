@@ -12,6 +12,7 @@
 //! repair, and when `format --check` found a file that is not formatted.
 
 mod args;
+mod config;
 mod driver;
 mod error;
 mod fix;

@@ -828,3 +828,104 @@ fn fix_lists_by_default_and_writes_when_told() {
     let output = usfm(["fix", "no-such-file.usfm"]);
     assert_eq!(output.status.code(), Some(1));
 }
+
+// ---------------------------------------------------------------------------
+// `usfm.toml`: the project's levels for what is reported.
+// ---------------------------------------------------------------------------
+
+/// A folder with a `usfm.toml` and one book in a folder below it, whose only
+/// Warning is an unclosed `\nd`.
+fn project(name: &str, config: &str) -> PathBuf {
+    let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
+    let books = root.join("books");
+    std::fs::create_dir_all(&books).expect("creating a test project");
+    std::fs::write(root.join("usfm.toml"), config).expect("writing usfm.toml");
+    let book = books.join("book.usfm");
+    std::fs::write(&book, "\\id GEN\n\\c 1\n\\p\n\\v 1 a \\nd b\n").expect("writing a book");
+    book
+}
+
+const NOT_CLOSED_OFF: &str = "[lint.rules]\ncharacter-style-not-closed = \"off\"\n";
+
+/// The nearest `usfm.toml` above a file is read: a rule it switches off is
+/// not printed and does not fail `--deny-warnings`; `--no-config` reports it
+/// again.
+#[test]
+fn a_rule_switched_off_in_usfm_toml_is_not_reported() {
+    let book = project("config-off", NOT_CLOSED_OFF);
+    let book = book.to_str().unwrap();
+
+    let output = usfm(["parse", book, "--deny-warnings"]);
+    assert!(output.status.success(), "{}", stderr(&output));
+    assert!(!stderr(&output).contains("character-style-not-closed"));
+
+    let output = usfm(["parse", book, "--deny-warnings", "--no-config"]);
+    assert!(!output.status.success());
+    assert!(stderr(&output).contains("character-style-not-closed"));
+}
+
+/// A level changes the severity, so `--strict` refuses a Warning the project
+/// made an Error.
+#[test]
+fn a_rule_given_a_level_in_usfm_toml_is_reported_at_it() {
+    let book = project(
+        "config-level",
+        "[lint.rules]\ncharacter-style-not-closed = \"error\"\n",
+    );
+    let output = usfm(["parse", book.to_str().unwrap(), "--strict"]);
+    assert!(!output.status.success());
+    assert!(
+        stderr(&output).contains("error[character-style-not-closed]"),
+        "{}",
+        stderr(&output)
+    );
+}
+
+/// `--config` names the file, wherever the book is.
+#[test]
+fn config_names_the_file() {
+    let book = project("config-named", "");
+    let config = input("named-usfm.toml", NOT_CLOSED_OFF);
+    let output = usfm([
+        "parse",
+        book.to_str().unwrap(),
+        "--config",
+        config.to_str().unwrap(),
+    ]);
+    assert!(output.status.success());
+    assert!(!stderr(&output).contains("character-style-not-closed"));
+}
+
+/// A `usfm.toml` that cannot be used stops the run and says why: falling
+/// back to the defaults would report what the project switched off.
+#[test]
+fn a_usfm_toml_that_cannot_be_read_is_an_error() {
+    let book = project("config-bad", "[lint.rules]\nno-such-code = \"off\"\n");
+    for command in ["parse", "format", "fix"] {
+        let output = usfm([command, book.to_str().unwrap()]);
+        assert!(!output.status.success(), "{command}");
+        let stderr = stderr(&output);
+        assert!(
+            stderr.contains("usfm.toml") && stderr.contains("no-such-code"),
+            "{command}: {stderr}"
+        );
+    }
+}
+
+/// `format` and `fix` read it too: nothing is printed for the rule, and the
+/// closer the project chose to leave out is not written in.
+#[test]
+fn format_and_fix_read_usfm_toml() {
+    let book = project("config-format-fix", NOT_CLOSED_OFF);
+    let book = book.to_str().unwrap();
+
+    let output = usfm(["format", book]);
+    assert!(output.status.success());
+    assert!(!stderr(&output).contains("character-style-not-closed"));
+
+    let output = usfm(["fix", book]);
+    assert!(output.status.success());
+    assert_eq!(stdout(&output), "");
+    let output = usfm(["fix", book, "--no-config"]);
+    assert!(stdout(&output).contains("fix[character-style-not-closed]"));
+}

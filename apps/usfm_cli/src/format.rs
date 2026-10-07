@@ -84,7 +84,17 @@ pub fn run(args: &FormatArgs) -> Result<(), Error> {
         // The facade, not the parser: `unlisted-book-code` and the rest of the
         // semantic pass are as much a reason to look at a file as a repair is
         // (ticket 19).
-        let result = usfm::parse_with(&source, &style_sheet);
+        let mut result = usfm::parse_with(&source, &style_sheet);
+        // The project's levels first: what it switched off is neither
+        // printed nor a reason to refuse the file.
+        match args.config.for_file(path) {
+            Ok(config) => config.lint.apply(&mut result.diagnostics),
+            Err(e) => {
+                eprintln!("Error: {}", io_message(&e));
+                failed = true;
+                continue;
+            }
+        }
         print_diagnostics(&label, &source, &result.diagnostics, args.diagnostics);
         let has_error = result
             .diagnostics

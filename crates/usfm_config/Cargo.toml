@@ -1,0 +1,18 @@
+[package]
+name = "usfm_config"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+# `usfm.toml`, a project's configuration file: one file for every tool, a
+# table per kind of setting. It sits beside `usfm_semantic` in the dependency
+# order — it reads a list of diagnostics and changes what is reported, and
+# knows nothing of the tree or of who produced the list.
+[dependencies]
+# `Code` and `Severity`: a rule is a code, and a level is a severity or off.
+usfm_diagnostics = { path = "../usfm_diagnostics" }
+toml = { workspace = true }
+
+[dev-dependencies]
+# A `Span` for the diagnostics the tests build.
+usfm_span = { path = "../usfm_span" }

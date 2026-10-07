@@ -283,6 +283,10 @@ making `content-outside-paragraph` a Warning: "if we get around to a custom
 lint file, I would expect that it could be turned off." So when one is
 specified, a project must be able to switch a code off (and that code is the
 first one named); nothing else about the file is decided.
+**Done 2026-10-07**: the file is `usfm.toml` (`crates/usfm_config`), one
+file for every tool with `[lint.rules]` as its first table; a code is
+`"off"` or given a level. What is not there yet: scope narrower than the
+project (per file, per marker), and any table but `[lint]`.
 And **a warning for reference settings the text contradicts**. Since
 2026-10-06 `Settings::citation_format` keeps a setting's standard spelling
 (`:`, `-`, `,`, `;`) beside the declared one unless another setting claims
