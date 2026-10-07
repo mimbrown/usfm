@@ -238,6 +238,22 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **Extra material in references, and either space in a book name
+  (2026-10-07).** Two more unambiguous cases for `usfm_semantic::citation`,
+  both silent. `CitationFormat::extra_material` (Paratext's
+  `ReferenceExtraMaterial`, split on `|` by
+  `Settings::citation_format`, empty by default) lists the words a project
+  writes inside its references; each is passed over like whitespace where
+  it stands as a whole word — after a book name, between references, and
+  when asking whether an unread word stands before a `C:V` — so
+  `Mt ch. 5` is Matthew 5 once the project declares `ch.`, and stays
+  unread when it does not. And a space in a book name matches a no-break
+  space and the reverse (`BookNameTable::match_at`; the citation's range is
+  the spelling in the text). Over the real projects: nine `\xt` newly read
+  in the one project that declares extra material, each a whole chapter
+  whose `link-href` names the same book and chapter, and eight in another
+  whose name list and text disagree on the space; no citation was lost or
+  changed anywhere
 - **Standard reference punctuation is kept unless claimed (2026-10-06).**
   A real project sets `ChapterVerseSeparator` to `.`, sets no other
   reference punctuation, and writes `:` in every reference, so not one of
