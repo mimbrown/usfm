@@ -20,6 +20,7 @@ use std::sync::Arc;
 
 use usfm::ast::visit_mut::{self, VisitMut};
 use usfm::ast::{Char, Document, Milestone, Note, Para, Periph, Sidebar, StyleId};
+use usfm::config::Lint;
 use usfm::diagnostics::{ParseResult, Severity};
 use usfm::parser::DEFAULT_STYLESHEET;
 use usfm::pipeline::{OutputFormat, TextReplacement};
@@ -123,6 +124,9 @@ pub struct DiagnosticOptions {
     format: DiagnosticFormat,
     threshold: Option<Severity>,
     flag: &'static str,
+    /// The project's `usfm.toml`: every list of diagnostics goes through it
+    /// before it is printed or held against the threshold.
+    lint: Lint,
 }
 
 /// Print every diagnostic to standard error, `label` being the name the lines
@@ -152,9 +156,10 @@ pub fn print_diagnostics(
 fn report<'a>(
     label: &str,
     source: &str,
-    result: ParseResult<'a>,
+    mut result: ParseResult<'a>,
     options: &DiagnosticOptions,
 ) -> Result<Document<'a>, Error> {
+    options.lint.apply(&mut result.diagnostics);
     print_diagnostics(label, source, &result.diagnostics, options.format);
     enforce(label, result, options)
 }
@@ -210,6 +215,17 @@ impl Driver {
         let custom_stylesheet = resolve_one(args.custom_stylesheet.as_deref(), &mut errors);
         let diglot_stylesheet = resolve_one(args.diglot_stylesheet.as_deref(), &mut errors);
 
+        // One configuration for the run, the first file's: several files
+        // are one document here, and its diagnostics one list.
+        let lint = match files.first().map(|file| args.config.for_file(file)) {
+            Some(Ok(config)) => config.lint,
+            Some(Err(e)) => {
+                errors.push(e);
+                Lint::default()
+            }
+            None => Lint::default(),
+        };
+
         let output = match args.output.as_deref().map(absolute) {
             Some(Ok(path)) => Some(path),
             Some(Err(e)) => {
@@ -248,6 +264,7 @@ impl Driver {
                 format: args.diagnostics,
                 threshold: args.threshold(),
                 flag: args.threshold_flag(),
+                lint,
             },
         };
         (driver, errors)
@@ -442,7 +459,8 @@ fn read<'a>(
             let mut refused = Vec::new();
             for file in files {
                 let label = file.path.display().to_string();
-                let result = usfm::parse_usx_with(&file.value, style_sheet);
+                let mut result = usfm::parse_usx_with(&file.value, style_sheet);
+                options.lint.apply(&mut result.diagnostics);
                 print_diagnostics(&label, &file.value, &result.diagnostics, options.format);
                 match enforce(&label, result, options) {
                     Ok(document) => documents.push(document),

@@ -15,6 +15,8 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use usfm::diagnostics::Severity;
 use usfm::pipeline::OutputFormat;
 
+use crate::config::ConfigArgs;
+
 /// Parse USFM (or read USX) and write it out as USX, HTML, JSON, USFM, SILE
 /// or a translation prompt.
 #[derive(Debug, Parser)]
@@ -101,6 +103,9 @@ pub struct ParseArgs {
     /// How diagnostics are written to standard error.
     #[arg(long, value_enum, default_value_t = DiagnosticFormat::Text)]
     pub diagnostics: DiagnosticFormat,
+
+    #[command(flatten)]
+    pub config: ConfigArgs,
 }
 
 impl ParseArgs {
@@ -166,6 +171,9 @@ pub struct FormatArgs {
     /// How diagnostics are written to standard error.
     #[arg(long, value_enum, default_value_t = DiagnosticFormat::Text)]
     pub diagnostics: DiagnosticFormat,
+
+    #[command(flatten)]
+    pub config: ConfigArgs,
 }
 
 /// `usfm fix`: the fixes for what the toolchain reports.
@@ -198,6 +206,9 @@ pub struct FixArgs {
     /// the fixes are listed and counted.
     #[arg(long)]
     pub write: bool,
+
+    #[command(flatten)]
+    pub config: ConfigArgs,
 }
 
 /// `--from` (ticket 48).

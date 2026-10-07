@@ -591,3 +591,39 @@ fn formatting_rewrites_the_whole_document_and_hover_explains_what_is_there() {
 
     shutdown(&mut lsp);
 }
+
+/// The nearest `usfm.toml` above the document sets what is published: a rule
+/// it switches off is not, and one it gives a level is published at it.
+#[test]
+fn usfm_toml_sets_what_is_published() {
+    let directory = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("lsp-config");
+    std::fs::create_dir_all(&directory).expect("creating the project directory");
+    std::fs::write(
+        directory.join("usfm.toml"),
+        "[lint.rules]\ncharacter-style-not-closed = \"off\"\nunknown-marker = \"info\"\n",
+    )
+    .expect("writing usfm.toml");
+    let (_path, uri) = document("lsp-config/41MAT.SFM");
+
+    let mut lsp = Lsp::start();
+    lsp.request(
+        "initialize",
+        json!({ "processId": null, "rootUri": null, "capabilities": {} }),
+    );
+    lsp.notify("initialized", json!({}));
+    open(
+        &mut lsp,
+        &uri,
+        "\\id MAT\n\\c 1\n\\p\n\\v 1 a \\foo b \\nd c\n",
+    );
+
+    let diagnostics = lsp.diagnostics(&uri);
+    let reported: Vec<(&str, u64)> = diagnostics
+        .iter()
+        .map(|d| (d["code"].as_str().unwrap(), d["severity"].as_u64().unwrap()))
+        .collect();
+    // 3 is the protocol's Information; the parser reports it as an Error.
+    assert_eq!(reported, [("unknown-marker", 3)], "{diagnostics:?}");
+
+    shutdown(&mut lsp);
+}

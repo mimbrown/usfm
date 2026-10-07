@@ -36,6 +36,7 @@
 
 mod actions;
 mod completion;
+mod config;
 mod convert;
 mod documents;
 mod format;
@@ -63,8 +64,10 @@ use tower_lsp_server::ls_types::{
 use tower_lsp_server::{Client, LanguageServer, LspService, Server};
 
 use usfm::StyleSheet;
+use usfm::config::Lint;
 use usfm::span::LineIndex;
 
+use config::Configs;
 use documents::Documents;
 use stylesheet::Stylesheets;
 
@@ -75,6 +78,8 @@ struct Backend {
     /// A `Mutex` and not an `RwLock`: reading a sheet also *records* it, so
     /// every use of this is a write.
     stylesheets: Mutex<Stylesheets>,
+    /// What has been said about a `usfm.toml` that could not be used.
+    configs: Mutex<Configs>,
 }
 
 impl Backend {
@@ -83,6 +88,7 @@ impl Backend {
             client,
             documents: Documents::default(),
             stylesheets: Mutex::new(Stylesheets::default()),
+            configs: Mutex::new(Configs::default()),
         }
     }
 
@@ -120,12 +126,30 @@ impl Backend {
         Some((text, sheet))
     }
 
+    /// The project's levels for `uri`'s diagnostics, from the nearest
+    /// `usfm.toml`. Every list of diagnostics the server publishes or acts
+    /// on goes through them, which is what the CLI does with the same file.
+    async fn lint(&self, uri: &Uri) -> Lint {
+        let (lint, warning) = {
+            let path = uri.to_file_path();
+            self.configs.lock().await.for_document(path.as_deref())
+        };
+        if let Some(warning) = warning {
+            self.client
+                .show_message(MessageType::WARNING, warning)
+                .await;
+        }
+        lint
+    }
+
     async fn publish_diagnostics(&self, uri: &Uri, version: Option<i32>) {
         let Some((text, sheet)) = self.source(uri).await else {
             return;
         };
+        let lint = self.lint(uri).await;
 
-        let result = usfm::parse_with(&text, &sheet);
+        let mut result = usfm::parse_with(&text, &sheet);
+        lint.apply(&mut result.diagnostics);
         let index = LineIndex::new(&text);
         let diagnostics = result
             .diagnostics
@@ -255,7 +279,9 @@ impl LanguageServer for Backend {
         let Some((text, sheet)) = self.source(&uri).await else {
             return Ok(None);
         };
-        let result = usfm::parse_with(&text, &sheet);
+        let lint = self.lint(&uri).await;
+        let mut result = usfm::parse_with(&text, &sheet);
+        lint.apply(&mut result.diagnostics);
         if let Some(refusal) = format::refusal(&result.diagnostics) {
             self.client
                 .show_message(MessageType::WARNING, refusal)
@@ -352,7 +378,9 @@ impl LanguageServer for Backend {
         let Some((text, sheet)) = self.source(&uri).await else {
             return Ok(None);
         };
-        let result = usfm::parse_with(&text, &sheet);
+        let lint = self.lint(&uri).await;
+        let mut result = usfm::parse_with(&text, &sheet);
+        lint.apply(&mut result.diagnostics);
         let index = LineIndex::new(&text);
 
         let wanted = |diagnostic: &usfm::Diagnostic| {
