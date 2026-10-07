@@ -238,6 +238,30 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **`usfm.toml`, a project's configuration file (2026-10-07).** One file
+  for every tool, a table per kind of setting (Michael: all-in-one
+  language tooling likes one file; oxc's file per tool follows JS
+  conventions and is not ours to match). Today it has one kind:
+  `[lint.rules]`, each key a diagnostic code and each value `"off"`,
+  `"info"`, `"warning"` or `"error"`. `crates/usfm_config` (`usfm::config`,
+  no feature) reads it — `Config::discover(dir)` is the nearest `usfm.toml`
+  in `dir` or above, `Lint::apply(&mut diagnostics)` drops what is off and
+  re-levels the rest — and is strict about the file itself: an unknown
+  table, key, code or level is an error naming it. **Nothing the parser
+  does changes**; the tree and its repairs are the same, only the list is.
+  Every tool applies it to the list straight after parsing and does
+  everything else with the result: `usfm parse` (printing, `--strict`,
+  `--deny-warnings`; one config for the run, the first file's), `usfm
+  format` (printing and the `--write` refusal) and `usfm fix` (a rule that
+  is off is not fixed unless `--code` names it), each per file, with
+  `--config FILE` and `--no-config`; and the language server
+  (`config.rs`: read on every request, so an edit applies at once;
+  published diagnostics, the formatting refusal, code actions). A file
+  that cannot be used stops the CLI and, in the server, warns once and
+  falls back to the defaults. It began with a real project that leaves
+  character styles to close at the paragraph end on purpose, for which
+  `character-style-not-closed` is noise. Whole project only: no
+  per-file or per-marker scope yet
 - **Placements the USX schema allows are listed (2026-10-07).**
   `marker-not-listed-here` (Info) was reported for two things real
   projects do everywhere and `usx.rnc` allows: a note in an introduction
@@ -1065,6 +1089,9 @@ usfm-tools/
 │   ├── usfm_ast/          # AST nodes, Visit / VisitMut / Fold, Cursor, PlainText
 │   ├── usfm_diagnostics/  # Diagnostic, Code, Severity, ParseResult, rendering
 │   ├── usfm_parser/       # Lexer + parser. A library, no binary
+│   ├── usfm_config/       # `usfm.toml`: a project's levels for what is
+│   │                      #   reported (`[lint.rules]`). Reads a list of
+│   │                      #   diagnostics, knows nothing of the tree
 │   ├── usfm_fix/          # Fixes for diagnostics: fix(&Document, source,
 │   │                      #   &Diagnostic) -> Option<Fix>, and apply. Does
 │   │                      #   not parse; `usfm fix` and the server call it
@@ -1170,7 +1197,7 @@ To fetch or update docs: `python3 .claude/import_docs.py`
 ## Context
 
 - Custom lexer/parser (not tree-sitter)
-- A Cargo workspace: fourteen `crates/`, two `apps/`, and the `tasks/` packages (`tasks/fuzz` has its own workspace)
+- A Cargo workspace: fifteen `crates/`, two `apps/`, and the `tasks/` packages (`tasks/fuzz` has its own workspace)
 - Test suite from usfm-bible/tcdocs (git submodule)
 - Tests validate USFM → USX (XML) conversion
 - USFM spec: https://ubsicap.github.io/usfm/

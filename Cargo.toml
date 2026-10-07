@@ -6,6 +6,7 @@ members = [
   "crates/usfm",
   "crates/usfm_ast",
   "crates/usfm_codegen",
+  "crates/usfm_config",
   "crates/usfm_diagnostics",
   "crates/usfm_fix",
   "crates/usfm_html",
@@ -47,4 +48,6 @@ serde_json = "1.0"
 # with the features an stdio LSP loop needs rather than `full`.
 tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread", "io-std", "sync"] }
 tower-lsp-server = "0.23.0"
+# `usfm.toml` (`crates/usfm_config`). Read only: nothing writes the file.
+toml = { version = "0.8", default-features = false, features = ["parse"] }
 xml-rs = "0.8.26"

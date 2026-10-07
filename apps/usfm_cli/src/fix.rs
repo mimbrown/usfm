@@ -35,6 +35,7 @@
 use std::sync::Arc;
 
 use usfm::Code;
+use usfm::config::Lint;
 use usfm::fix::{FIXABLE, Fix, is_fixable};
 use usfm::parser::DEFAULT_STYLESHEET;
 use usfm::span::LineIndex;
@@ -66,7 +67,15 @@ pub fn run(args: &FixArgs) -> Result<(), Error> {
                 continue;
             }
         };
-        let Some(fixed) = fix_source(&source, &style_sheet, only.as_deref()) else {
+        let lint = match args.config.for_file(path) {
+            Ok(config) => config.lint,
+            Err(e) => {
+                eprintln!("Error: {}", message(&e));
+                failed = true;
+                continue;
+            }
+        };
+        let Some(fixed) = fix_source(&source, &style_sheet, only.as_deref(), &lint) else {
             eprintln!("Error: {label}: the fixes did not settle; left as it was");
             failed = true;
             continue;
@@ -116,11 +125,23 @@ struct Fixed {
 
 /// Apply fixes to `source` until none is left. `None` if that does not
 /// happen in [`MAX_PASSES`].
-fn fix_source(source: &str, style_sheet: &Arc<StyleSheet>, only: Option<&[Code]>) -> Option<Fixed> {
+///
+/// A rule the project's `usfm.toml` switched off is not fixed — the project
+/// has said that spelling is how it writes — unless `--code` names it,
+/// which is the more specific instruction.
+fn fix_source(
+    source: &str,
+    style_sheet: &Arc<StyleSheet>,
+    only: Option<&[Code]>,
+    lint: &Lint,
+) -> Option<Fixed> {
     let mut text = source.to_owned();
     let mut lines = Vec::new();
     for _ in 0..MAX_PASSES {
-        let result = usfm::parse_with(&text, style_sheet);
+        let mut result = usfm::parse_with(&text, style_sheet);
+        if only.is_none() {
+            lint.apply(&mut result.diagnostics);
+        }
         let fixes = usfm::fix::fixes(&result.document, &text, &result.diagnostics, only);
         if fixes.is_empty() {
             return Some(Fixed { text, lines });
@@ -208,7 +229,7 @@ mod tests {
     use super::*;
 
     fn fixed(source: &str, only: Option<&[Code]>) -> Fixed {
-        fix_source(source, &DEFAULT_STYLESHEET, only).expect("the fixes settle")
+        fix_source(source, &DEFAULT_STYLESHEET, only, &Lint::default()).expect("the fixes settle")
     }
 
     /// Fixes whose edits touch take a pass each, and the lines list both.
@@ -242,6 +263,23 @@ mod tests {
             "\\id GEN\n\\c 1\n\\p \\v 1 a \\foo b \\w word|lemma=\"grace\"\\w*\n"
         );
         assert_eq!(result.lines.len(), 1);
+    }
+
+    /// What the project switched off is how it writes, so it is left —
+    /// unless the code is asked for by name.
+    #[test]
+    fn a_rule_switched_off_is_not_fixed() {
+        use usfm::config::Level;
+        let source = "\\id GEN\n\\c 1\n\\p \\v 1 a \\foo b \\nd c\n";
+        let mut lint = Lint::default();
+        lint.set(Code::CharacterStyleNotClosed, Level::Off);
+        let fixed = fix_source(source, &DEFAULT_STYLESHEET, None, &lint).unwrap();
+        assert_eq!(fixed.lines.len(), 1, "{:?}", fixed.lines);
+        assert!(fixed.lines[0].contains("unknown-marker"));
+        assert!(!fixed.text.contains("\\nd*"));
+        let only = [Code::CharacterStyleNotClosed];
+        let fixed = fix_source(source, &DEFAULT_STYLESHEET, Some(&only), &lint).unwrap();
+        assert!(fixed.text.contains("\\nd*"), "{}", fixed.text);
     }
 
     #[test]
