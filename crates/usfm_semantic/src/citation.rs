@@ -40,6 +40,10 @@
 //! * whitespace may follow the chapter–verse separator (`23: 5-6`);
 //! * directional marks (U+200E, U+200F, U+061C) inside a reference are
 //!   skipped, since right-to-left projects write them around digits.
+//! * a space in a book name matches a no-break space and the reverse;
+//! * the words a project declares as extra material
+//!   ([`CitationFormat::extra_material`]: `ch.` in `Mt ch. 5`) are passed
+//!   over like whitespace where they stand as whole words.
 //!
 //! The reader does not guess: a wrong reference is worse than none, so
 //! whatever is ambiguous stays [`Piece::Text`]. A bare number in an `\xt`
@@ -107,6 +111,11 @@ pub struct CitationFormat {
     pub chapter_number: Vec<String>,
     /// Between books: `;` in `Mt 5:3; Lk 6:20`.
     pub book_sequence: Vec<String>,
+    /// Words a project writes inside a reference that say nothing the
+    /// numbers do not (`ch.` in `Mt ch. 5:3`): Paratext's
+    /// `ReferenceExtraMaterial`. Each is passed over like whitespace where it
+    /// stands as a whole word. Empty by default.
+    pub extra_material: Vec<String>,
 }
 
 impl Default for CitationFormat {
@@ -120,6 +129,7 @@ impl Default for CitationFormat {
             sequence: one(","),
             chapter_number: one(";"),
             book_sequence: one(";"),
+            extra_material: Vec::new(),
         }
     }
 }
@@ -182,13 +192,15 @@ impl BookNameTable {
         self.names.insert(at, (name.to_string(), code));
     }
 
-    /// The longest name that `text` starts with, and its length in bytes.
+    /// The longest name that `text` starts with, and the length in bytes of
+    /// its spelling there. A space in either is a no-break space in the
+    /// other: which of the two a name is typed with shows nowhere, and no
+    /// two names differ by it.
     fn match_at(&self, text: &str) -> Option<(BookCode, usize)> {
         let named = self
             .names
             .iter()
-            .find(|(name, _)| text.starts_with(name.as_str()))
-            .map(|(name, code)| (*code, name.len()));
+            .find_map(|(name, code)| Some((*code, name_len_at(text, name)?)));
         if named.is_some() || !self.codes {
             return named;
         }
@@ -212,6 +224,25 @@ impl BookNameTable {
             .filter(BookCode::is_listed)
             .map(|code| (code, 3))
     }
+}
+
+/// The length of `name` as `text` starts with it, a space and a no-break
+/// space taken as the same character.
+fn name_len_at(text: &str, name: &str) -> Option<usize> {
+    if text.starts_with(name) {
+        return Some(name.len());
+    }
+    let space = |c: char| if c == '\u{00A0}' { ' ' } else { c };
+    let mut rest = text.chars();
+    let mut len = 0;
+    for expected in name.chars() {
+        let found = rest.next()?;
+        if space(found) != space(expected) {
+            return None;
+        }
+        len += found.len_utf8();
+    }
+    Some(len)
 }
 
 /// Read the references in `text`. `default_book` is the book a reference
@@ -281,7 +312,7 @@ impl Scanner<'_> {
                 if self.text[j..].starts_with('.') {
                     j += 1;
                 }
-                j = self.skip_space(j);
+                j = self.skip_extra(j);
                 let bare_here = if is_single_chapter(code) {
                     Bare::Verse
                 } else {
@@ -343,6 +374,13 @@ impl Scanner<'_> {
                     i += len;
                     continue;
                 }
+            }
+
+            // Extra material is not a word: it leaves a bare number its
+            // meaning, as whitespace does.
+            if at_boundary && let Some(len) = self.extra_at(i) {
+                i += len;
+                continue;
             }
 
             let c = self.text[i..].chars().next().unwrap();
@@ -460,14 +498,46 @@ impl Scanner<'_> {
         self.number(self.skip_space(i + len))
     }
 
-    /// Whether the last thing before `i`, whitespace and marks aside, is a
-    /// letter or a digit of text nothing has read.
+    /// Whether the last thing before `i` — whitespace, marks and extra
+    /// material aside — is a letter or a digit of text nothing has read.
     fn follows_a_word(&self, i: usize) -> bool {
-        self.text[self.text_start..i]
-            .chars()
-            .rev()
-            .find(|c| !(c.is_whitespace() || is_directional_mark(*c)))
-            .is_some_and(char::is_alphanumeric)
+        let skipped = |c: char| c.is_whitespace() || is_directional_mark(c);
+        let mut before = self.text[self.text_start..i].trim_end_matches(skipped);
+        while let Some(rest) = self.format.extra_material.iter().find_map(|extra| {
+            let extra = extra.trim();
+            let rest = before.strip_suffix(extra).filter(|_| !extra.is_empty())?;
+            (!rest.ends_with(char::is_alphanumeric)).then_some(rest)
+        }) {
+            before = rest.trim_end_matches(skipped);
+        }
+        before.ends_with(char::is_alphanumeric)
+    }
+
+    /// The length of the extra material at `i`, which the caller knows to be
+    /// at the start of a word: one of the format's phrases, with no letter or
+    /// digit directly after it.
+    fn extra_at(&self, i: usize) -> Option<usize> {
+        let text = &self.text[i..];
+        self.format
+            .extra_material
+            .iter()
+            .map(|extra| extra.trim())
+            .filter(|extra| !extra.is_empty())
+            .filter(|extra| text.starts_with(extra))
+            .filter(|extra| !text[extra.len()..].starts_with(char::is_alphanumeric))
+            .map(str::len)
+            .max()
+    }
+
+    /// Past whitespace, marks and extra material.
+    fn skip_extra(&self, mut i: usize) -> usize {
+        loop {
+            i = self.skip_space(i);
+            match self.extra_at(i) {
+                Some(len) => i += len,
+                None => return i,
+            }
+        }
     }
 
     /// A number at `i` and its segment letter, and where they end. The number
@@ -787,6 +857,46 @@ mod tests {
     #[test]
     fn a_name_with_a_digit_and_a_space_is_matched_whole() {
         assert_eq!(english("1 Cor 13:4"), ["1CO 13:4"]);
+    }
+
+    /// Which of the two spaces a name is typed with shows nowhere, so either
+    /// matches the other, and the citation covers the spelling in the text.
+    #[test]
+    fn a_no_break_space_in_a_name_is_a_space() {
+        assert_eq!(english("1\u{00A0}Cor 5:3"), ["1CO 5:3"]);
+        let mut names = BookNameTable::new();
+        names.add("1\u{00A0}Cor", code("1CO"));
+        let text = "see 1 Cor 5:3";
+        let pieces = parse_citations(text, &CitationFormat::default(), &names, None);
+        let [Piece::Text(_), Piece::Citation(citation)] = pieces.as_slice() else {
+            panic!("{pieces:?}");
+        };
+        assert_eq!(describe(citation), "1CO 5:3");
+        assert_eq!(&text[citation.range.clone()], "1 Cor 5:3");
+    }
+
+    /// A project's extra material is passed over like whitespace, as a whole
+    /// word only, and is no reference of its own.
+    #[test]
+    fn extra_material_is_passed_over() {
+        let format = CitationFormat {
+            extra_material: vec!["chapter".to_string(), "ch.".to_string()],
+            ..CitationFormat::default()
+        };
+        assert_eq!(read("Mt chapter 5", &format, None), ["MAT 5"]);
+        assert_eq!(
+            read("Mt ch. 5:3; ch. 6", &format, None),
+            ["MAT 5:3", "MAT 6"]
+        );
+        // Not declared, so a word like any other.
+        assert!(english("Mt chapter 5").is_empty());
+        // Part of a longer word.
+        assert!(read("Mt chapters 5", &format, None).is_empty());
+        assert!(read("chapter 5", &format, Some("MAT")).is_empty());
+        // It is not the unread word that may be another book's name, and
+        // does not hide one either.
+        assert_eq!(read("chapter 3:16", &format, Some("MAT")), ["MAT 3:16"]);
+        assert!(read("Acts chapter 3:16", &format, Some("MAT")).is_empty());
     }
 
     #[test]

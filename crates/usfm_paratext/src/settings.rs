@@ -107,6 +107,9 @@ impl Settings {
     /// get `,` back as a sequence mark. This is silent today; a settings
     /// mismatch like that is worth a warning once there is somewhere to
     /// report one (the spec's "Work with no plan yet").
+    ///
+    /// `ReferenceExtraMaterial`, the words a project writes inside its
+    /// references, is split on `|` the same way and has no default.
     pub fn citation_format(&self) -> CitationFormat {
         const KEYS: [&str; 6] = [
             "ChapterVerseSeparator",
@@ -162,6 +165,13 @@ impl Settings {
             sequence: next(),
             chapter_number: next(),
             book_sequence: next(),
+            extra_material: self
+                .get("ReferenceExtraMaterial")
+                .unwrap_or("")
+                .split('|')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect(),
         }
     }
 
@@ -319,6 +329,21 @@ mod tests {
         assert_eq!(format.sequence, ["،", ","]);
         assert_eq!(format.chapter_number, ["؛", ";"]);
         assert_eq!(format.chapter_verse, [":"]);
+    }
+
+    #[test]
+    fn the_citation_format_has_the_extra_material() {
+        let settings = Settings::from_xml(
+            "<ScriptureText><ReferenceExtraMaterial>chapter| ch. |</ReferenceExtraMaterial>\
+             </ScriptureText>",
+        )
+        .unwrap();
+        assert_eq!(
+            settings.citation_format().extra_material,
+            ["chapter", "ch."]
+        );
+        let none = Settings::from_xml("<ScriptureText></ScriptureText>").unwrap();
+        assert!(none.citation_format().extra_material.is_empty());
     }
 
     /// A declared setting keeps its standard spelling unless another setting
