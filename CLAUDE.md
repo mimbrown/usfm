@@ -238,6 +238,18 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **Placements the USX schema allows are listed (2026-10-07).**
+  `marker-not-listed-here` (Info) was reported for two things real
+  projects do everywhere and `usx.rnc` allows: a note in an introduction
+  paragraph other than `\ip` (`BookIntroduction` and `IntroList` take
+  `Footnote | CrossReference`), and `\no` in an ordinary paragraph (it is in
+  `Char.char.style.enum` with `\it` and `\bd`, and `usfm.sty` gives it a
+  list of its own with no `\p`). `usfm-extra.sty` now amends
+  `\OccursUnder` on `\f`, `\fe`, `\ef`, `\efe`, `\x`, `\ex` (usfm.sty's
+  list plus the introduction paragraphs that hold text) and `\no` (its
+  own plus `\tl`'s). Only the sheet changed. Two real projects went from
+  314 to 202 and from 92 to 5; what is left is their own `\z…` styles
+  under markers their `custom.sty` does not list, and `\fig` under `\is`
 - **Book names compared as Unicode compares them (2026-10-07).** One
   real project's name list stores a doubling mark and a vowel on a letter
   in one order and its text stores them in the other: the same text by
