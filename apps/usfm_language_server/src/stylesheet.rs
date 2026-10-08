@@ -8,7 +8,11 @@
 //! 1. `initializationOptions.stylesheet`, a path the client sends at
 //!    `initialize` — absolute, or relative to the workspace root (or, with no
 //!    workspace, to the document's own directory);
-//! 2. otherwise a [`PROJECT_STYLESHEET`] file next to the document;
+//! 2. otherwise the project's own files next to the document:
+//!    [`PROJECT_STYLESHEET`] for every book, and for a peripheral book
+//!    (`\id FRT`, `INT`, `GLO`, `XXA`, …) [`PERIPHERAL_STYLESHEET`] over it,
+//!    so that `frtbak.sty` wins there and is not read for Scripture at all —
+//!    `usfm_paratext`'s rule for a project;
 //! 3. otherwise the default sheet.
 //!
 //! A sheet found either way **extends** the default rather than replacing it,
@@ -31,6 +35,19 @@ use usfm::parser::DEFAULT_STYLESHEET;
 
 /// The name Paratext gives a project's stylesheet override.
 pub const PROJECT_STYLESHEET: &str = "custom.sty";
+/// The name of a project's sheet for its peripheral books.
+pub const PERIPHERAL_STYLESHEET: &str = "frtbak.sty";
+
+/// Whether `text` is a peripheral book, by its `\id` line: front and back
+/// matter, an introduction, a glossary and the like. A document with no
+/// readable `\id` is taken as Scripture.
+pub fn is_peripheral(text: &str) -> bool {
+    text.lines()
+        .find_map(|line| line.trim_start().strip_prefix("\\id "))
+        .and_then(|rest| rest.trim_start().get(..3))
+        .and_then(|code| code.parse::<usfm::ast::BookCode>().ok())
+        .is_some_and(|code| code.is_non_scripture())
+}
 
 /// The stylesheet each document is parsed with, and the sheets read so far.
 ///
@@ -45,8 +62,9 @@ pub struct Stylesheets {
     /// `initializationOptions.stylesheet`, resolved against the workspace root
     /// if it was relative and a root was given.
     configured: Option<PathBuf>,
-    /// One entry per path tried; `None` means it failed and has been reported.
-    cache: HashMap<PathBuf, Option<Arc<StyleSheet>>>,
+    /// One entry per list of files tried, in the order they are read;
+    /// `None` means it failed and has been reported.
+    cache: HashMap<Vec<PathBuf>, Option<Arc<StyleSheet>>>,
 }
 
 impl Stylesheets {
@@ -68,10 +86,18 @@ impl Stylesheets {
     /// The warning comes back rather than being sent from here so that this
     /// type stays a plain cache with no `Client` and no `async`, which is also
     /// what makes it testable without a server.
-    pub fn for_document(&mut self, path: Option<&Path>) -> (Arc<StyleSheet>, Option<String>) {
-        let Some(sheet_path) = self.path_for(path) else {
+    ///
+    /// `peripheral` is [`is_peripheral`] of the document's text, which
+    /// decides the order a project's two files are read in.
+    pub fn for_document(
+        &mut self,
+        path: Option<&Path>,
+        peripheral: bool,
+    ) -> (Arc<StyleSheet>, Option<String>) {
+        let sheet_path = self.paths_for(path, peripheral);
+        if sheet_path.is_empty() {
             return (Arc::clone(&DEFAULT_STYLESHEET), None);
-        };
+        }
         if let Some(cached) = self.cache.get(&sheet_path) {
             // Already read: a hit hands back the sheet, a miss the default
             // sheet and no second warning about the same file.
@@ -94,7 +120,28 @@ impl Stylesheets {
         }
     }
 
-    /// Which `.sty` file, if any, applies to the document at `path`.
+    /// Which `.sty` files apply to the document at `path`, in the order
+    /// they are read: the later wins.
+    fn paths_for(&self, path: Option<&Path>, peripheral: bool) -> Vec<PathBuf> {
+        if self.configured.is_some() {
+            return self.path_for(path).into_iter().collect();
+        }
+        let Some(directory) = path.and_then(Path::parent) else {
+            return Vec::new();
+        };
+        let order: &[&str] = if peripheral {
+            &[PROJECT_STYLESHEET, PERIPHERAL_STYLESHEET]
+        } else {
+            &[PROJECT_STYLESHEET]
+        };
+        order
+            .iter()
+            .map(|name| directory.join(name))
+            .filter(|path| path.is_file())
+            .collect()
+    }
+
+    /// The configured `.sty` file, if any, for the document at `path`.
     fn path_for(&self, path: Option<&Path>) -> Option<PathBuf> {
         if let Some(configured) = &self.configured {
             // A relative option with no workspace root is resolved against the
@@ -108,23 +155,24 @@ impl Stylesheets {
                 None => configured.clone(),
             });
         }
-        let beside = path?.parent()?.join(PROJECT_STYLESHEET);
-        beside.is_file().then_some(beside)
+        None
     }
 }
 
-/// Read one `.sty` file over a copy of the default sheet: an entry for a
-/// marker the default has amends it, a new marker adds a rule.
-fn load(path: &Path) -> Result<Arc<StyleSheet>, String> {
-    let text = std::fs::read_to_string(path)
-        .map_err(|e| format!("usfm: cannot read the stylesheet {}: {e}", path.display()))?;
+/// Read `.sty` files, in order, over a copy of the default sheet: an entry
+/// for a marker the sheet has amends it, a new marker adds a rule.
+fn load(paths: &[PathBuf]) -> Result<Arc<StyleSheet>, String> {
     let mut extended = (**DEFAULT_STYLESHEET).clone();
-    extended.extend_from_str(&text).map_err(|e| {
-        format!(
-            "usfm: cannot parse the stylesheet {}: {e:?}",
-            path.display()
-        )
-    })?;
+    for path in paths {
+        let text = std::fs::read_to_string(path)
+            .map_err(|e| format!("usfm: cannot read the stylesheet {}: {e}", path.display()))?;
+        extended.extend_from_str(&text).map_err(|e| {
+            format!(
+                "usfm: cannot parse the stylesheet {}: {e:?}",
+                path.display()
+            )
+        })?;
+    }
     Ok(Arc::new(extended))
 }
 
@@ -150,11 +198,11 @@ mod tests {
     fn with_no_project_sheet_a_document_gets_the_default() {
         let directory = scratch("no-sheet");
         let mut sheets = Stylesheets::default();
-        let (sheet, warning) = sheets.for_document(Some(&book(&directory)));
+        let (sheet, warning) = sheets.for_document(Some(&book(&directory)), false);
         assert!(Arc::ptr_eq(&sheet, &DEFAULT_STYLESHEET));
         assert_eq!(warning, None);
         // And so does a document with no path at all (an untitled buffer).
-        let (sheet, warning) = sheets.for_document(None);
+        let (sheet, warning) = sheets.for_document(None, false);
         assert!(Arc::ptr_eq(&sheet, &DEFAULT_STYLESHEET));
         assert_eq!(warning, None);
     }
@@ -169,14 +217,14 @@ mod tests {
         .expect("writing custom.sty");
 
         let mut sheets = Stylesheets::default();
-        let (sheet, warning) = sheets.for_document(Some(&book(&directory)));
+        let (sheet, warning) = sheets.for_document(Some(&book(&directory)), false);
         assert_eq!(warning, None);
         // The project's own marker, and one of the default sheet's: the
         // project sheet extends, it does not replace.
         assert!(sheet.get_rule_by_marker("test").is_some());
         assert!(sheet.get_rule_by_marker("p").is_some());
         // Read once: the second call is the cache.
-        let (again, _) = sheets.for_document(Some(&book(&directory)));
+        let (again, _) = sheets.for_document(Some(&book(&directory)), false);
         assert!(Arc::ptr_eq(&sheet, &again));
     }
 
@@ -195,7 +243,7 @@ mod tests {
         .expect("writing custom.sty");
 
         let mut sheets = Stylesheets::default();
-        let (sheet, warning) = sheets.for_document(Some(&book(&directory)));
+        let (sheet, warning) = sheets.for_document(Some(&book(&directory)), false);
         assert_eq!(warning, None);
         assert!(sheet.get_rule_by_marker("zgrk").is_some());
         let parse = usfm::parse_with(
@@ -229,7 +277,7 @@ mod tests {
         .expect("writing custom.sty");
 
         let mut sheets = Stylesheets::default();
-        let (sheet, warning) = sheets.for_document(Some(&book(&directory)));
+        let (sheet, warning) = sheets.for_document(Some(&book(&directory)), false);
         assert_eq!(warning, None);
         // The new markers are there, and an override kept what it did not
         // mention: `\\vp` is still a character style, `\\mt4` a paragraph
@@ -266,7 +314,7 @@ mod tests {
             Some(directory.join("project.sty").to_str().unwrap()),
             Some(directory.clone()),
         );
-        let (sheet, warning) = sheets.for_document(Some(&book(&directory)));
+        let (sheet, warning) = sheets.for_document(Some(&book(&directory)), false);
         assert_eq!(warning, None);
         assert!(sheet.get_rule_by_marker("configured").is_some());
         assert!(sheet.get_rule_by_marker("beside").is_none());
@@ -283,9 +331,45 @@ mod tests {
 
         let mut sheets = Stylesheets::default();
         sheets.configure(Some("project.sty"), Some(directory.clone()));
-        let (sheet, warning) = sheets.for_document(Some(&book(&directory)));
+        let (sheet, warning) = sheets.for_document(Some(&book(&directory)), false);
         assert_eq!(warning, None);
         assert!(sheet.get_rule_by_marker("configured").is_some());
+    }
+
+    /// `frtbak.sty` is read over `custom.sty` for a peripheral book and not
+    /// at all for a book of Scripture.
+    #[test]
+    fn frtbak_sty_is_read_for_peripheral_books_only() {
+        let directory = scratch("frtbak");
+        let entry = |marker: &str, name: &str| {
+            format!(
+                "\\Marker {marker}\n\\Endmarker {marker}*\n\\Name {name}\n\\StyleType Character\n\n"
+            )
+        };
+        std::fs::write(
+            directory.join(PROJECT_STYLESHEET),
+            entry("zboth", "from custom"),
+        )
+        .unwrap();
+        std::fs::write(
+            directory.join(PERIPHERAL_STYLESHEET),
+            entry("zboth", "from frtbak") + &entry("zfrtbak", "f"),
+        )
+        .unwrap();
+        let (main, _) = Stylesheets::default().for_document(Some(&book(&directory)), false);
+        assert!(main.get_rule_by_marker("zfrtbak").is_none());
+        let (peripheral, _) = Stylesheets::default().for_document(Some(&book(&directory)), true);
+        assert!(peripheral.get_rule_by_marker("zfrtbak").is_some());
+        let mut sheets = Stylesheets::default();
+        let mut name = |text: &str| {
+            let (sheet, warning) =
+                sheets.for_document(Some(&book(&directory)), is_peripheral(text));
+            assert_eq!(warning, None);
+            sheet.get_rule_by_marker("zboth").unwrap().name.clone()
+        };
+        assert_eq!(name("\\id MAT\n\\c 1").as_deref(), Some("from custom"));
+        assert_eq!(name("\\id INT intro\n").as_deref(), Some("from frtbak"));
+        assert_eq!(name("no id at all").as_deref(), Some("from custom"));
     }
 
     #[test]
@@ -297,14 +381,14 @@ mod tests {
             Some(directory.clone()),
         );
 
-        let (sheet, warning) = sheets.for_document(Some(&book(&directory)));
+        let (sheet, warning) = sheets.for_document(Some(&book(&directory)), false);
         assert!(Arc::ptr_eq(&sheet, &DEFAULT_STYLESHEET));
         let warning = warning.expect("a missing stylesheet is reported");
         assert!(warning.contains("nowhere.sty"), "{warning}");
 
         // The same document again says nothing more: the failure is cached, so
         // a typo in the setting does not warn on every keystroke.
-        let (sheet, warning) = sheets.for_document(Some(&book(&directory)));
+        let (sheet, warning) = sheets.for_document(Some(&book(&directory)), false);
         assert!(Arc::ptr_eq(&sheet, &DEFAULT_STYLESHEET));
         assert_eq!(warning, None);
     }

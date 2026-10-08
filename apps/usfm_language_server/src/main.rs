@@ -113,7 +113,10 @@ impl Backend {
         let text = self.documents.text(uri).await?;
         let (sheet, warning) = {
             let path = uri.to_file_path();
-            self.stylesheets.lock().await.for_document(path.as_deref())
+            self.stylesheets
+                .lock()
+                .await
+                .for_document(path.as_deref(), stylesheet::is_peripheral(&text))
         };
         if let Some(warning) = warning {
             // Never fatal: the document is parsed with the default sheet, and
