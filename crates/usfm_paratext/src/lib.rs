@@ -6,9 +6,9 @@
 //! [`Project::open`] reads the two XML files; [`Project::book_path`] and
 //! [`Project::read_book`] find a book's file by the project's naming rule, and
 //! [`Project::style_sheets`] are the sheets its books are parsed against — the
-//! default sheet with the project's `frtbak.sty` and `custom.sty` read over
-//! it, the way `usfm parse --custom-stylesheet` reads one (ticket 51), in the
-//! order that suits the book.
+//! default sheet with the project's `custom.sty` read over it, the way
+//! `usfm parse --custom-stylesheet` reads one (ticket 51), and for a
+//! peripheral book its `frtbak.sty` over that.
 //!
 //! Nothing here parses USFM: hand the text and the sheet to
 //! `usfm::parse_with`.
@@ -62,17 +62,16 @@ pub const SETTINGS_FILE: &str = "Settings.xml";
 pub const BOOK_NAMES_FILE: &str = "BookNames.xml";
 /// The project's own stylesheet, read over the one `Settings.xml` names.
 pub const CUSTOM_STYLESHEET_FILE: &str = "custom.sty";
-/// The project's stylesheet for its peripheral books, read with
-/// `custom.sty` for every book; see [`Project::style_sheets`].
+/// The project's stylesheet for its peripheral books, read over
+/// `custom.sty` for those books only; see [`Project::style_sheets`].
 pub const FRTBAK_STYLESHEET_FILE: &str = "frtbak.sty";
 
 /// A project's two sheets: [`Project::style_sheets`].
 #[derive(Clone)]
 pub struct ProjectSheets {
-    /// For a book of Scripture: where the project's two files disagree,
-    /// `custom.sty` wins.
+    /// For a book of Scripture: `custom.sty` alone.
     pub main: Arc<StyleSheet>,
-    /// For a peripheral book: `frtbak.sty` wins.
+    /// For a peripheral book: `custom.sty`, then `frtbak.sty`, which wins.
     pub peripheral: Arc<StyleSheet>,
 }
 
@@ -177,13 +176,14 @@ impl Project {
     /// Each starts from the sheet `Settings.xml`'s `StyleSheet` names, when
     /// the project has that file and it is not Paratext's own `usfm.sty`
     /// (which is the built-in sheet), otherwise from the built-in sheet. The
-    /// project's two files of its own, `frtbak.sty` and `custom.sty`, are
-    /// then read over it — an entry for a marker the sheet has amends it, a
-    /// new marker is added — **both for every book, in the order that lets
-    /// the right one win** where they disagree: `custom.sty` last for a book
-    /// of Scripture, `frtbak.sty` last for a peripheral book (`FRT`, `INT`,
-    /// `GLO`, `XXA`, …: [`BookCode::is_non_scripture`]). A project with
-    /// neither file, or with one, has the same sheet for both.
+    /// project's `custom.sty` is then read over it for every book — an entry
+    /// for a marker the sheet has amends it, a new marker is added — and for
+    /// a peripheral book (`FRT`, `INT`, `GLO`, `XXA`, …:
+    /// [`BookCode::is_non_scripture`]) its `frtbak.sty` over that, so
+    /// `frtbak.sty` wins there where the two disagree. A book of Scripture
+    /// is not read against `frtbak.sty` at all: such a file is a whole
+    /// sheet for front and back matter, and would amend the standard markers
+    /// of the text. A project with no `frtbak.sty` has one sheet for both.
     pub fn style_sheets(&self) -> Result<ProjectSheets, Error> {
         let base = match self.own_style_sheet_path() {
             Some(path) => {
@@ -214,8 +214,8 @@ impl Project {
             }
             Ok(Arc::new(sheet))
         };
-        let main = layered([&frtbak, &custom])?;
-        let peripheral = if custom.is_some() && frtbak.is_some() {
+        let main = layered([&custom, &None])?;
+        let peripheral = if frtbak.is_some() {
             layered([&custom, &frtbak])?
         } else {
             Arc::clone(&main)

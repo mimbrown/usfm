@@ -9,10 +9,9 @@
 //!    `initialize` — absolute, or relative to the workspace root (or, with no
 //!    workspace, to the document's own directory);
 //! 2. otherwise the project's own files next to the document:
-//!    [`PROJECT_STYLESHEET`] and [`PERIPHERAL_STYLESHEET`], **both read for
-//!    every book** and in the order that lets the right one win where they
-//!    disagree — `custom.sty` last for a book of Scripture, `frtbak.sty` last
-//!    for a peripheral book (`\id FRT`, `INT`, `GLO`, `XXA`, …), which is
+//!    [`PROJECT_STYLESHEET`] for every book, and for a peripheral book
+//!    (`\id FRT`, `INT`, `GLO`, `XXA`, …) [`PERIPHERAL_STYLESHEET`] over it,
+//!    so that `frtbak.sty` wins there and is not read for Scripture at all —
 //!    `usfm_paratext`'s rule for a project;
 //! 3. otherwise the default sheet.
 //!
@@ -130,10 +129,10 @@ impl Stylesheets {
         let Some(directory) = path.and_then(Path::parent) else {
             return Vec::new();
         };
-        let order = if peripheral {
-            [PROJECT_STYLESHEET, PERIPHERAL_STYLESHEET]
+        let order: &[&str] = if peripheral {
+            &[PROJECT_STYLESHEET, PERIPHERAL_STYLESHEET]
         } else {
-            [PERIPHERAL_STYLESHEET, PROJECT_STYLESHEET]
+            &[PROJECT_STYLESHEET]
         };
         order
             .iter()
@@ -337,16 +336,30 @@ mod tests {
         assert!(sheet.get_rule_by_marker("configured").is_some());
     }
 
-    /// Both of a project's files are read for every book, the book's own
-    /// kind last.
+    /// `frtbak.sty` is read over `custom.sty` for a peripheral book and not
+    /// at all for a book of Scripture.
     #[test]
-    fn frtbak_sty_wins_in_a_peripheral_book_and_custom_sty_elsewhere() {
+    fn frtbak_sty_is_read_for_peripheral_books_only() {
         let directory = scratch("frtbak");
-        let entry = |name: &str| {
-            format!("\\Marker zboth\n\\Endmarker zboth*\n\\Name {name}\n\\StyleType Character\n")
+        let entry = |marker: &str, name: &str| {
+            format!(
+                "\\Marker {marker}\n\\Endmarker {marker}*\n\\Name {name}\n\\StyleType Character\n\n"
+            )
         };
-        std::fs::write(directory.join(PROJECT_STYLESHEET), entry("from custom")).unwrap();
-        std::fs::write(directory.join(PERIPHERAL_STYLESHEET), entry("from frtbak")).unwrap();
+        std::fs::write(
+            directory.join(PROJECT_STYLESHEET),
+            entry("zboth", "from custom"),
+        )
+        .unwrap();
+        std::fs::write(
+            directory.join(PERIPHERAL_STYLESHEET),
+            entry("zboth", "from frtbak") + &entry("zfrtbak", "f"),
+        )
+        .unwrap();
+        let (main, _) = Stylesheets::default().for_document(Some(&book(&directory)), false);
+        assert!(main.get_rule_by_marker("zfrtbak").is_none());
+        let (peripheral, _) = Stylesheets::default().for_document(Some(&book(&directory)), true);
+        assert!(peripheral.get_rule_by_marker("zfrtbak").is_some());
         let mut sheets = Stylesheets::default();
         let mut name = |text: &str| {
             let (sheet, warning) =

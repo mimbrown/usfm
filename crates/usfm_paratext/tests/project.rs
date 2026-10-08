@@ -63,10 +63,10 @@ fn the_style_sheet_is_the_default_with_custom_sty_over_it() {
     assert!(sheet.get_rule_by_marker("xt").is_some());
 }
 
-/// A project's two sheets are both read for every book, and the one that is
-/// the book's own kind is read last, so it wins where they disagree.
+/// `custom.sty` is read for every book; `frtbak.sty` is read over it for a
+/// peripheral book, where it wins, and not at all for a book of Scripture.
 #[test]
-fn frtbak_sty_wins_in_a_peripheral_book_and_custom_sty_elsewhere() {
+fn frtbak_sty_is_read_for_peripheral_books_only() {
     let dir = std::env::temp_dir().join(format!("usfm-paratext-sheets-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     std::fs::copy(fixture().join("Settings.xml"), dir.join("Settings.xml")).unwrap();
@@ -99,9 +99,10 @@ fn frtbak_sty_wins_in_a_peripheral_book_and_custom_sty_elsewhere() {
     let sheets = project.style_sheets().unwrap();
     for sheet in [&sheets.main, &sheets.peripheral] {
         assert!(sheet.get_rule_by_marker("zcustom").is_some());
-        assert!(sheet.get_rule_by_marker("zfrtbak").is_some());
         assert!(sheet.get_rule_by_marker("xt").is_some());
     }
+    assert!(sheets.peripheral.get_rule_by_marker("zfrtbak").is_some());
+    assert!(sheets.main.get_rule_by_marker("zfrtbak").is_none());
     assert_eq!(
         name(sheets.for_book(code("MAT"))).as_deref(),
         Some("from custom")
