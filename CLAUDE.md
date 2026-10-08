@@ -238,6 +238,26 @@ document order, one entry per `\c` / `\v`, repeats and all; `chapter(n)` and
 has `chapter() == None` and is in no chapter's `verses()`.
 
 Recent progress:
+- **`frtbak.sty` for peripheral books (2026-10-08).** A Paratext project
+  may carry a second sheet of its own. `custom.sty` is read over the
+  default sheet for every book, as before; for a peripheral book
+  (`BookCode::is_non_scripture`: `FRT`, `INT`, `GLO`, `XXA`, …)
+  `frtbak.sty` is read over that, so it wins there where the two disagree.
+  **A book of Scripture is not read against `frtbak.sty` at all** (Michael,
+  2026-10-08): the file in the wild is a whole sheet, not a few
+  amendments, and read for every book — the first rule tried — it amended
+  standard markers of the text (one project's second `\it` entry lists an
+  `\OccursUnder` with no `NEST`, and three Scripture books' trees changed),
+  while resolving nothing there: over three real projects every marker
+  only `frtbak.sty` declares is used in peripheral books alone.
+  `usfm_paratext`'s `Project::style_sheets()` returns
+  `ProjectSheets { main, peripheral }` with `for_book(code)`;
+  `style_sheet()` is still there and is `main`. The language server does
+  the same for the files beside a document (`stylesheet.rs`:
+  `is_peripheral` reads the `\id` line; the cache is keyed by the ordered
+  list of files). Whether Paratext layers them exactly this way is not
+  known. The CLI's `--custom-stylesheet` is unchanged: it reads the one
+  file named
 - **`usfm.toml`, a project's configuration file (2026-10-07).** One file
   for every tool, a table per kind of setting (Michael: all-in-one
   language tooling likes one file; oxc's file per tool follows JS
