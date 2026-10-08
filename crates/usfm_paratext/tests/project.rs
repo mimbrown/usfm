@@ -63,6 +63,65 @@ fn the_style_sheet_is_the_default_with_custom_sty_over_it() {
     assert!(sheet.get_rule_by_marker("xt").is_some());
 }
 
+/// A project's two sheets are both read for every book, and the one that is
+/// the book's own kind is read last, so it wins where they disagree.
+#[test]
+fn frtbak_sty_wins_in_a_peripheral_book_and_custom_sty_elsewhere() {
+    let dir = std::env::temp_dir().join(format!("usfm-paratext-sheets-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::copy(fixture().join("Settings.xml"), dir.join("Settings.xml")).unwrap();
+    let entry = |marker: &str, name: &str| {
+        format!(
+            "\\Marker {marker}\n\\Endmarker {marker}*\n\\Name {name}\n\\StyleType Character\n\n"
+        )
+    };
+    std::fs::write(
+        dir.join("custom.sty"),
+        entry("zboth", "from custom") + &entry("zcustom", "c"),
+    )
+    .unwrap();
+    let project = Project::open(&dir).unwrap();
+    let name = |sheet: &usfm_style::StyleSheet| {
+        sheet
+            .get_rule_by_marker("zboth")
+            .and_then(|rule| rule.name.clone())
+    };
+
+    // One file: one sheet for every book.
+    let sheets = project.style_sheets().unwrap();
+    assert!(std::sync::Arc::ptr_eq(&sheets.main, &sheets.peripheral));
+
+    std::fs::write(
+        dir.join("frtbak.sty"),
+        entry("zboth", "from frtbak") + &entry("zfrtbak", "f"),
+    )
+    .unwrap();
+    let sheets = project.style_sheets().unwrap();
+    for sheet in [&sheets.main, &sheets.peripheral] {
+        assert!(sheet.get_rule_by_marker("zcustom").is_some());
+        assert!(sheet.get_rule_by_marker("zfrtbak").is_some());
+        assert!(sheet.get_rule_by_marker("xt").is_some());
+    }
+    assert_eq!(
+        name(sheets.for_book(code("MAT"))).as_deref(),
+        Some("from custom")
+    );
+    assert_eq!(
+        name(sheets.for_book(code("INT"))).as_deref(),
+        Some("from frtbak")
+    );
+    assert_eq!(
+        name(sheets.for_book(code("XXA"))).as_deref(),
+        Some("from frtbak")
+    );
+    assert_eq!(
+        name(&project.style_sheet().unwrap()).as_deref(),
+        Some("from custom")
+    );
+
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
 #[test]
 fn a_folder_with_no_settings_is_an_error() {
     let missing = fixture().join("no-such-project");

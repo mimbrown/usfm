@@ -5,9 +5,10 @@
 //! present, a `BookNames.xml` with each book's names, and the stylesheets.
 //! [`Project::open`] reads the two XML files; [`Project::book_path`] and
 //! [`Project::read_book`] find a book's file by the project's naming rule, and
-//! [`Project::style_sheet`] is the sheet its books are parsed against — the
-//! default sheet with the project's `custom.sty` read over it, the way the
-//! language server and `usfm parse --custom-stylesheet` read one (ticket 51).
+//! [`Project::style_sheets`] are the sheets its books are parsed against — the
+//! default sheet with the project's `frtbak.sty` and `custom.sty` read over
+//! it, the way `usfm parse --custom-stylesheet` reads one (ticket 51), in the
+//! order that suits the book.
 //!
 //! Nothing here parses USFM: hand the text and the sheet to
 //! `usfm::parse_with`.
@@ -23,10 +24,10 @@
 //! use usfm_ast::BookCode;
 //!
 //! let project = Project::open("Paratext/SSV")?;
-//! let sheet = project.style_sheet()?;
+//! let sheets = project.style_sheets()?;
 //! for code in project.books() {
 //!     let text = project.read_book(code)?;
-//!     // usfm::parse_with(&text, &sheet)
+//!     // usfm::parse_with(&text, sheets.for_book(code))
 //! }
 //! # Ok::<(), usfm_paratext::Error>(())
 //! ```
@@ -61,6 +62,30 @@ pub const SETTINGS_FILE: &str = "Settings.xml";
 pub const BOOK_NAMES_FILE: &str = "BookNames.xml";
 /// The project's own stylesheet, read over the one `Settings.xml` names.
 pub const CUSTOM_STYLESHEET_FILE: &str = "custom.sty";
+/// The project's stylesheet for its peripheral books, read with
+/// `custom.sty` for every book; see [`Project::style_sheets`].
+pub const FRTBAK_STYLESHEET_FILE: &str = "frtbak.sty";
+
+/// A project's two sheets: [`Project::style_sheets`].
+#[derive(Clone)]
+pub struct ProjectSheets {
+    /// For a book of Scripture: where the project's two files disagree,
+    /// `custom.sty` wins.
+    pub main: Arc<StyleSheet>,
+    /// For a peripheral book: `frtbak.sty` wins.
+    pub peripheral: Arc<StyleSheet>,
+}
+
+impl ProjectSheets {
+    /// The sheet to parse the book `code` against.
+    pub fn for_book(&self, code: BookCode) -> &Arc<StyleSheet> {
+        if code.is_non_scripture() {
+            &self.peripheral
+        } else {
+            &self.main
+        }
+    }
+}
 /// The project's lexicon, which its interlinear glosses point into.
 pub const LEXICON_FILE: &str = "Lexicon.xml";
 
@@ -147,14 +172,20 @@ impl Project {
         read_text(&path)
     }
 
-    /// The sheet the project's books are parsed against: the sheet
-    /// `Settings.xml`'s `StyleSheet` names when the project has that file and
-    /// it is not Paratext's own `usfm.sty` (which is the built-in sheet),
-    /// otherwise the built-in sheet; then `custom.sty`, if the project has
-    /// one, read over it — an entry for a marker the sheet has amends it, a
-    /// new marker is added.
-    pub fn style_sheet(&self) -> Result<Arc<StyleSheet>, Error> {
-        let mut sheet = match self.own_style_sheet_path() {
+    /// The sheets the project's books are parsed against.
+    ///
+    /// Each starts from the sheet `Settings.xml`'s `StyleSheet` names, when
+    /// the project has that file and it is not Paratext's own `usfm.sty`
+    /// (which is the built-in sheet), otherwise from the built-in sheet. The
+    /// project's two files of its own, `frtbak.sty` and `custom.sty`, are
+    /// then read over it — an entry for a marker the sheet has amends it, a
+    /// new marker is added — **both for every book, in the order that lets
+    /// the right one win** where they disagree: `custom.sty` last for a book
+    /// of Scripture, `frtbak.sty` last for a peripheral book (`FRT`, `INT`,
+    /// `GLO`, `XXA`, …: [`BookCode::is_non_scripture`]). A project with
+    /// neither file, or with one, has the same sheet for both.
+    pub fn style_sheets(&self) -> Result<ProjectSheets, Error> {
+        let base = match self.own_style_sheet_path() {
             Some(path) => {
                 StyleSheet::from_str(&read_text(&path)?).map_err(|e| Error::Stylesheet {
                     path,
@@ -163,16 +194,42 @@ impl Project {
             }
             None => (**DEFAULT_STYLESHEET).clone(),
         };
-        let custom = self.dir.join(CUSTOM_STYLESHEET_FILE);
-        if custom.is_file() {
-            sheet
-                .extend_from_str(&read_text(&custom)?)
-                .map_err(|e| Error::Stylesheet {
-                    path: custom,
+        let own = |name: &str| -> Result<Option<(PathBuf, String)>, Error> {
+            let path = self.dir.join(name);
+            if !path.is_file() {
+                return Ok(None);
+            }
+            let text = read_text(&path)?;
+            Ok(Some((path, text)))
+        };
+        let custom = own(CUSTOM_STYLESHEET_FILE)?;
+        let frtbak = own(FRTBAK_STYLESHEET_FILE)?;
+        let layered = |order: [&Option<(PathBuf, String)>; 2]| -> Result<Arc<StyleSheet>, Error> {
+            let mut sheet = base.clone();
+            for (path, text) in order.into_iter().flatten() {
+                sheet.extend_from_str(text).map_err(|e| Error::Stylesheet {
+                    path: path.clone(),
                     message: format!("{e:?}"),
                 })?;
-        }
-        Ok(Arc::new(sheet))
+            }
+            Ok(Arc::new(sheet))
+        };
+        let main = layered([&frtbak, &custom])?;
+        let peripheral = if custom.is_some() && frtbak.is_some() {
+            layered([&custom, &frtbak])?
+        } else {
+            Arc::clone(&main)
+        };
+        Ok(ProjectSheets { main, peripheral })
+    }
+
+    /// The sheet a book of Scripture is parsed against:
+    /// [`style_sheets`](Self::style_sheets)' `main`. A project with a
+    /// `frtbak.sty` has another for its peripheral books, so a caller that
+    /// reads those asks `style_sheets` once and
+    /// [`ProjectSheets::for_book`] per book.
+    pub fn style_sheet(&self) -> Result<Arc<StyleSheet>, Error> {
+        Ok(self.style_sheets()?.main)
     }
 
     /// The gloss languages the project has interlinear files for: each
