@@ -70,8 +70,8 @@ files between them cover every `Code`, and each one's coverage test reads
 holds of `usfm::parse_usx` / `parse_usx_with` (ticket 48) and
 `usfm_usx::read_usx`.
 
-Conformance status (276 tests across two roots, 2026-09-27):
-- tcdocs (260 tests): 216 passed, 0 failed, 0 panicked, 1 skipped,
+Conformance status (277 tests across two roots, 2026-10-14):
+- tcdocs (261 tests, upstream `4cdd83d`): 217 passed, 0 failed, 0 panicked, 1 skipped,
   43 expected failures, 0 unexpected passes
 - `usfm-grammar/bugfixes` (16 tests, vendored under
   `tasks/conformance/fixtures/usfm-grammar/`, MIT): 16 passed, 0 failed
@@ -121,7 +121,9 @@ Conformance status (276 tests across two roots, 2026-09-27):
   since ticket 45, which moved it out of `usfm_parser` so the USX reader can
   resolve styles without depending on the parser; `usfm_parser` and the
   facade re-export it under the old name): the markers that sheet predates (`\ipc`, `\ta`,
-  `\wl`) and the one entry it gets wrong (`\xta` occurs under `\ex` too),
+  `\wl`) the entries it gets wrong (`\xta` occurs under `\ex` too, and `\fv`
+  nests inside a note's `\ft`, `\fq`, … as every other member of
+  `Char.char.style.enum` does, since 2026-10-14),
   each citing `tcdocs/grammar/usx.rnc`, plus `\s5`, unfoldingWord's chunk
   break, which no schema lists. `usfm.sty` itself is byte for byte tcdocs'
   `grammar/usfm_sb.sty` (CC BY 4.0, `NOTICE.md`): add to the extra sheet,
@@ -150,7 +152,7 @@ Conformance status (276 tests across two roots, 2026-09-27):
   empty, has the baseline's semantics — an unlisted failure is a regression, a
   listed case that round-trips is a stale entry, both fail — and every entry
   needs a reason naming the bug. After it come M7's two USX properties
-  (ticket 46), over the 229 cases the harness compares (an input and a
+  (ticket 46), over the 230 cases the harness compares (an input and a
   reference, and the parse matched it), each written as USX and compared
   with the reference exactly as the harness compares — patches applied, its
   whitespace rules — and each gated the same way against an empty list:
