@@ -70,8 +70,8 @@ files between them cover every `Code`, and each one's coverage test reads
 holds of `usfm::parse_usx` / `parse_usx_with` (ticket 48) and
 `usfm_usx::read_usx`.
 
-Conformance status (276 tests across two roots, 2026-09-27):
-- tcdocs (260 tests): 216 passed, 0 failed, 0 panicked, 1 skipped,
+Conformance status (277 tests across two roots, 2026-10-14):
+- tcdocs (261 tests, upstream `4cdd83d`): 217 passed, 0 failed, 0 panicked, 1 skipped,
   43 expected failures, 0 unexpected passes
 - `usfm-grammar/bugfixes` (16 tests, vendored under
   `tasks/conformance/fixtures/usfm-grammar/`, MIT): 16 passed, 0 failed
@@ -109,7 +109,7 @@ Conformance status (276 tests across two roots, 2026-09-27):
   collapsed on both sides and their `<usx version>` restored from the `\usfm`
   line, because that generator copies source whitespace verbatim and truncates
   the version to `major.minor`; tcdocs is compared exactly as before.
-- Fifteen reference files (ten tcdocs, five usfm-grammar) are read through a
+- Sixteen reference files (eleven tcdocs, five usfm-grammar) are read through a
   patch in `tasks/conformance/tcdocs-patches/`
   (rules in its README; the directory covers both roots): a unified diff with
   the rationale above it, for a reference quirk or an accepted deviation, never
@@ -150,7 +150,7 @@ Conformance status (276 tests across two roots, 2026-09-27):
   empty, has the baseline's semantics — an unlisted failure is a regression, a
   listed case that round-trips is a stale entry, both fail — and every entry
   needs a reason naming the bug. After it come M7's two USX properties
-  (ticket 46), over the 229 cases the harness compares (an input and a
+  (ticket 46), over the 230 cases the harness compares (an input and a
   reference, and the parse matched it), each written as USX and compared
   with the reference exactly as the harness compares — patches applied, its
   whitespace rules — and each gated the same way against an empty list:
