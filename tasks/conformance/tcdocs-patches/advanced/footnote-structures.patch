@@ -1,16 +1,8 @@
-An accepted deviation and a reference quirk.
-
-`\ft Which may be called` newline `\fv 3\fv*\fq notes`: the reference nests
-`\fv` inside `\ft`. The stylesheet does not let `\fv` nest (no `NEST` in its
-`OccursUnder`), so it closes the `\ft` and stands beside it, as Paratext
-writes it (samples-from-wild/doo43-1). Same deviation as
-specExamples/footnote and usfmjsTests/usfmBodyTestD, which nest `\fv` inside
-`\fqa` the same way.
-
-This file is hand-written: the line break after `\f*` is copied into the USX
-as a raw newline, which reads as no whitespace at all. A line break is
-whitespace (rule 1 on `Text`), and Paratext writes it as a space before the
-verse end (specExamples/footnote, the same `\f*` newline `\v`).
+Reference quirk. This file is hand-written: the line break after `\f*` is
+copied into the USX as a raw newline, which reads as no whitespace at all.
+A line break is whitespace (rule 1 on `Text`), and Paratext writes it as a
+space before the verse end (specExamples/footnote, the same `\f*` newline
+`\v`).
 
 --- origin.xml
 +++ origin.xml
@@ -20,5 +12,5 @@ verse end (specExamples/footnote, the same `\f*` newline `\v`).
    <chapter style="c" number="1" sid="MRK 1" />
 -  <para style="p"><verse style="v" number="1" sid="MRK 1:1" />The first verse<note style="f" caller="+"><char style="fr">1:1 </char><char style="ft">A footnote about </char><char style="fk">footnotes </char><char style="ft">Which may be called <char style="fv">3</char></char><char style="fq">notes </char><char style="ft">in </char><char style="fl">other translations </char><char style="ft">or </char><char style="fqa">footies </char><char style="ft">very very rarely.</char></note>
 -<verse eid="MRK 1:1" /><verse style="v" number="2" sid="MRK 1:2" />the second verse<verse eid="MRK 1:2" /></para>
-+  <para style="p"><verse style="v" number="1" sid="MRK 1:1" />The first verse<note style="f" caller="+"><char style="fr">1:1 </char><char style="ft">A footnote about </char><char style="fk">footnotes </char><char style="ft">Which may be called </char><char style="fv">3</char><char style="fq">notes </char><char style="ft">in </char><char style="fl">other translations </char><char style="ft">or </char><char style="fqa">footies </char><char style="ft">very very rarely.</char></note> <verse eid="MRK 1:1" /><verse style="v" number="2" sid="MRK 1:2" />the second verse<verse eid="MRK 1:2" /></para>
++  <para style="p"><verse style="v" number="1" sid="MRK 1:1" />The first verse<note style="f" caller="+"><char style="fr">1:1 </char><char style="ft">A footnote about </char><char style="fk">footnotes </char><char style="ft">Which may be called <char style="fv">3</char></char><char style="fq">notes </char><char style="ft">in </char><char style="fl">other translations </char><char style="ft">or </char><char style="fqa">footies </char><char style="ft">very very rarely.</char></note> <verse eid="MRK 1:1" /><verse style="v" number="2" sid="MRK 1:2" />the second verse<verse eid="MRK 1:2" /></para>
    <chapter eid="MRK 1" /></usx>

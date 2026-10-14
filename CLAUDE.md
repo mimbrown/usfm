@@ -109,7 +109,7 @@ Conformance status (277 tests across two roots, 2026-10-14):
   collapsed on both sides and their `<usx version>` restored from the `\usfm`
   line, because that generator copies source whitespace verbatim and truncates
   the version to `major.minor`; tcdocs is compared exactly as before.
-- Sixteen reference files (eleven tcdocs, five usfm-grammar) are read through a
+- Fifteen reference files (ten tcdocs, five usfm-grammar) are read through a
   patch in `tasks/conformance/tcdocs-patches/`
   (rules in its README; the directory covers both roots): a unified diff with
   the rationale above it, for a reference quirk or an accepted deviation, never
@@ -121,7 +121,9 @@ Conformance status (277 tests across two roots, 2026-10-14):
   since ticket 45, which moved it out of `usfm_parser` so the USX reader can
   resolve styles without depending on the parser; `usfm_parser` and the
   facade re-export it under the old name): the markers that sheet predates (`\ipc`, `\ta`,
-  `\wl`) and the one entry it gets wrong (`\xta` occurs under `\ex` too),
+  `\wl`) the entries it gets wrong (`\xta` occurs under `\ex` too, and `\fv`
+  nests inside a note's `\ft`, `\fq`, … as every other member of
+  `Char.char.style.enum` does, since 2026-10-14),
   each citing `tcdocs/grammar/usx.rnc`, plus `\s5`, unfoldingWord's chunk
   break, which no schema lists. `usfm.sty` itself is byte for byte tcdocs'
   `grammar/usfm_sb.sty` (CC BY 4.0, `NOTICE.md`): add to the extra sheet,
