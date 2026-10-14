@@ -47,10 +47,10 @@ Para p@149..1138
       Text "7.38: "@738..744
     Char ft@744..796
       Text "Jesus' words in verses 37-38 may be translated: "@748..796
-    Char fqa@796..852
+    Char fqa@796..862
       Text "“Whoever is thirsty should come to me and drink. "@801..852
-    Char fv@852..862
-      Text "38"@856..858
+      Char fv@852..862
+        Text "38"@856..858
     Char ft@862..947
       Text "As the scripture says, ‘Streams of life-giving water will pour out ...’”"@866..944
   VerseEnd 38
@@ -69,3 +69,5 @@ Para p@149..1138
   Text " la imagen misma ..."@1117..1138
   VerseEnd 3
 ChapterEnd 136
+--- diagnostics
+info[character-style-nested-without-plus] @852..855: `\fv` is nested without `+`; treated as `\+fv`
