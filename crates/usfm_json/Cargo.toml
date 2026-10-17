@@ -3,6 +3,8 @@ name = "usfm_json"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
+description = "JSON output for a parsed USFM document, one object per node"
+repository.workspace = true
 
 # An output crate in `docs/adr/0001-oxc-style-crate-layout.md`: it turns a
 # `Document` into JSON. "No output crate depends on another output crate", and
@@ -11,9 +13,9 @@ license = "MIT"
 # the list below.
 [dependencies]
 # The tree it walks, and `Alignment`/`Caller`/`Span`.
-usfm_ast = { path = "../usfm_ast" }
+usfm_ast = { version = "0.1.0", path = "../usfm_ast" }
 # `StyleSheet` and `StyleRule`, to resolve a node's `StyleId` to its marker.
-usfm_style = { path = "../usfm_style" }
+usfm_style = { version = "0.1.0", path = "../usfm_style" }
 # `Value` and its writers. The AST itself stays serde-free: nothing here is a
 # `Serialize` derive, and `usfm_ast` does not gain a serde dependency (ticket
 # 16); the shape is built node by node in `json.rs`.

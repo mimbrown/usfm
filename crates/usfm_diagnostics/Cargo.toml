@@ -3,6 +3,8 @@ name = "usfm_diagnostics"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
+description = "Diagnostics for USFM: codes, severities, parse results and rendering"
+repository.workspace = true
 
 # `span <- style, ast <- diagnostics <- parser` in
 # `docs/adr/0001-oxc-style-crate-layout.md`: what the parser, the semantic pass
@@ -10,6 +12,6 @@ license = "MIT"
 # diagnostic, without any of them depending on the parser.
 [dependencies]
 # `ParseResult` carries the `Document` the parse produced.
-usfm_ast = { path = "../usfm_ast" }
+usfm_ast = { version = "0.1.0", path = "../usfm_ast" }
 # `Span` on every diagnostic, and `LineIndex` for `Diagnostic::render`.
-usfm_span = { path = "../usfm_span" }
+usfm_span = { version = "0.1.0", path = "../usfm_span" }

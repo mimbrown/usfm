@@ -3,13 +3,15 @@ name = "usfm_ast"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
+description = "The USFM syntax tree, with visitors, folds and a cursor"
+repository.workspace = true
 
 [dependencies]
 # The AST is self-describing about style (hardening plan D3): a `Document`
 # owns the stylesheet its `StyleId`s resolve against.
-usfm_style = { path = "../usfm_style" }
+usfm_style = { version = "0.1.0", path = "../usfm_style" }
 # `Span` and `SPAN`, re-exported as `usfm_ast::span` (ticket 11).
-usfm_span = { path = "../usfm_span" }
+usfm_span = { version = "0.1.0", path = "../usfm_span" }
 
 [features]
 # Expose `test_fixtures::sample_document`, the hand-built tree this crate's

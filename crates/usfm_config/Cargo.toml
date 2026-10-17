@@ -3,6 +3,8 @@ name = "usfm_config"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
+description = "usfm.toml, a project's settings for which USFM diagnostics are reported and how"
+repository.workspace = true
 
 # `usfm.toml`, a project's configuration file: one file for every tool, a
 # table per kind of setting. It sits beside `usfm_semantic` in the dependency
@@ -10,7 +12,7 @@ license = "MIT"
 # knows nothing of the tree or of who produced the list.
 [dependencies]
 # `Code` and `Severity`: a rule is a code, and a level is a severity or off.
-usfm_diagnostics = { path = "../usfm_diagnostics" }
+usfm_diagnostics = { version = "0.1.0", path = "../usfm_diagnostics" }
 toml = { workspace = true }
 
 [dev-dependencies]

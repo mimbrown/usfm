@@ -3,6 +3,8 @@ name = "usfm_usx"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
+description = "USX for the usfm_tools tree: write a document as USX, and read USX into one"
+repository.workspace = true
 # Snapshots of machine.py's test books stay out of the published crate;
 # their tests need the workspace anyway.
 exclude = ["tests/snapshots/reader__machine_py_*"]
@@ -16,15 +18,15 @@ exclude = ["tests/snapshots/reader__machine_py_*"]
 # absent from the list below.
 [dependencies]
 # The tree it walks, and `default_attribute_name` / `is_valid_attribute_name`.
-usfm_ast = { path = "../usfm_ast" }
+usfm_ast = { version = "0.1.0", path = "../usfm_ast" }
 # `Diagnostic`, `Code` and `ParseResult`, which the reader reports in:
 # diagnostics sit below the outputs, so this points the allowed way.
-usfm_diagnostics = { path = "../usfm_diagnostics" }
+usfm_diagnostics = { version = "0.1.0", path = "../usfm_diagnostics" }
 # `Span`, on every node the reader builds.
-usfm_span = { path = "../usfm_span" }
+usfm_span = { version = "0.1.0", path = "../usfm_span" }
 # `StyleSheet` and `StyleRule`, to resolve a node's `StyleId` to its marker,
 # and `DEFAULT_STYLESHEET`, which the reader resolves a `style` against.
-usfm_style = { path = "../usfm_style" }
+usfm_style = { version = "0.1.0", path = "../usfm_style" }
 # The reader's XML parser (ticket 45): a byte range on every node and
 # attribute, which is what a span needs. It only reads.
 roxmltree = { workspace = true }

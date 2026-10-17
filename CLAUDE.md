@@ -1164,6 +1164,12 @@ usfm-tools/
 └── tcdocs/                # Git submodule: official USFM test suite
 ```
 
+Publishing (crates.io): the facade's package is `usfm_tools`, because `usfm` on
+crates.io is another project; `apps/`, `tasks/` and render depend on it as
+`usfm = { package = "usfm_tools", ... }`, so code still says `usfm::`. Every
+library crate's internal dependency carries `version` beside `path`; apps
+and `tasks/` are `publish = false`.
+
 Every crate the ADR's tree calls for now exists: `crates/usfm_semantic`
 arrived with ticket 19 and `crates/usfm_codegen` with ticket 25. M6 rebuilt
 the language server under `apps/`.

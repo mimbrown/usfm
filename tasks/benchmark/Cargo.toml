@@ -11,7 +11,7 @@ publish = false
 # `parse_json` and `codegen` groups measure; `pipeline` is off because nothing
 # here renders through it, and `benchmarking` forwards to `usfm_parser` for the
 # `UniquePromise` the `lex` group needs to build a `Lexer` directly.
-usfm = { path = "../../crates/usfm", default-features = false, features = [
+usfm = { package = "usfm_tools", path = "../../crates/usfm", default-features = false, features = [
   "usx",
   "html",
   "json",

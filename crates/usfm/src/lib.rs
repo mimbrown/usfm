@@ -5,7 +5,7 @@
 //! layers under short module names and adds the calls a consumer usually
 //! wants — [`parse`] and [`parse_with`] for USFM, [`parse_usx`] and
 //! [`parse_usx_with`] for USX (feature `usx`) — so an application depends
-//! on `usfm` instead of on five to nine separate crates:
+//! on `usfm_tools` instead of on five to nine separate crates:
 //!
 //! | module | crate | what it holds |
 //! |---|---|---|
@@ -77,10 +77,10 @@ pub use usfm_parser::DEFAULT_STYLESHEET;
 /// [`usfm_semantic::analyze`]'s (see [`parse_with_options`]).
 ///
 /// ```
-/// let result = usfm::parse("\\id GEN\n\\c 1\n\\p\n\\v 1 In the beginning.\n");
+/// let result = usfm_tools::parse("\\id GEN\n\\c 1\n\\p\n\\v 1 In the beginning.\n");
 /// assert!(result.diagnostics.is_empty());
 ///
-/// let index = usfm::semantic::ReferenceIndex::new(&result.document);
+/// let index = usfm_tools::semantic::ReferenceIndex::new(&result.document);
 /// assert_eq!(index.verse(1, 1).unwrap().text().trim(), "In the beginning.");
 /// ```
 pub fn parse(source: &str) -> ParseResult<'_> {
@@ -146,16 +146,16 @@ pub fn parse_with_options<'a>(
 ///   <para style="p"><verse number="1" style="v" sid="GEN 1:1"/>In the beginning.<verse eid="GEN 1:1"/></para>
 ///   <chapter eid="GEN 1"/>
 /// </usx>"#;
-/// let result = usfm::parse_usx(usx);
+/// let result = usfm_tools::parse_usx(usx);
 /// assert!(result.diagnostics.is_empty());
 ///
-/// let index = usfm::semantic::ReferenceIndex::new(&result.document);
+/// let index = usfm_tools::semantic::ReferenceIndex::new(&result.document);
 /// assert_eq!(index.verse(1, 1).unwrap().text().trim(), "In the beginning.");
 ///
 /// // A verse the chapter already has is the semantic pass's to report.
 /// let usx = usx.replace("<verse eid=\"GEN 1:1\"/>", "<verse eid=\"GEN 1:1\"/><verse number=\"1\" style=\"v\"/>");
-/// let codes: Vec<_> = usfm::parse_usx(&usx).diagnostics.iter().map(|d| d.code).collect();
-/// assert!(codes.contains(&usfm::Code::DuplicateVerseNumber), "{codes:?}");
+/// let codes: Vec<_> = usfm_tools::parse_usx(&usx).diagnostics.iter().map(|d| d.code).collect();
+/// assert!(codes.contains(&usfm_tools::Code::DuplicateVerseNumber), "{codes:?}");
 /// ```
 #[cfg(feature = "usx")]
 pub fn parse_usx(source: &str) -> ParseResult<'_> {
