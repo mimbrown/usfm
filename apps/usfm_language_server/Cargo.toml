@@ -3,6 +3,7 @@ name = "usfm_language_server"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
+publish = false
 
 # The language server the VS Code extension in `vscode/` spawns (ticket 30,
 # M6), built in `apps/` on the facade.
@@ -17,7 +18,7 @@ path = "src/main.rs"
 # and `usfm::StyleSheet` for a project's `.sty`, plus — since ticket 31 —
 # `usfm::codegen` for `textDocument/formatting`, which is the one writer it
 # uses. USX, HTML and JSON stay out: nothing in an editor asks for them.
-usfm = { path = "../../crates/usfm", default-features = false, features = ["codegen"] }
+usfm = { package = "usfm_tools", path = "../../crates/usfm", default-features = false, features = ["codegen"] }
 # The protocol: `tower-lsp-server` is the maintained fork of `tower-lsp` and
 # brings its own `ls_types`. `tokio` is its runtime and the server's stdio.
 tokio = { workspace = true }

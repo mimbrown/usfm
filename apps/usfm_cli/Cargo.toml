@@ -3,6 +3,7 @@ name = "usfm_cli"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
+publish = false
 
 # The binary that used to be `usfm_parser/src/main.rs` (ticket 15). It is the
 # only crate in the workspace that reads arguments, touches the filesystem or
@@ -27,4 +28,4 @@ notify = { workspace = true }
 # `--stylesheet` file, `usfm::pipeline` for every transform, and
 # `usfm::usx` for what `tests/cli.rs` compares the binary's output against.
 # Default features: the CLI can write every format.
-usfm = { path = "../../crates/usfm" }
+usfm = { package = "usfm_tools", path = "../../crates/usfm" }

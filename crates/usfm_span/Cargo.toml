@@ -3,6 +3,8 @@ name = "usfm_span"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
+description = "Source spans and line/column lookup for the usfm_tools crates"
+repository.workspace = true
 
 # The root of the dependency order in `docs/adr/0001-oxc-style-crate-layout.md`
 # (span <- style, ast <- diagnostics <- parser): source positions and nothing
