@@ -27,6 +27,9 @@ members = [
 exclude = ["tasks/fuzz"]
 resolver = "2"
 
+[workspace.package]
+repository = "https://github.com/mimbrown/usfm"
+
 [workspace.dependencies]
 bitflags = "2.9.0"
 # The CLI's argument parsing (ticket 15). `derive` is the only feature added to

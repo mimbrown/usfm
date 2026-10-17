@@ -1080,26 +1080,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "usfm"
-version = "0.1.0"
-dependencies = [
- "usfm_ast",
- "usfm_codegen",
- "usfm_config",
- "usfm_diagnostics",
- "usfm_fix",
- "usfm_html",
- "usfm_json",
- "usfm_paratext",
- "usfm_parser",
- "usfm_pipeline",
- "usfm_semantic",
- "usfm_span",
- "usfm_style",
- "usfm_usx",
-]
-
-[[package]]
 name = "usfm_ast"
 version = "0.1.0"
 dependencies = [
@@ -1112,7 +1092,7 @@ name = "usfm_benchmark"
 version = "0.1.0"
 dependencies = [
  "criterion",
- "usfm",
+ "usfm_tools",
 ]
 
 [[package]]
@@ -1121,19 +1101,19 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "notify",
- "usfm",
+ "usfm_tools",
 ]
 
 [[package]]
 name = "usfm_codegen"
 version = "0.1.0"
 dependencies = [
- "usfm",
  "usfm_ast",
  "usfm_benchmark",
  "usfm_parser",
  "usfm_style",
  "usfm_tests",
+ "usfm_tools",
 ]
 
 [[package]]
@@ -1157,10 +1137,10 @@ dependencies = [
 name = "usfm_fix"
 version = "0.1.0"
 dependencies = [
- "usfm",
  "usfm_ast",
  "usfm_diagnostics",
  "usfm_span",
+ "usfm_tools",
 ]
 
 [[package]]
@@ -1190,7 +1170,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "tower-lsp-server",
- "usfm",
+ "usfm_tools",
 ]
 
 [[package]]
@@ -1237,11 +1217,11 @@ version = "0.1.0"
 dependencies = [
  "insta",
  "unicode-normalization",
- "usfm",
  "usfm_ast",
  "usfm_diagnostics",
  "usfm_span",
  "usfm_style",
+ "usfm_tools",
 ]
 
 [[package]]
@@ -1263,9 +1243,29 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
- "usfm",
+ "usfm_tools",
  "walkdir",
  "xml-rs",
+]
+
+[[package]]
+name = "usfm_tools"
+version = "0.1.0"
+dependencies = [
+ "usfm_ast",
+ "usfm_codegen",
+ "usfm_config",
+ "usfm_diagnostics",
+ "usfm_fix",
+ "usfm_html",
+ "usfm_json",
+ "usfm_paratext",
+ "usfm_parser",
+ "usfm_pipeline",
+ "usfm_semantic",
+ "usfm_span",
+ "usfm_style",
+ "usfm_usx",
 ]
 
 [[package]]

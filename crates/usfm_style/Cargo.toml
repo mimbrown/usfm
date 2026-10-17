@@ -3,6 +3,8 @@ name = "usfm_style"
 version = "0.1.0"
 edition = "2024"
 license = "MIT AND CC-BY-4.0"
+description = "USFM stylesheets (.sty): the markers, their types and placement rules, with Paratext's usfm.sty built in"
+repository.workspace = true
 
 [dependencies]
 bitflags = { workspace = true }
