@@ -21,7 +21,7 @@ libfuzzer-sys = "0.4"
 # `span_check`, the span invariants the targets assert. JSON and pipeline stay
 # off: no target uses them, and every dependency here is also a dependency of
 # the sanitizer build.
-usfm = { path = "../../crates/usfm", default-features = false, features = [
+usfm = { package = "usfm_tools", path = "../../crates/usfm", default-features = false, features = [
   "usx",
   "html",
   "codegen",

@@ -3,13 +3,14 @@ name = "usfm_tests"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
+publish = false
 
 [dependencies]
 # The USX tree, its reader and the serializer the harness compares against the
 # reference files (ticket 13), reached through the facade (ticket 17).
 # `codegen` is the round-trip step of `--roundtrip` (ticket 27); the rest of
 # the harness only needs `usx`.
-usfm = { path = "../../crates/usfm", default-features = false, features = [
+usfm = { package = "usfm_tools", path = "../../crates/usfm", default-features = false, features = [
   "usx",
   "codegen",
 ] }
@@ -22,7 +23,7 @@ diffy = "0.5.2"
 [dev-dependencies]
 # `tests/usx_reader.rs` asserts the span invariants over every read reference
 # with `usfm_parser::span_check::nodes`, which is behind `testing`.
-usfm = { path = "../../crates/usfm", default-features = false, features = [
+usfm = { package = "usfm_tools", path = "../../crates/usfm", default-features = false, features = [
   "usx",
   "codegen",
   "testing",
