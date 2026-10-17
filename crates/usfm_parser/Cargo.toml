@@ -3,6 +3,9 @@ name = "usfm_parser"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
+# Snapshots of third-party test inputs (tcdocs, CC BY 4.0; machine.py, MIT)
+# stay out of the published crate; their tests need the workspace anyway.
+exclude = ["tests/snapshots/tcdocs__*", "tests/snapshots/recovery__machine_py_*"]
 
 # A library, and only a library, since ticket 15 moved the binary to
 # `apps/usfm_cli`. The dependency list below is M3's exit criterion from
