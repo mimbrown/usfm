@@ -109,6 +109,11 @@ derives from the following, which keep their own terms.
   > OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   > SOFTWARE.
 
+A published crate carries its own `LICENSE` and, where it holds any of the
+above, a `NOTICE.md`: `usfm_style` (the stylesheet; its licence is
+`MIT AND CC-BY-4.0`), `usfm_parser` and `usfm_span` (oxc). The test
+snapshots of tcdocs and machine.py inputs are left out of the packages.
+
 What ships is covered separately: the VS Code extension's `.vsix` carries
 `ThirdPartyNotices.txt`, which `npm run notices` (part of `npm run build` in
 `vscode/`) writes with `scripts/third_party_notices.py` from the Rust crates

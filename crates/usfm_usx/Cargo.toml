@@ -3,6 +3,9 @@ name = "usfm_usx"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
+# Snapshots of machine.py's test books stay out of the published crate;
+# their tests need the workspace anyway.
+exclude = ["tests/snapshots/reader__machine_py_*"]
 
 # An output crate in `docs/adr/0001-oxc-style-crate-layout.md`: it owns the XML
 # tree and its writer, and turns a `Document` into USX — and, since ticket 45,
