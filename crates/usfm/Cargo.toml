@@ -1,6 +1,6 @@
 [package]
 name = "usfm_tools"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 license = "MIT"
 description = "The USFM toolchain behind one name: parse USFM or USX into a tree with diagnostics, check it, and write it out"
