@@ -13,16 +13,17 @@
 # `str::get_unchecked` on the parser's hottest path, and checking it is this
 # script's job: every span the parser slices a `&str` with passes through it.
 #
-# Miri interprets the program on one host thread, so the test harness's threads
-# buy nothing and the wall time is the sum of the suites. Local wall time on the
-# 4-vCPU Xeon @ 2.80GHz the agent loop runs on, with the Miri build already
-# done: **about 5 min** (300 s wall on 2026-09-27; per-suite times in the
-# comments below), with the reader's 31 s in it. That is the whole of the CI
-# step's 5-minute budget, and not only because of the reader: `usx_text`
-# takes 46 s where this script said ~15 s, and as long at the M6 close commit
-# too, so the VM or the nightly toolchain moved rather than the code. Without
-# the reader the total is about 4 min 30 s today. A suite added
-# here has to earn it; the next one should come with a cut elsewhere.
+# Miri interprets each program on one host thread, so the test harness's
+# threads buy nothing inside a suite. The suites are separate processes,
+# though, so this script builds them all first and then runs them side by
+# side, one per CPU (`MIRI_JOBS` overrides), longest first, and prints each
+# suite's output whole once all have finished. Run one after another they took
+# about 5 min on the 4-vCPU agent VM and 3 min 20 s in CI (2026-10-20); side
+# by side the wall time is about the longest suite's. Most of every suite's
+# fixed cost is `DEFAULT_STYLESHEET`: building its 335 rules and their ~6 000
+# strings takes about 11 s under Miri, once per suite, and again each time a
+# test clones the sheet or the parser derives a style (`Arc::make_mut`). A
+# suite added here still has to earn it.
 #
 # Not run in full, on purpose:
 # * `usfm_usx --test reader` (ticket 49) — eight of its 25 tests; the block
@@ -78,93 +79,22 @@ export INSTA_UPDATE=no
 # cannot spawn a process. Telling it the root outright skips that.
 export INSTA_WORKSPACE_ROOT="$PWD"
 
-run() {
-  echo "==> cargo +nightly miri test $*"
-  cargo +nightly miri test "$@"
-}
+# Suites, longest first so the long ones are not the last to start. `"$1"` is
+# `build` or `launch` below; `--no-isolation` lets a suite read files (insta
+# reads its snapshots from disk, which Miri's isolation forbids).
+suites() {
+  # Whole-document parses: the lexer over real markup, and the span
+  # invariants checked mechanically.
+  "$1" -p usfm_parser --test usx_text     # ~46 s
+  "$1" -p usfm_parser --test spans        # ~59 s
+  "$1" -p usfm_parser --test whitespace   # ~17 s
+  "$1" -p usfm_parser --test verse_ends   # ~18 s
+  "$1" -p usfm_parser --test attributes   # ~13 s
 
-# `Span` and `LineIndex`: byte offsets sliced out of a `&str`.          ~1 s
-run -p usfm_span --lib
-
-# `Diagnostic::render` / `to_json_line` over a `LineIndex`, and the JSON
-# escaping that walks a `&str` char by char.                            ~5 s
-run -p usfm_diagnostics --lib
-
-# `string_parser` (through `number`), `cursor`, the visitors, `text`. The
-# `reference` tests were here until ticket 22 moved `ReferenceIndex` to
-# `usfm_semantic`; they are not re-added below, for the reason that crate is
-# skipped — the index walks node references and clones a `NumberList`, and
-# slices no bytes.                                                      ~9 s
-run -p usfm_ast --lib
-
-# `write_escaped`: a byte-table scan over a `&str` that slices at the indices
-# it stops on, plus the reader round trip (ticket 13).                  ~3 s
-run -p usfm_usx --lib
-
-# The USX reader (ticket 45, Miri since ticket 49): `roxmltree` has no
-# `unsafe` (`#![forbid(unsafe_code)]`), but the reader slices the source with
-# the byte ranges it hands back — every span, every borrowed attribute value
-# and text run — and collapses whitespace over `&str`s. insta reads its
-# snapshots from disk, which Miri's isolation forbids.                  ~31 s
-# Eight of the suite's 25 tests: the ones whose input reaches the reader's
-# byte handling somewhere unusual — XML that is not well formed, a byte-order
-# mark and a declaration read past, DBL's pretty-printing inside mixed
-# content, a note's indentation, the whitespace rules, every attribute shape
-# the writer writes and their spans, and the writer's own output read back.
-# The other 16 are one USX vocabulary rule each over a few lines of ordinary
-# XML, or a machine.py Tes book, and add 110 s between them (the suite minus
-# 1JN is 140 s; about 11 s of any run is the default stylesheet built once
-# under Miri), which the CI step's budget does not have. Skipped even from a
-# full run: the machine.py WEB test, which reads 1JN (115 KB) and had not
-# finished after 15 minutes.
-(
-  export MIRIFLAGS="${MIRIFLAGS:-} -Zmiri-disable-isolation"
-  run -p usfm_usx --test reader -- --exact \
-    usx_not_well_formed \
-    a_byte_order_mark_and_a_declaration_are_read_past \
-    dbl_pretty_printing_is_formatting \
-    a_notes_indentation_is_not_a_space \
-    text_is_read_by_the_ast_whitespace_rules \
-    attributes_are_read_in_the_canonical_form \
-    every_attribute_the_writer_writes_is_read \
-    what_the_writer_writes_reads_back
-)
-
-# `write_escaped` / `write_escaped_attribute`: the same byte-table scan over a
-# `&str`, slicing at the indices it stops on (ticket 14).               ~1 s
-# Only the `escape` tests: the rest of `usfm_html`'s lib suite parses whole
-# documents through the HTML writer, which is 14 s of Miri for byte handling
-# the parser suites below already cover (whole suite: 15 s).
-run -p usfm_html --lib escape::
-
-# `write_text` / `write_attribute_value`: two byte scans over a `&str` that
-# slice at the indices they stop on — `\\`, `|`, the two bytes of U+00A0, and
-# `"` inside a quoted attribute value (ticket 25).                     ~15 s
-run -p usfm_codegen --lib -- --exact \
-  usfm::tests::text_is_escaped_the_way_the_parser_reads_it_back \
-  usfm::tests::a_quote_in_an_attribute_value_is_escaped \
-  usfm::tests::a_stray_backslash_comes_back_escaped \
-  usfm::tests::the_default_attribute_is_written_bare
-
-# The lexer's own unit tests, including `lexer::source`, plus the parser and
-# style unit tests. The `--skip text_replacements` this line carried until
-# ticket 15 is gone with the module.                                  ~20 s
-run -p usfm_parser --lib
-
-# Whole-document parses: the lexer over real markup, and the span
-# invariants checked mechanically.
-run -p usfm_parser --test whitespace   # ~17 s
-run -p usfm_parser --test attributes   # ~13 s
-run -p usfm_parser --test usx_text     # ~46 s
-run -p usfm_parser --test verse_ends   # ~18 s
-run -p usfm_parser --test spans        # ~59 s
-
-# Malformed input, where the lexer's cursor ends up in the least ordinary
-# places. insta reads its snapshots from disk, which Miri's isolation
-# forbids.                                                            ~57 s
-(
-  export MIRIFLAGS="${MIRIFLAGS:-} -Zmiri-disable-isolation"
-  run -p usfm_parser --test recovery -- --exact \
+  # Malformed input, where the lexer's cursor ends up in the least ordinary
+  # places. insta reads its snapshots from disk, which Miri's isolation
+  # forbids.                                                            ~57 s
+  "$1" --no-isolation -p usfm_parser --test recovery -- --exact \
     stray_backslash \
     unmatched_milestone_end \
     nested_marker_not_nested \
@@ -175,6 +105,124 @@ run -p usfm_parser --test spans        # ~59 s
     newline_in_attributes \
     malformed_verse_number \
     character_style_not_closed_at_eof
-)
 
+  # The USX reader (ticket 45, Miri since ticket 49): `roxmltree` has no
+  # `unsafe` (`#![forbid(unsafe_code)]`), but the reader slices the source with
+  # the byte ranges it hands back — every span, every borrowed attribute value
+  # and text run — and collapses whitespace over `&str`s. insta reads its
+  # snapshots from disk, which Miri's isolation forbids.                  ~31 s
+  # Eight of the suite's 25 tests: the ones whose input reaches the reader's
+  # byte handling somewhere unusual — XML that is not well formed, a byte-order
+  # mark and a declaration read past, DBL's pretty-printing inside mixed
+  # content, a note's indentation, the whitespace rules, every attribute shape
+  # the writer writes and their spans, and the writer's own output read back.
+  # The other 16 are one USX vocabulary rule each over a few lines of ordinary
+  # XML, or a machine.py Tes book, and add 110 s between them (the suite minus
+  # 1JN is 140 s; about 11 s of any run is the default stylesheet built once
+  # under Miri), which the CI step's budget does not have. Skipped even from a
+  # full run: the machine.py WEB test, which reads 1JN (115 KB) and had not
+  # finished after 15 minutes.
+  "$1" --no-isolation -p usfm_usx --test reader -- --exact \
+    usx_not_well_formed \
+    a_byte_order_mark_and_a_declaration_are_read_past \
+    dbl_pretty_printing_is_formatting \
+    a_notes_indentation_is_not_a_space \
+    text_is_read_by_the_ast_whitespace_rules \
+    attributes_are_read_in_the_canonical_form \
+    every_attribute_the_writer_writes_is_read \
+    what_the_writer_writes_reads_back
+
+  # `write_text` / `write_attribute_value`: two byte scans over a `&str` that
+  # slice at the indices they stop on — `\\`, `|`, the two bytes of U+00A0, and
+  # `"` inside a quoted attribute value (ticket 25).                     ~15 s
+  "$1" -p usfm_codegen --lib -- --exact \
+    usfm::tests::text_is_escaped_the_way_the_parser_reads_it_back \
+    usfm::tests::a_quote_in_an_attribute_value_is_escaped \
+    usfm::tests::a_stray_backslash_comes_back_escaped \
+    usfm::tests::the_default_attribute_is_written_bare
+
+  # The lexer's own unit tests, including `lexer::source`, plus the parser and
+  # style unit tests. The `--skip text_replacements` this line carried until
+  # ticket 15 is gone with the module.                                  ~20 s
+  "$1" -p usfm_parser --lib
+
+  # `string_parser` (through `number`), `cursor`, the visitors, `text`. The
+  # `reference` tests were here until ticket 22 moved `ReferenceIndex` to
+  # `usfm_semantic`; they are not re-added below, for the reason that crate is
+  # skipped — the index walks node references and clones a `NumberList`, and
+  # slices no bytes.                                                      ~9 s
+  "$1" -p usfm_ast --lib
+
+  # `Diagnostic::render` / `to_json_line` over a `LineIndex`, and the JSON
+  # escaping that walks a `&str` char by char.                            ~5 s
+  "$1" -p usfm_diagnostics --lib
+
+  # `write_escaped`: a byte-table scan over a `&str` that slices at the indices
+  # it stops on, plus the reader round trip (ticket 13).                  ~3 s
+  "$1" -p usfm_usx --lib
+
+  # `Span` and `LineIndex`: byte offsets sliced out of a `&str`.          ~1 s
+  "$1" -p usfm_span --lib
+
+  # `write_escaped` / `write_escaped_attribute`: the same byte-table scan over a
+  # `&str`, slicing at the indices it stops on (ticket 14).               ~1 s
+  # Only the `escape` tests: the rest of `usfm_html`'s lib suite parses whole
+  # documents through the HTML writer, which is 14 s of Miri for byte handling
+  # the parser suites below already cover (whole suite: 15 s).
+  "$1" -p usfm_html --lib escape::
+}
+
+# Build every suite first, one after another, so the runs below start from a
+# finished build instead of contending for cargo's build lock.
+build() {
+  [[ $1 == --no-isolation ]] && shift
+  cargo +nightly miri test --no-run --quiet "$@"
+}
+
+parallel="${MIRI_JOBS:-$(nproc)}"
+logs="$(mktemp -d)"
+trap 'rm -rf "$logs"' EXIT
+count=0
+
+# Each suite in the background, its output to a file of its own, at most
+# `$parallel` at once.
+launch() {
+  local flags="${MIRIFLAGS:-}"
+  if [[ $1 == --no-isolation ]]; then
+    flags="$flags -Zmiri-disable-isolation"
+    shift
+  fi
+  while (( $(jobs -rp | wc -l) >= parallel )); do
+    wait -n || true
+  done
+  count=$((count + 1))
+  local log="$logs/$(printf '%02d' "$count")"
+  (
+    echo "==> cargo +nightly miri test $*"
+    start=$SECONDS
+    status=0
+    MIRIFLAGS="$flags" cargo +nightly miri test "$@" || status=$?
+    echo "<== $((SECONDS - start)) s, exit $status"
+    echo "$status" >"$log.status"
+  ) >"$log.out" 2>&1 &
+}
+
+echo "miri: building the suites"
+suites build
+suites launch
+echo "miri: running $count suites, $parallel at a time"
+wait
+
+failed=0
+for status in "$logs"/*.status; do
+  cat "${status%.status}.out"
+  [[ $(cat "$status") == 0 ]] || failed=1
+done
+for out in "$logs"/*.out; do
+  [[ -f ${out%.out}.status ]] || { cat "$out"; failed=1; }
+done
+if (( failed )); then
+  echo "miri: a suite failed (see above)" >&2
+  exit 1
+fi
 echo "miri: clean"
