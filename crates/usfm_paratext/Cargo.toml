@@ -1,6 +1,6 @@
 [package]
 name = "usfm_paratext"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 license = "MIT"
 description = "Reads a Paratext project folder: settings, book names, book files, stylesheets and interlinear glosses"

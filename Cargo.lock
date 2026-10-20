@@ -1175,7 +1175,7 @@ dependencies = [
 
 [[package]]
 name = "usfm_paratext"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "roxmltree",
  "usfm_ast",
