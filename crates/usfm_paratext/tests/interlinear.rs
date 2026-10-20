@@ -271,3 +271,28 @@ fn a_malformed_file_is_an_error() {
     assert_eq!(book.verses.len(), 1);
     assert_eq!(book.verses[0].approved_hash.as_deref(), Some("b"));
 }
+
+#[test]
+fn a_repeated_lexicon_entry_keeps_its_place_and_its_last_senses() {
+    let xml = r#"<Lexicon><Entries>
+<item><Lexeme Type="Word" Form="a" /><Entry><Sense Id="s1"><Gloss Language="en">first</Gloss></Sense></Entry></item>
+<item><Lexeme Type="Word" Form="b" /><Entry><Sense Id="s2"><Gloss Language="en">bee</Gloss></Sense></Entry></item>
+<item><Lexeme Type="Word" Form="a" /><Entry><Sense Id="s3"><Gloss Language="en">last</Gloss></Sense></Entry></item>
+</Entries></Lexicon>"#;
+    let lexicon = Lexicon::from_xml(xml).unwrap();
+    let forms: Vec<_> = lexicon
+        .entries()
+        .iter()
+        .map(|entry| entry.key.form.as_str())
+        .collect();
+    assert_eq!(forms, ["a", "b"]);
+    let a = LexemeKey {
+        kind: LexemeType::Word,
+        form: "a".into(),
+        homograph: 1,
+    };
+    assert_eq!(
+        lexicon.entry(&a).unwrap().senses[0].gloss("en"),
+        Some("last")
+    );
+}

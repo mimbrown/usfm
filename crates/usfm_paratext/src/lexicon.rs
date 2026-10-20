@@ -75,6 +75,8 @@ pub struct Lexicon {
     analyses: Vec<WordAnalysis>,
     /// Sense id -> (entry, sense). The first of a repeated id wins.
     senses: HashMap<String, (usize, usize)>,
+    /// Each entry's place in `entries`, by its key.
+    by_key: HashMap<LexemeKey, usize>,
 }
 
 impl Lexicon {
@@ -106,11 +108,17 @@ impl Lexicon {
                 })
                 .collect();
             let entry = LexiconEntry { key, senses };
-            match lexicon.entries.iter_mut().find(|e| e.key == entry.key) {
-                Some(earlier) => *earlier = entry,
-                None => lexicon.entries.push(entry),
+            match lexicon.by_key.get(&entry.key) {
+                Some(&earlier) => lexicon.entries[earlier] = entry,
+                None => {
+                    lexicon
+                        .by_key
+                        .insert(entry.key.clone(), lexicon.entries.len());
+                    lexicon.entries.push(entry);
+                }
             }
         }
+        let mut analyses: HashMap<String, usize> = HashMap::new();
         for item in items(root, "Analyses") {
             let word = child(item, "string")
                 .ok_or("an analysis has no <string> wordform")?
@@ -126,13 +134,12 @@ impl Lexicon {
                 continue;
             }
             let analysis = WordAnalysis { word, lexemes };
-            match lexicon
-                .analyses
-                .iter_mut()
-                .find(|a| a.word == analysis.word)
-            {
-                Some(earlier) => *earlier = analysis,
-                None => lexicon.analyses.push(analysis),
+            match analyses.get(&analysis.word) {
+                Some(&earlier) => lexicon.analyses[earlier] = analysis,
+                None => {
+                    analyses.insert(analysis.word.clone(), lexicon.analyses.len());
+                    lexicon.analyses.push(analysis);
+                }
             }
         }
         for (e, entry) in lexicon.entries.iter().enumerate() {
@@ -151,7 +158,7 @@ impl Lexicon {
     }
 
     pub fn entry(&self, key: &LexemeKey) -> Option<&LexiconEntry> {
-        self.entries.iter().find(|entry| &entry.key == key)
+        Some(&self.entries[*self.by_key.get(key)?])
     }
 
     /// The sense a cluster's `GlossId` names.
