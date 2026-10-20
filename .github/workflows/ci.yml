@@ -21,6 +21,11 @@ jobs:
       # Toolchain comes from rust-toolchain.toml.
       - run: rustup show active-toolchain
 
+      # Before nightly is installed, on purpose: rust-cache keys the cache on
+      # every toolchain installed when it runs, and nightly changes daily, so
+      # with nightly installed first runs found no cache (2026-10-20).
+      - uses: Swatinem/rust-cache@v2
+
       # Miri needs nightly, and only Miri does: rust-toolchain.toml stays
       # pinned at 1.98.0, and `scripts/miri.sh` asks for `+nightly` explicitly.
       # `miri setup` builds the Miri sysroot once, outside the timed gate step.
@@ -28,8 +33,6 @@ jobs:
         run: |
           rustup toolchain install nightly --profile minimal --component miri,rust-src
           cargo +nightly miri setup
-
-      - uses: Swatinem/rust-cache@v2
 
       # The same script agents run before pushing.
       - name: Gate

@@ -196,10 +196,11 @@ Conformance status (277 tests across two roots, 2026-10-14):
   `usfm_diagnostics` libs, `usfm_usx`'s lib and (8 of 25, since ticket 49)
   `reader` tests, `usfm_html`'s `escape` tests, the parser lib
   and the `whitespace`, `attributes`, `usx_text`, `verse_ends`, `spans` and
-  (10 of 103) `recovery` suites, about 5 min (2026-09-27; about 4 min 30 s
-  without the reader, the rest of the growth being drift on this VM since the
-  last measurement — the whole of the script's own 5-minute budget, see its
-  header). It needs a nightly toolchain
+  (10 of 103) `recovery` suites. It builds them all, then runs them side by
+  side, one per CPU (`MIRI_JOBS` overrides): about 2 min on the 4-vCPU agent
+  VM where one after another took 5 (2026-10-20). Most of each suite's fixed
+  cost is building `DEFAULT_STYLESHEET` under Miri, about 11 s. It needs a
+  nightly toolchain
   with `miri` and `rust-src`, which CI installs in its own step and
   `scripts/session-start.sh` installs on a fresh VM; `rust-toolchain.toml`
   stays pinned at 1.98.0 for everything else.
