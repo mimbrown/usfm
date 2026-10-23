@@ -336,6 +336,29 @@ impl<'a> Text<'a> {
     pub fn synthesized(content: impl Into<Cow<'a, str>>) -> Self {
         Self::new(content, SPAN)
     }
+
+    /// Drop leading ASCII whitespace (rule 6). Content borrowed from the
+    /// source stays borrowed, since what is left is a slice of the same run,
+    /// and owned content is shortened in place: neither allocates. The span
+    /// is unchanged; it records the source run, not the content.
+    pub fn trim_ascii_start(&mut self) {
+        match &mut self.content {
+            Cow::Borrowed(s) => *s = s.trim_ascii_start(),
+            Cow::Owned(s) => {
+                let n = s.len() - s.trim_ascii_start().len();
+                s.drain(..n);
+            }
+        }
+    }
+
+    /// Drop trailing ASCII whitespace (rule 5), without allocating, as
+    /// [`Text::trim_ascii_start`] does.
+    pub fn trim_ascii_end(&mut self) {
+        match &mut self.content {
+            Cow::Borrowed(s) => *s = s.trim_ascii_end(),
+            Cow::Owned(s) => s.truncate(s.trim_ascii_end().len()),
+        }
+    }
 }
 
 impl std::ops::Deref for Text<'_> {

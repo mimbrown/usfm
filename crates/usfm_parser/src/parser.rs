@@ -981,11 +981,9 @@ impl<'a> ParserImpl<'a> {
                 .collect::<String>(),
         );
         if let Some(Inline::Text(text)) = children.first_mut() {
-            let trimmed = text.content.trim_start_matches(|c: char| c.is_ascii_whitespace());
-            if trimmed.is_empty() {
+            text.trim_ascii_start();
+            if text.is_empty() {
                 children.remove(0);
-            } else if trimmed.len() != text.content.len() {
-                text.content = Cow::Owned(trimmed.to_string());
             }
         }
         Some(Text::new(content, char.span))
@@ -1571,13 +1569,11 @@ impl<'a> ParserImpl<'a> {
             && text.ends_with(|c: char| c.is_ascii_whitespace())
         {
             space = true;
-            let trimmed = text.trim_end_matches(|c: char| c.is_ascii_whitespace());
-            if trimmed.is_empty() {
+            // Span unchanged: it records the source run, not the content.
+            // See `Text`.
+            text.trim_ascii_end();
+            if text.is_empty() {
                 children.pop();
-            } else {
-                // Span unchanged: it records the source run, not the
-                // content. See `Text`.
-                text.content = Cow::Owned(trimmed.to_string());
             }
         }
         children.push(verse_end(open.number));
@@ -2589,6 +2585,17 @@ impl<'a> ParserImpl<'a> {
             match self.cur_kind() {
                 Kind::Whitespace { .. } if self.cur_src() != " " => {
                     let end = self.cur_span().start;
+                    if end == start {
+                        // A run that is whitespace and nothing else (a line
+                        // break between two markers, everywhere in aligned
+                        // text) is one space, which needs no copy.
+                        self.bump_any();
+                        if !self.cur_kind().is_text() {
+                            let end = self.cur_span().start;
+                            return Text::new(Cow::Borrowed(" "), Span::new(start, end));
+                        }
+                        return self.parse_text_owned(start, String::from(" "));
+                    }
                     let mut owned = self.source_text[start as usize..end as usize].to_string();
                     self.bump_any();
                     owned.push(' ');

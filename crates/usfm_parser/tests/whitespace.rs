@@ -268,3 +268,34 @@ fn a_book_code_on_the_line_after_id() {
     assert!(left.diagnostics.is_empty(), "{:?}", left.diagnostics);
     assert!(usfm_parser::ast::eq_ignoring_spans(&left.document, &right.document));
 }
+
+/// Trimming a run (rules 5 and 6) and a run that is one line break and
+/// nothing else (rule 1) leave the text borrowed from the source: what is
+/// left is a slice of the run, or the one space a `'static` str can hold.
+/// Not a rule of the tree, which is the same either way, but the reason most
+/// text in a real book costs no copy.
+#[test]
+fn trimmed_and_whitespace_only_runs_are_not_copied() {
+    use std::borrow::Cow;
+    let source = "\\id GEN\n\\c 1\n\\q \\v 1 line one \\q2 \\w a\\w*\n\\w b\\w* \\w c\\w*\n";
+    let document = Parser::new(source)
+        .parse_with_options(&DEFAULT_STYLESHEET, false)
+        .document;
+    let texts: Vec<_> = document
+        .blocks
+        .iter()
+        .filter_map(|block| match block {
+            Block::Para(para) => Some(para.children.iter()),
+            _ => None,
+        })
+        .flatten()
+        .filter_map(|inline| match inline {
+            Inline::Text(text) => Some(&text.content),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(texts, ["line one", " ", " "]);
+    for text in texts {
+        assert!(matches!(text, Cow::Borrowed(_)), "{text:?} was copied");
+    }
+}
