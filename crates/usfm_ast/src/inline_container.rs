@@ -20,19 +20,16 @@ pub trait InlineContainer<'a> {
         // The cheapest question first: the text almost never starts with
         // whitespace, and one byte answers that without touching the child
         // list at all. A multi-byte character's first byte is never ASCII
-        // whitespace, so the byte test and `trim_start_matches` agree
+        // whitespace, so the byte test and `trim_ascii_start` agree
         // (ticket 37).
         if let Inline::Text(text) = &mut child
             && text.as_bytes().first().is_some_and(u8::is_ascii_whitespace)
             && matches!(self.children().last(), None | Some(Inline::VerseStart(_)))
         {
-            let trimmed = text.trim_start_matches(|c: char| c.is_ascii_whitespace());
-            if trimmed.is_empty() {
+            text.trim_ascii_start();
+            if text.is_empty() {
                 return;
             }
-            // The span still covers the run the text was read from; see
-            // the note on `Text`.
-            text.content = Cow::Owned(trimmed.to_string());
         }
         // If the last child is a text node, and the new child is also a text node, merge them
         let children = self.children_mut();
@@ -83,15 +80,13 @@ pub trait InlineContainer<'a> {
     fn trim_trailing_whitespace(&mut self) {
         let children = self.children_mut();
         if let Some(Inline::Text(text)) = children.last_mut() {
-            let trimmed = text.trim_end_matches(|c: char| c.is_ascii_whitespace());
-            if trimmed.is_empty() {
+            // The span still covers the run this text was read from; see the
+            // note on `Text`. Narrowing it here would need the source, since
+            // normalised whitespace makes content length and source length
+            // differ.
+            text.trim_ascii_end();
+            if text.is_empty() {
                 children.pop();
-            } else if trimmed.len() != text.len() {
-                // The span still covers the run this text was read from; see
-                // the note on `Text`. Narrowing it here would need the source,
-                // since normalised whitespace makes content length and source
-                // length differ.
-                text.content = Cow::Owned(trimmed.to_string());
             }
         }
     }
